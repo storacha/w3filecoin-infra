@@ -9,7 +9,7 @@ The repo contains the infra deployment code and the service implementation.
 
 ```
 ├── stacks      - sst and aws cdk code to deploy all the things
-└── service     - lambda & dynamoDB implementations for the filecoin pipeline
+└── api     - lambda & dynamoDB implementations for the filecoin pipeline
 ```
 
 To work on this codebase **you need**:
