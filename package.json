@@ -17,6 +17,7 @@
     "@serverless-stack/cli": "^1.18.4",
     "@serverless-stack/resources": "^1.18.4",
     "@tsconfig/node16": "^1.0.3",
+    "@types/node": "^18.11.18",
     "aws-cdk-lib": "2.50.0",
     "hd-scripts": "^3.0.2",
     "lint-staged": "^13.0.3",
