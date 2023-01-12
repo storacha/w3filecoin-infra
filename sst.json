@@ -1,0 +1,5 @@
+{
+  "name": "w3filecoin",
+  "region": "us-west-2",
+  "main": "stacks/index.js"
+}

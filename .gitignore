@@ -1,0 +1,15 @@
+# dependencies
+node_modules
+dist
+
+# sst
+.sst
+.build
+
+# misc
+.DS_Store
+.vscode
+
+# local env files
+.env*.local
+.test-env.json
