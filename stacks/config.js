@@ -1,3 +1,6 @@
+import { createRequire } from 'module'
+import git from 'git-rev-sync'
+
 /**
  * Return the custom domain config for http api
  * 
@@ -14,4 +17,59 @@ export function getCustomDomain (stage, hostedZone) {
   const domainMap = { prod: hostedZone }
   const domainName = domainMap[stage] ?? `${stage}.${hostedZone}`
   return { domainName, hostedZone }
+}
+
+export function getApiPackageJson () {
+  // @ts-expect-error ts thinks this is unused becuase of the ignore
+  const require = createRequire(import.meta.url)
+  // @ts-ignore ts dont see *.json and dont like it
+  const pkg = require('../../api/package.json')
+  return pkg
+}
+
+export function getGitInfo () {
+  return {
+    commmit: git.long('.'),
+    branch: git.branch('.')
+  }
+}
+
+/**
+ * @param {import('@serverless-stack/resources').App} app
+ * @param {import('@serverless-stack/resources').Stack} stack
+ */
+export function setupSentry (app, stack) {
+  // Skip when locally
+  if (app.local) {
+    return
+  }
+
+  const { SENTRY_DSN } = getEnv()
+
+  stack.addDefaultFunctionEnv({
+    SENTRY_DSN,
+  })
+}
+
+/**
+ * Get Env validating it is set.
+ */
+function getEnv() {
+  return {
+    SENTRY_DSN: mustGetEnv('SENTRY_DSN'),
+  }
+}
+
+/**
+ * 
+ * @param {string} name 
+ * @returns {string}
+ */
+function mustGetEnv (name) {
+  if (!process.env[name]) {
+    throw new Error(`Missing env var: ${name}`)
+  }
+
+  // @ts-expect-error there will always be a string there, but typescript does not believe
+  return process.env[name]
 }
