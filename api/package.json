@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {},
   "dependencies": {
+    "@sentry/serverless": "^7.22.0",
     "aws-sdk": "^2.1293.0"
   },
   "devDependencies": {
