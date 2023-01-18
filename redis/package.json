@@ -1,0 +1,13 @@
+{
+  "name": "@w3filecoin/redis",
+  "version": "0.0.0",
+  "type": "module",
+  "dependencies": {
+    "@sentry/serverless": "^7.22.0",
+    "ioredis": "^5.3.0"
+  },
+  "devDependencies": {},
+  "engines": {
+    "node": ">=16.15"
+  }
+}

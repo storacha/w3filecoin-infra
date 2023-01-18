@@ -5,11 +5,13 @@ dist
 # sst
 .sst
 .build
+cdk.context.json
 
 # misc
 .DS_Store
 .vscode
 
 # local env files
+.env
 .env*.local
 .test-env.json

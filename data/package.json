@@ -1,0 +1,27 @@
+{
+  "name": "@w3filecoin/data",
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "test": "ava --node-arguments='--experimental-fetch' --verbose --timeout=60s test/{*.test.js,**/*.test.js}"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "3.245.0",
+    "@aws-sdk/util-dynamodb": "^3.245.0",
+    "@sentry/serverless": "^7.22.0",
+    "aws-sdk": "^2.1293.0",
+    "ioredis": "^5.3.0",
+    "nanoid": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.109",
+    "@ucanto/transport": "^4.1.0",
+    "@web-std/blob": "^3.0.4",
+    "ava": "^4.3.3",
+    "multiformats": "^11.0.1",
+    "testcontainers": "^8.13.0"
+  },
+  "engines": {
+    "node": ">=16.15"
+  }
+}

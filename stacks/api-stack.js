@@ -32,8 +32,9 @@ export function ApiStack({ app, stack }) {
           VERSION: pkg.version,
           COMMIT: git.commmit,
           STAGE: stack.stage,
-        }
-      }
+        },
+        timeout: 15 * 60,
+      },
     },
     routes: {
       'GET /':        'functions/get.home',
