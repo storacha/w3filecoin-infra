@@ -41,6 +41,10 @@ Ensure the following variables are set in the env when deploying
 
 The root domain to deploy the API to. e.g `filecoin.web3.storage`. The value should match a hosted zone configured in route53 that your aws account has access to.
 
+#### `HOSTED_REDIS_ZONE`
+
+The root domain to deploy the Redis specific API to. e.g `redis-filecoin.web3.storage`. The value should match a hosted zone configured in route53 that your aws account has access to.
+
 </p>
 
 [SST]: https://sst.dev

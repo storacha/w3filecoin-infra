@@ -33,5 +33,5 @@
     "stripInternal": true,
     "resolveJsonModule": true,
   },
-  "include": [ "api", "stacks" ]
+  "include": [ "api", "stacks", "redis" ]
 }

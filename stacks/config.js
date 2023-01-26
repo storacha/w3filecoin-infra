@@ -1,5 +1,8 @@
 import { createRequire } from 'module'
 import git from 'git-rev-sync'
+import * as iam from 'aws-cdk-lib/aws-iam'
+
+export const AGGREGATE_KEY = 'w3filecoin-aggregate-id'
 
 /**
  * Return the custom domain config for http api
@@ -49,6 +52,28 @@ export function setupSentry (app, stack) {
   stack.addDefaultFunctionEnv({
     SENTRY_DSN,
   })
+}
+
+/**
+ * @param {import('@serverless-stack/resources').Stack} stack
+ */
+export function getRedisLambdaRole (stack) {
+  // Create role with required policies for lambdas to interact with redis cluster
+  const role = new iam.Role(stack, `${stack.stackName}-redis-lambda-role`, {
+    assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
+    managedPolicies: [
+      // Basic Lambda policy
+      {
+        managedPolicyArn: 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      },
+      // Basic VPC Access execution role
+      {
+        managedPolicyArn: 'arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole',
+      }
+    ]
+  })
+
+  return role
 }
 
 /**

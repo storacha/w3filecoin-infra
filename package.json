@@ -8,10 +8,13 @@
   "scripts": {
     "start": "sst start",
     "build": "sst build",
-    "deploy": "sst deploy",
+    "deploy": "sst deploy --outputs-file .test-env.json",
     "remove": "sst remove",
     "console": "sst console",
-    "lint": "tsc && eslint '**/*.js'"
+    "lint": "tsc && eslint '**/*.js'",
+    "clean": "rm -rf dist node_modules package-lock.json ./*/{.cache,dist,node_modules}",
+    "test": "echo 'todo'",
+    "test-integration": "ava --verbose --timeout=60s test/*.test.js"
   },
   "devDependencies": {
     "@serverless-stack/cli": "^1.18.4",
@@ -19,7 +22,10 @@
     "@tsconfig/node16": "^1.0.3",
     "@types/git-rev-sync": "^2.0.0",
     "@types/node": "^18.11.18",
+    "@web-std/fetch": "^4.1.0",
+    "ava": "^4.3.3",
     "aws-cdk-lib": "2.50.0",
+    "dotenv": "^16.0.3",
     "git-rev-sync": "^3.0.2",
     "hd-scripts": "^3.0.2",
     "lint-staged": "^13.0.3",
@@ -46,6 +52,7 @@
     }
   },
   "workspaces": [
-    "api"
+    "api",
+    "redis"
   ]
 }
