@@ -13,8 +13,8 @@
     "console": "sst console",
     "lint": "tsc && eslint '**/*.js'",
     "clean": "rm -rf dist node_modules package-lock.json ./*/{.cache,dist,node_modules}",
-    "test": "echo 'todo'",
-    "test-integration": "ava --verbose --timeout=60s test/*.test.js"
+    "test": "npm test -w data",
+    "test-integration": "ava --verbose --serial --timeout=300s test/*.test.js"
   },
   "devDependencies": {
     "@serverless-stack/cli": "^1.18.4",
@@ -29,6 +29,7 @@
     "git-rev-sync": "^3.0.2",
     "hd-scripts": "^3.0.2",
     "lint-staged": "^13.0.3",
+    "p-wait-for": "^5.0.0",
     "typescript": "^4.9.4"
   },
   "dependencies": {
@@ -48,11 +49,17 @@
       "project": "./tsconfig.json"
     },
     "rules": {
-      "unicorn/no-zero-fractions": "off"
+      "unicorn/explicit-length-check": "off",
+      "unicorn/no-array-callback-reference": "off",
+      "unicorn/no-await-expression-member": "off",
+      "unicorn/no-zero-fractions": "off",
+      "no-console": "off",
+      "no-warning-comments": "off"
     }
   },
   "workspaces": [
     "api",
+    "data",
     "redis"
   ]
 }

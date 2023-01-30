@@ -1,6 +1,7 @@
 import {
   State
 } from '@serverless-stack/core'
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb'
 import { createRequire } from 'module'
 
 // Either seed.run deployment, or development deploy outputs-file
@@ -35,4 +36,22 @@ export const getAwsRegion = () => {
   }
 
   return 'us-west-2'
+}
+
+/**
+ * @param {string} tableName 
+ */
+export const getDynamoDb = (tableName) => {
+  const region = getAwsRegion()
+  const endpoint = `https://dynamodb.${region}.amazonaws.com`
+
+  return {
+    client: new DynamoDBClient({
+      region,
+      endpoint
+    }),
+    tableName: `${getStackName()}-${tableName}`,
+    region,
+    endpoint
+  }
 }

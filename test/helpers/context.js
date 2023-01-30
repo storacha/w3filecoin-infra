@@ -6,8 +6,24 @@ dotenv.config({
 })
 
 /**
+ * @typedef {object} Dynamo
+ * @property {import('@aws-sdk/client-dynamodb').DynamoDBClient} client
+ * @property {string} endpoint
+ * @property {string} region
+ * @property {string} tableName
+ * 
+ * @typedef {object} DataContext
+ * @property {string} aggregateId
+ * @property {string} region
+ * @property {Dynamo} aggregateDynamo
+ * @property {Dynamo} carDynamo
+ * 
+ * @typedef {import('ava').TestFn<Awaited<DataContext>>} TestDataFn
  * @typedef {import('ava').TestFn<Awaited<any>>} TestAnyFn
  */
 
 // eslint-disable-next-line unicorn/prefer-export-from
 export const test  = /** @type {TestAnyFn} */ (anyTest)
+
+// eslint-disable-next-line unicorn/prefer-export-from
+export const testData  = /** @type {TestDataFn} */ (anyTest)

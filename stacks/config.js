@@ -1,8 +1,11 @@
 import { createRequire } from 'module'
 import git from 'git-rev-sync'
 import * as iam from 'aws-cdk-lib/aws-iam'
+import { Duration } from 'aws-cdk-lib'
 
 export const AGGREGATE_KEY = 'w3filecoin-aggregate-id'
+const DEFAULT_AGGREGATE_MAX_SIZE = 127*(1<<28)
+const DEFAULT_AGGREGATE_MIN_SIZE = 1+127*(1<<27)
 
 /**
  * Return the custom domain config for http api
@@ -77,10 +80,32 @@ export function getRedisLambdaRole (stack) {
 }
 
 /**
+ * @param {import('@serverless-stack/resources').Stack} stack
+ */
+export function getAggregateConfig (stack) {
+  if (stack.stage !== 'production') {
+    const { AGGREGATE_MAX_SIZE, AGGREGATE_MIN_SIZE } = process.env
+    return {
+      aggregateMaxSize: AGGREGATE_MAX_SIZE || `${DEFAULT_AGGREGATE_MAX_SIZE}`,
+      aggregateMinSize: AGGREGATE_MIN_SIZE || `${20_000}`,
+      maxBatchingWindow: Duration.seconds(15)
+    }
+  }
+
+  return {
+    aggregateMaxSize: `${DEFAULT_AGGREGATE_MAX_SIZE}`,
+    aggregateMinSize: `${DEFAULT_AGGREGATE_MIN_SIZE}`,
+    maxBatchingWindow: Duration.minutes(5)
+  }
+}
+
+/**
  * Get Env validating it is set.
  */
 function getEnv() {
   return {
+    AGGREGATE_MAX_SIZE: process.env.AGGREGATE_MAX_SIZE,
+    AGGREGATE_MIN_SIZE: process.env.AGGREGATE_MIN_SIZE,
     SENTRY_DSN: mustGetEnv('SENTRY_DSN'),
   }
 }
