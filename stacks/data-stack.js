@@ -1,7 +1,11 @@
 import { Table } from '@serverless-stack/resources'
 import { StartingPosition } from 'aws-cdk-lib/aws-lambda'
 
-import { carTableProps, aggregateTableProps } from '../data/tables/index.js'
+import {
+  aggregateTableProps,
+  carTableProps,
+  ferryTableProps
+} from '../data/tables/index.js'
 import {
   getAggregateConfig,
   setupSentry,
@@ -36,6 +40,13 @@ export function DataStack({ stack, app }) {
     stream: 'new_and_old_images'
   })
 
+  /**
+   * This table maps aggregates with the CARs they "transport" to Filecoin deals.
+   */
+  const ferryTable = new Table(stack, 'ferry', {
+    ...ferryTableProps,
+  })
+
   const aggregateConfig = getAggregateConfig(stack)
 
   // car dynamodb table stream consumers
@@ -48,8 +59,9 @@ export function DataStack({ stack, app }) {
           AGGREGATE_TABLE_NAME: aggregateTable.tableName,
           AGGREGATE_MIN_SIZE: aggregateConfig.aggregateMinSize,
           AGGREGATE_MAX_SIZE: aggregateConfig.aggregateMaxSize,
+          FERRY_TABLE_NAME: ferryTable.tableName,
         },
-        permissions: [aggregateTable],
+        permissions: [aggregateTable, ferryTable],
         timeout: 3 * 60,
       },
       cdk: {
@@ -124,5 +136,6 @@ export function DataStack({ stack, app }) {
   return {
     carTable,
     aggregateTable,
+    ferryTable
   }
 }

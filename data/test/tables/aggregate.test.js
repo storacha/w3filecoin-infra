@@ -6,7 +6,7 @@ import { CreateTableCommand, ScanCommand } from '@aws-sdk/client-dynamodb'
 import { unmarshall } from '@aws-sdk/util-dynamodb'
 import { customAlphabet } from 'nanoid'
 
-import { aggregateTableProps } from '../../tables/index.js'
+import { aggregateTableProps, ferryTableProps } from '../../tables/index.js'
 import { createAggregateTable, AGGREGATE_STATE } from '../../tables/aggregate.js'
 
 const REGION = 'us-west-2'
@@ -27,11 +27,12 @@ test('can add multiple batches to same aggregate', async t => {
   const batchCount = 2
   const aggregateId = `${Date.now()}`
 
-  const { tableName } = await prepareResources(t.context.dynamoClient)
+  const { aggregateTableName, ferryTableName } = await prepareResources(t.context.dynamoClient)
   const batches = await getBatchesToAggregate(batchCount, batchSize)
   const totalSizeToAggregate = batches.flat().reduce((accum, car) => accum + car.size, 0)
 
-  const aggregateTable = createAggregateTable(REGION, tableName, {
+  const aggregateTable = createAggregateTable(REGION, aggregateTableName, {
+    ferryTableName,
     endpoint: t.context.dbEndpoint,
     // Make max size enough for sum of all batches size
     maxSize: totalSizeToAggregate
@@ -41,24 +42,33 @@ test('can add multiple batches to same aggregate', async t => {
   for (const [i, batch] of batches.entries()) {
     await aggregateTable.appendCARs(aggregateId, batch)
 
-    const aggregates = await getAggregates(t.context.dynamoClient, tableName)
+    const aggregates = await getAggregates(t.context.dynamoClient, aggregateTableName)
+    const carsInFerry = await getCarsInAggregateFerry(t.context.dynamoClient, ferryTableName)
 
     // only one aggregate exists all the time
     t.is(aggregates.length, 1)
-    t.is(aggregates[0].cars.size, batchSize + (i * batchSize))
+
+    t.is(carsInFerry.length, batchSize + (i * batchSize))
     t.is(aggregates[0].stat, AGGREGATE_STATE.ingesting)
   }
 
-  const aggregates = await getAggregates(t.context.dynamoClient, tableName)
+  const aggregates = await getAggregates(t.context.dynamoClient, aggregateTableName)
+  const carsInFerry = await getCarsInAggregateFerry(t.context.dynamoClient, ferryTableName)
+
   // only one aggregate exists all the time
   t.is(aggregates.length, 1)
-  t.is(aggregates[0].cars.size, batchSize * batchCount)
+  t.is(carsInFerry.length, batchSize * batchCount)
   t.is(aggregates[0].aggregateId, aggregateId)
   t.is(aggregates[0].stat, AGGREGATE_STATE.ingesting)
   t.is(aggregates[0].size, totalSizeToAggregate)
   t.truthy(aggregates[0].insertedAt)
   t.truthy(aggregates[0].updatedAt)
   t.not(aggregates[0].insertedAt, aggregates[0].updatedAt)
+
+  // Validate all CARs in ferry are assigned to given aggregate
+  for (const car of carsInFerry) {
+    t.is(car.aggregateId, aggregateId)
+  }
 })
 
 test('fails to insert a new batch if its size is bigger than max', async t => {
@@ -66,11 +76,12 @@ test('fails to insert a new batch if its size is bigger than max', async t => {
   const batchCount = 1
   const aggregateId = `${Date.now()}`
 
-  const { tableName } = await prepareResources(t.context.dynamoClient)
+  const { aggregateTableName, ferryTableName } = await prepareResources(t.context.dynamoClient)
   const batches = await getBatchesToAggregate(batchCount, batchSize)
   const totalSizeToAggregate = batches.flat().reduce((accum, car) => accum + car.size, 0)
 
-  const aggregateTable = createAggregateTable(REGION, tableName, {
+  const aggregateTable = createAggregateTable(REGION, aggregateTableName, {
+    ferryTableName,
     endpoint: t.context.dbEndpoint,
     // Make max size smaller than requested content to aggregate
     maxSize: totalSizeToAggregate - 1
@@ -78,7 +89,7 @@ test('fails to insert a new batch if its size is bigger than max', async t => {
 
   await t.throwsAsync(() => aggregateTable.appendCARs(aggregateId, batches[0]))
 
-  const aggregates = await getAggregates(t.context.dynamoClient, tableName)
+  const aggregates = await getAggregates(t.context.dynamoClient, aggregateTableName)
   // no aggregates exist
   t.is(aggregates.length, 0)
 })
@@ -88,11 +99,12 @@ test('fails to insert a second batch if total size is bigger than max', async t 
   const batchCount = 2
   const aggregateId = `${Date.now()}`
 
-  const { tableName } = await prepareResources(t.context.dynamoClient)
+  const { aggregateTableName, ferryTableName } = await prepareResources(t.context.dynamoClient)
   const batches = await getBatchesToAggregate(batchCount, batchSize)
   const totalSizeToAggregate = batches.flat().reduce((accum, car) => accum + car.size, 0)
 
-  const aggregateTable = createAggregateTable(REGION, tableName, {
+  const aggregateTable = createAggregateTable(REGION, aggregateTableName, {
+    ferryTableName,
     endpoint: t.context.dbEndpoint,
     // Make max size smaller than requested content to aggregate
     maxSize: totalSizeToAggregate - 1
@@ -104,9 +116,11 @@ test('fails to insert a second batch if total size is bigger than max', async t 
   // Second batch fails to insert
   await t.throwsAsync(() => aggregateTable.appendCARs(aggregateId, batches[1]))
 
-  const aggregates = await getAggregates(t.context.dynamoClient, tableName)
+  const aggregates = await getAggregates(t.context.dynamoClient, aggregateTableName)
+  const carsInFerry = await getCarsInAggregateFerry(t.context.dynamoClient, ferryTableName)
+  
   t.is(aggregates.length, 1)
-  t.is(aggregates[0].cars.size, Number(batchSize) * 1)
+  t.is(carsInFerry.length, Number(batchSize) * 1)
   t.is(aggregates[0].stat, AGGREGATE_STATE.ingesting)
   t.is(aggregates[0].aggregateId, aggregateId)
   t.is(aggregates[0].size, batches[0].reduce((accum, car) => accum + car.size, 0))
@@ -120,11 +134,12 @@ test('can transition aggregate states', async t => {
   const batchCount = 1
   const aggregateId = `${Date.now()}`
 
-  const { tableName } = await prepareResources(t.context.dynamoClient)
+  const { aggregateTableName, ferryTableName } = await prepareResources(t.context.dynamoClient)
   const batches = await getBatchesToAggregate(batchCount, batchSize)
   const totalSizeToAggregate = batches.flat().reduce((accum, car) => accum + car.size, 0)
 
-  const aggregateTable = createAggregateTable(REGION, tableName, {
+  const aggregateTable = createAggregateTable(REGION, aggregateTableName, {
+    ferryTableName,
     endpoint: t.context.dbEndpoint,
     minSize: totalSizeToAggregate / 2,
     maxSize: totalSizeToAggregate
@@ -135,7 +150,7 @@ test('can transition aggregate states', async t => {
     await aggregateTable.appendCARs(aggregateId, batch)
   }
 
-  const aggregatesBeforeLock = await getAggregates(t.context.dynamoClient, tableName)
+  const aggregatesBeforeLock = await getAggregates(t.context.dynamoClient, aggregateTableName)
   // only one aggregate exists all the time
   t.is(aggregatesBeforeLock.length, 1)
   t.is(aggregatesBeforeLock[0].aggregateId, aggregateId)
@@ -144,7 +159,7 @@ test('can transition aggregate states', async t => {
   // set aggregate as ready
   await aggregateTable.setAsReady(aggregateId)
 
-  const aggregatesAfterLock = await getAggregates(t.context.dynamoClient, tableName)
+  const aggregatesAfterLock = await getAggregates(t.context.dynamoClient, aggregateTableName)
   // only one aggregate exists all the time
   t.is(aggregatesAfterLock.length, 1)
   t.is(aggregatesAfterLock[0].stat, AGGREGATE_STATE.ready)
@@ -152,7 +167,7 @@ test('can transition aggregate states', async t => {
   // set aggregate as pending deal
   await aggregateTable.setAsDealPending(aggregatesAfterLock[0].aggregateId)
 
-  const aggregatesPendingDeal = await getAggregates(t.context.dynamoClient, tableName)
+  const aggregatesPendingDeal = await getAggregates(t.context.dynamoClient, aggregateTableName)
   // only one aggregate exists all the time
   t.is(aggregatesPendingDeal.length, 1)
   t.is(aggregatesPendingDeal[0].aggregateId, aggregateId)
@@ -163,7 +178,7 @@ test('can transition aggregate states', async t => {
   const commP = 'commP...a'
   await aggregateTable.setAsDealProcessed(aggregatesAfterLock[0].aggregateId, commP)
 
-  const aggregatesProcessedDeal = await getAggregates(t.context.dynamoClient, tableName)
+  const aggregatesProcessedDeal = await getAggregates(t.context.dynamoClient, aggregateTableName)
   // only one aggregate exists all the time
   t.is(aggregatesProcessedDeal.length, 1)
   t.is(aggregatesProcessedDeal[0].aggregateId, aggregateId)
@@ -176,11 +191,12 @@ test('fails to lock aggregate without a minimum size', async t => {
   const batchCount = 2
   const aggregateId = `${Date.now()}`
 
-  const { tableName } = await prepareResources(t.context.dynamoClient)
+  const { aggregateTableName, ferryTableName } = await prepareResources(t.context.dynamoClient)
   const batches = await getBatchesToAggregate(batchCount, batchSize)
   const totalSizeToAggregate = batches.flat().reduce((accum, car) => accum + car.size, 0)
 
-  const aggregateTable = createAggregateTable(REGION, tableName, {
+  const aggregateTable = createAggregateTable(REGION, aggregateTableName, {
+    ferryTableName,
     endpoint: t.context.dbEndpoint,
     // Needs more than one batch minimum
     minSize: (totalSizeToAggregate / 2) + 1,
@@ -192,7 +208,7 @@ test('fails to lock aggregate without a minimum size', async t => {
 
   await t.throwsAsync(() => aggregateTable.setAsReady(aggregateId))
 
-  const aggregatesBeforeLock = await getAggregates(t.context.dynamoClient, tableName)
+  const aggregatesBeforeLock = await getAggregates(t.context.dynamoClient, aggregateTableName)
   // only one aggregate exists all the time
   t.is(aggregatesBeforeLock.length, 1)
   t.is(aggregatesBeforeLock[0].aggregateId, aggregateId)
@@ -202,7 +218,7 @@ test('fails to lock aggregate without a minimum size', async t => {
   await aggregateTable.appendCARs(aggregateId, batches[1])
 
   await aggregateTable.setAsReady(aggregateId)
-  const aggregatesAfterLock = await getAggregates(t.context.dynamoClient, tableName)
+  const aggregatesAfterLock = await getAggregates(t.context.dynamoClient, aggregateTableName)
   // only one aggregate exists all the time
   t.is(aggregatesAfterLock.length, 1)
   t.is(aggregatesAfterLock[0].aggregateId, aggregateId)
@@ -214,11 +230,12 @@ test('fails to set as deal pending when aggregate not ready', async t => {
   const batchCount = 1
   const aggregateId = `${Date.now()}`
 
-  const { tableName } = await prepareResources(t.context.dynamoClient)
+  const { aggregateTableName, ferryTableName } = await prepareResources(t.context.dynamoClient)
   const batches = await getBatchesToAggregate(batchCount, batchSize)
   const totalSizeToAggregate = batches.flat().reduce((accum, car) => accum + car.size, 0)
 
-  const aggregateTable = createAggregateTable(REGION, tableName, {
+  const aggregateTable = createAggregateTable(REGION, aggregateTableName, {
+    ferryTableName,
     endpoint: t.context.dbEndpoint,
     minSize: totalSizeToAggregate / 2,
     maxSize: totalSizeToAggregate
@@ -229,7 +246,7 @@ test('fails to set as deal pending when aggregate not ready', async t => {
     await aggregateTable.appendCARs(aggregateId, batch)
   }
 
-  const aggregatesBeforeLock = await getAggregates(t.context.dynamoClient, tableName)
+  const aggregatesBeforeLock = await getAggregates(t.context.dynamoClient, aggregateTableName)
   // only one aggregate exists all the time
   t.is(aggregatesBeforeLock.length, 1)
   t.is(aggregatesBeforeLock[0].aggregateId, aggregateId)
@@ -238,7 +255,7 @@ test('fails to set as deal pending when aggregate not ready', async t => {
   // attempt to set deal as pending
   await t.throwsAsync(() => aggregateTable.setAsDealPending(aggregatesBeforeLock[0].aggregateId))
 
-  const aggregatesNotPending = await getAggregates(t.context.dynamoClient, tableName)
+  const aggregatesNotPending = await getAggregates(t.context.dynamoClient, aggregateTableName)
   // only one aggregate exists all the time
   t.is(aggregatesNotPending.length, 1)
   t.is(aggregatesNotPending[0].aggregateId, aggregateId)
@@ -250,11 +267,12 @@ test('fails to set as deal processed when aggregate is not pending', async t => 
   const batchCount = 1
   const aggregateId = `${Date.now()}`
 
-  const { tableName } = await prepareResources(t.context.dynamoClient)
+  const { aggregateTableName, ferryTableName } = await prepareResources(t.context.dynamoClient)
   const batches = await getBatchesToAggregate(batchCount, batchSize)
   const totalSizeToAggregate = batches.flat().reduce((accum, car) => accum + car.size, 0)
 
-  const aggregateTable = createAggregateTable(REGION, tableName, {
+  const aggregateTable = createAggregateTable(REGION, aggregateTableName, {
+    ferryTableName,
     endpoint: t.context.dbEndpoint,
     minSize: totalSizeToAggregate / 2,
     maxSize: totalSizeToAggregate
@@ -265,7 +283,7 @@ test('fails to set as deal processed when aggregate is not pending', async t => 
     await aggregateTable.appendCARs(aggregateId, batch)
   }
 
-  const aggregatesBeforeLock = await getAggregates(t.context.dynamoClient, tableName)
+  const aggregatesBeforeLock = await getAggregates(t.context.dynamoClient, aggregateTableName)
   // only one aggregate exists all the time
   t.is(aggregatesBeforeLock.length, 1)
   t.is(aggregatesBeforeLock[0].aggregateId, aggregateId)
@@ -274,7 +292,7 @@ test('fails to set as deal processed when aggregate is not pending', async t => 
   // set aggregate as ready
   await aggregateTable.setAsReady(aggregateId)
 
-  const aggregatesAfterLock = await getAggregates(t.context.dynamoClient, tableName)
+  const aggregatesAfterLock = await getAggregates(t.context.dynamoClient, aggregateTableName)
   // only one aggregate exists all the time
   t.is(aggregatesAfterLock.length, 1)
   t.is(aggregatesAfterLock[0].stat, AGGREGATE_STATE.ready)
@@ -284,7 +302,7 @@ test('fails to set as deal processed when aggregate is not pending', async t => 
   // attempt to set deal as processed
   await t.throwsAsync(() => aggregateTable.setAsDealProcessed(aggregatesAfterLock[0].aggregateId, commP))
 
-  const aggregatesNotProcessed = await getAggregates(t.context.dynamoClient, tableName)
+  const aggregatesNotProcessed = await getAggregates(t.context.dynamoClient, aggregateTableName)
   // only one aggregate exists all the time
   t.is(aggregatesNotProcessed.length, 1)
   t.is(aggregatesNotProcessed[0].aggregateId, aggregateId)
@@ -308,15 +326,33 @@ async function getAggregates (dynamo, tableName, options = {}) {
 }
 
 /**
+ * @param {import("@aws-sdk/client-dynamodb").DynamoDBClient} dynamo
+ * @param {string} tableName
+ * @param {object} [options]
+ * @param {number} [options.limit]
+ */
+async function getCarsInAggregateFerry (dynamo, tableName, options = {}) {
+  const cmd = new ScanCommand({
+    TableName: tableName,
+    Limit: options.limit || 1000
+  })
+
+  const response = await dynamo.send(cmd)
+  return response.Items?.map(i => unmarshall(i)) || []
+}
+
+/**
  * @param {import("@aws-sdk/client-dynamodb").DynamoDBClient} dynamoClient
  */
 async function prepareResources (dynamoClient) {
-  const [ tableName ] = await Promise.all([
+  const [ aggregateTableName, ferryTableName ] = await Promise.all([
     createDynamoAggregateTable(dynamoClient),
+    createDynamoFerryTable(dynamoClient),
   ])
 
   return {
-    tableName
+    aggregateTableName,
+    ferryTableName
   }
 }
 
@@ -330,6 +366,25 @@ async function createDynamoAggregateTable(dynamo) {
   await dynamo.send(new CreateTableCommand({
     TableName: tableName,
     ...dynamoDBTableConfig(aggregateTableProps),
+    ProvisionedThroughput: {
+      ReadCapacityUnits: 1,
+      WriteCapacityUnits: 1
+    }
+  }))
+
+  return tableName
+}
+
+/**
+ * @param {import("@aws-sdk/client-dynamodb").DynamoDBClient} dynamo
+ */
+async function createDynamoFerryTable(dynamo) {
+  const id = customAlphabet('1234567890abcdefghijklmnopqrstuvwxyz', 10)
+  const tableName = id()
+
+  await dynamo.send(new CreateTableCommand({
+    TableName: tableName,
+    ...dynamoDBTableConfig(ferryTableProps),
     ProvisionedThroughput: {
       ReadCapacityUnits: 1,
       WriteCapacityUnits: 1

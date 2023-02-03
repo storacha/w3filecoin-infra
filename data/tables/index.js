@@ -8,7 +8,6 @@ export const carTableProps = {
     url: 'string',        // `https://...`
     commP: 'string',       // `commP...a`
     md5: 'string',       // `md5...a`
-    aggregateId: 'string',   // `a50b...1`
     insertedAt: 'string',   // `2023-01-17T...`
   },
   // link
@@ -18,7 +17,7 @@ export const carTableProps = {
 /** @type TableProps */
 export const aggregateTableProps = {
   fields: {
-    aggregateId: 'string',   // `a50b...1`
+    aggregateId: 'string',   // `1675425764468`
     size: 'number',         // `101`
     // Note: `state` and `status` are reserved keywords in dynamodb
     stat: 'string',        // 'INGESTING' | 'READY' | 'DEAL_PENDING' | 'DEAL_PROCESSED'
@@ -30,6 +29,24 @@ export const aggregateTableProps = {
   globalIndexes: {
     indexStat: {
       partitionKey: 'stat',
+      sortKey: 'aggregateId',
+      projection: 'keys_only'
+    }
+  }
+}
+
+/** @type TableProps */
+export const ferryTableProps = {
+  fields: {
+    aggregateId: 'string',   // `1675425764468`
+    link: 'string',         // `bagy...1`
+    insertedAt: 'string',   // `2023-01-17T...`
+  },
+  // link
+  primaryIndex: { partitionKey: 'aggregateId', sortKey: 'link' },
+  globalIndexes: {
+    indexLink: {
+      partitionKey: 'link',
       sortKey: 'aggregateId',
       projection: 'keys_only'
     }

@@ -15,33 +15,26 @@ import {
 
 test.before(async t => {
   const region = getAwsRegion()
-  const carDynamo = getDynamoDb('car')
   const aggregateDynamo = getDynamoDb('aggregate')
+  const carDynamo = getDynamoDb('car')
+  const ferryDynamo = getDynamoDb('ferry')
 
   t.context = {
     region,
     carDynamo,
-    aggregateDynamo
+    aggregateDynamo,
+    ferryDynamo
   }
+
+  await deleteAll(t.context)
 })
 
 test.afterEach(async t => {
-  const { carDynamo, aggregateDynamo } = t.context
-
-  // Delete Car Table
-  await deleteCarTableRows(carDynamo.client, carDynamo.tableName, 
-    await getTableRows(carDynamo.client, carDynamo.tableName)
-  )
-
-  // Delete Aggregate Table
-  await deleteAggregateTableRows(aggregateDynamo.client, aggregateDynamo.tableName, 
-    await getTableRows(aggregateDynamo.client, aggregateDynamo.tableName)
-  )
+  await deleteAll(t.context)
 })
 
-
 test('can write in car table and gets propagated into aggregate when batch size ready', async t => {
-  const { aggregateDynamo, carDynamo, region } = t.context
+  const { aggregateDynamo, carDynamo, ferryDynamo, region } = t.context
   const batchCount = 2
   const batchSize = 40
 
@@ -85,11 +78,14 @@ test('can write in car table and gets propagated into aggregate when batch size 
   t.truthy(aggregatesAfterWrite[0].updatedAt)
   // Might go to other aggregates depending on events
   t.is(aggregatesAfterWrite.reduce((acc, agg) => acc + agg.size, 0), totalSizeToAggregate)
-  t.is(aggregatesAfterWrite.reduce((acc, agg) => acc + agg.cars.size, 0), batchSize * batchCount)
+
+  // Ferry items written
+  const ferryItems = await getTableRows(ferryDynamo.client, ferryDynamo.tableName)
+  t.is(ferryItems.length, batchSize * batchCount)
 })
 
 test('can write in car table until an aggregate gets in ready state', async t => {
-  const { aggregateDynamo, carDynamo, region } = t.context
+  const { aggregateDynamo, carDynamo, ferryDynamo, region } = t.context
   const batchCount = 4
   const batchSize = 40
 
@@ -121,7 +117,10 @@ test('can write in car table until an aggregate gets in ready state', async t =>
   t.truthy(aggregatesAfterWrite.length)
   // Must have all CARs and Size expected
   t.is(aggregatesAfterWrite.reduce((acc, agg) => acc + agg.size, 0), totalSizeToAggregate)
-  t.is(aggregatesAfterWrite.reduce((acc, agg) => acc + agg.cars.size, 0), batchSize * batchCount)
+
+  // Ferry items written
+  const ferryItems = await getTableRows(ferryDynamo.client, ferryDynamo.tableName)
+  t.is(ferryItems.length, batchSize * batchCount)
 
   // How events propagate in terms of timing, might mean everything can go to one aggregate
   // This makes test not fail for these sporadic cases
@@ -131,6 +130,29 @@ test('can write in car table until an aggregate gets in ready state', async t =>
     t.truthy(readyAggregate)
   }
 })
+
+
+/**
+ * @param {{ region?: string; aggregateDynamo: any; carDynamo: any; ferryDynamo: any; }} context
+ */
+async function deleteAll (context) {
+  const { carDynamo, aggregateDynamo, ferryDynamo } = context
+
+  // Delete Car Table
+  await deleteCarTableRows(carDynamo.client, carDynamo.tableName, 
+    await getTableRows(carDynamo.client, carDynamo.tableName)
+  )
+
+  // Delete Aggregate Table
+  await deleteAggregateTableRows(aggregateDynamo.client, aggregateDynamo.tableName, 
+    await getTableRows(aggregateDynamo.client, aggregateDynamo.tableName)
+  )
+
+  // Delete Ferry Table
+  await deleteFerryTableRows(ferryDynamo.client, ferryDynamo.tableName, 
+    await getTableRows(ferryDynamo.client, ferryDynamo.tableName)
+  )
+}
 
 /**
  * @param {import('@aws-sdk/client-dynamodb').DynamoDBClient} dynamo
@@ -184,6 +206,33 @@ async function deleteAggregateTableRows (dynamo, tableName, rows) {
     const requests = deleteRows.splice(0, 25).map(row => ({
       DeleteRequest: {
         Key: marshall({ aggregateId: row.aggregateId })
+      }
+    }))
+    const cmd = new BatchWriteItemCommand({
+      RequestItems: {
+        [tableName]: requests
+      }
+    })
+
+    await dynamo.send(cmd)
+  }
+}
+
+/**
+ * @param {import('@aws-sdk/client-dynamodb').DynamoDBClient} dynamo
+ * @param {string} tableName
+ * @param {Record<string, any>[]} rows
+ */
+async function deleteFerryTableRows (dynamo, tableName, rows) {
+  const deleteRows = [...rows]
+
+  while (deleteRows.length) {
+    const requests = deleteRows.splice(0, 25).map(row => ({
+      DeleteRequest: {
+        Key: marshall({
+          aggregateId: row.aggregateId,
+          link: row.link
+        })
       }
     }))
     const cmd = new BatchWriteItemCommand({

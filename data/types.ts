@@ -25,6 +25,7 @@ export interface AggregateOpts {
   endpoint?: string
   maxSize?: number
   minSize?: number
+  ferryTableName?: string
 }
 
 export interface CarTable {

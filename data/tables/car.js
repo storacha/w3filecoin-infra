@@ -43,7 +43,7 @@ export function createCarTable (region, tableName, options = {}) {
               md5: { 'S': car.md5 },
               insertedAt: { 'S': insertedAt },
             },
-            ConditionExpression: 'attribute_not_exists(link)'
+            ConditionExpression: 'attribute_not_exists(link)',
           }
         })),
       })

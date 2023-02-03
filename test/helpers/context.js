@@ -15,6 +15,7 @@ dotenv.config({
  * @property {string} region
  * @property {Dynamo} aggregateDynamo
  * @property {Dynamo} carDynamo
+ * @property {Dynamo} ferryDynamo
  * 
  * @typedef {import('ava').TestFn<Awaited<DataContext>>} TestDataFn
  * @typedef {import('ava').TestFn<Awaited<any>>} TestAnyFn

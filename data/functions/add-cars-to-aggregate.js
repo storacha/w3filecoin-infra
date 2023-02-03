@@ -19,7 +19,8 @@ async function handler(event) {
   const {
     AGGREGATE_TABLE_NAME,
     AGGREGATE_MIN_SIZE,
-    AGGREGATE_MAX_SIZE
+    AGGREGATE_MAX_SIZE,
+    FERRY_TABLE_NAME
   } = getEnv()
 
   const records = parseDynamoDbEvent(event)
@@ -29,6 +30,7 @@ async function handler(event) {
     region: AWS_REGION,
     tableName: AGGREGATE_TABLE_NAME,
     options: {
+      ferryTableName: FERRY_TABLE_NAME,
       minSize: AGGREGATE_MIN_SIZE,
       maxSize: AGGREGATE_MAX_SIZE
     }
@@ -47,7 +49,8 @@ function getEnv() {
   return {
     AGGREGATE_TABLE_NAME: mustGetEnv('AGGREGATE_TABLE_NAME'),
     AGGREGATE_MIN_SIZE: Number(mustGetEnv('AGGREGATE_MIN_SIZE')),
-    AGGREGATE_MAX_SIZE: Number(mustGetEnv('AGGREGATE_MAX_SIZE'))
+    AGGREGATE_MAX_SIZE: Number(mustGetEnv('AGGREGATE_MAX_SIZE')),
+    FERRY_TABLE_NAME: mustGetEnv('FERRY_TABLE_NAME')
   }
 }
 

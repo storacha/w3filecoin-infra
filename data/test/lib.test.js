@@ -6,7 +6,7 @@ import { CreateTableCommand, ScanCommand } from '@aws-sdk/client-dynamodb'
 import { unmarshall } from '@aws-sdk/util-dynamodb'
 import { customAlphabet } from 'nanoid'
 
-import { aggregateTableProps } from '../tables/index.js'
+import { aggregateTableProps, ferryTableProps } from '../tables/index.js'
 import { AGGREGATE_STATE } from '../tables/aggregate.js'
 import { addCarsToAggregate } from '../lib/add-cars-to-aggregate.js'
 import { setAggregateAsReady } from '../lib/set-aggregate-as-ready.js'
@@ -25,18 +25,18 @@ test.before(async t => {
 })
 
 test('can add cars to given aggregate', async t => {
-  const { tableName, aggregateProps } = await getTable(t)
+  const { aggregateTableName, aggregateProps } = await getTable(t)
   const cars = await getCars(10)
   const { aggregateId } = await addCarsToAggregate(cars, aggregateProps)
 
-  const aggregates = await getAggregates(t.context.dynamoClient, tableName)
+  const aggregates = await getAggregates(t.context.dynamoClient, aggregateTableName)
   t.is(aggregates.length, 1)
   t.is(aggregates[0].aggregateId, aggregateId)
   t.is(aggregates[0].stat, AGGREGATE_STATE.ingesting)
 })
 
 test('can add cars to same aggregate', async t => {
-  const { tableName, aggregateProps } = await getTable(t)
+  const { aggregateTableName, aggregateProps } = await getTable(t)
   const batches = await Promise.all([
     getCars(10),
     getCars(10)
@@ -44,7 +44,7 @@ test('can add cars to same aggregate', async t => {
 
   const { aggregateId: aggregateId0 } = await addCarsToAggregate(batches[0], aggregateProps)
 
-  const aggregatesAfterFirstBatch = await getAggregates(t.context.dynamoClient, tableName)
+  const aggregatesAfterFirstBatch = await getAggregates(t.context.dynamoClient, aggregateTableName)
   t.is(aggregatesAfterFirstBatch.length, 1)
   t.is(aggregatesAfterFirstBatch[0].aggregateId, aggregateId0)
   t.is(aggregatesAfterFirstBatch[0].stat, AGGREGATE_STATE.ingesting)
@@ -52,27 +52,27 @@ test('can add cars to same aggregate', async t => {
   const { aggregateId: aggregateId1 } = await addCarsToAggregate(batches[1], aggregateProps)
   t.is(aggregateId0, aggregateId1)
 
-  const aggregatesAfterSecondBatch = await getAggregates(t.context.dynamoClient, tableName)
+  const aggregatesAfterSecondBatch = await getAggregates(t.context.dynamoClient, aggregateTableName)
   t.is(aggregatesAfterSecondBatch.length, 1)
   t.is(aggregatesAfterSecondBatch[0].aggregateId, aggregateId1)
   t.is(aggregatesAfterSecondBatch[0].stat, AGGREGATE_STATE.ingesting)
 })
 
 test('can set an aggregate as ready', async t => {
-  const { tableName, aggregateProps } = await getTable(t)
+  const { aggregateTableName, aggregateProps } = await getTable(t)
   const cars = await getCars(10)
 
   const { aggregateId } = await addCarsToAggregate(cars, aggregateProps)
   await setAggregateAsReady(aggregateId, aggregateProps)
 
-  const aggregates = await getAggregates(t.context.dynamoClient, tableName)
+  const aggregates = await getAggregates(t.context.dynamoClient, aggregateTableName)
   t.is(aggregates.length, 1)
   t.is(aggregates[0].aggregateId, aggregateId)
   t.is(aggregates[0].stat, AGGREGATE_STATE.ready)
 })
 
 test('can handle concurrent set of aggregate as ready', async t => {
-  const { tableName, aggregateProps } = await getTable(t)
+  const { aggregateTableName, aggregateProps } = await getTable(t)
   const cars = await getCars(10)
 
   const { aggregateId } = await addCarsToAggregate(cars, aggregateProps)
@@ -83,14 +83,14 @@ test('can handle concurrent set of aggregate as ready', async t => {
     setAggregateAsReady(aggregateId, aggregateProps)
   ])
 
-  const aggregates = await getAggregates(t.context.dynamoClient, tableName)
+  const aggregates = await getAggregates(t.context.dynamoClient, aggregateTableName)
   t.is(aggregates.length, 1)
   t.is(aggregates[0].aggregateId, aggregateId)
   t.is(aggregates[0].stat, AGGREGATE_STATE.ready)
 })
 
 test('can handle concurrent aggregates in ready state', async t => {
-  let { tableName, aggregateProps } = await getTable(t)
+  let { aggregateTableName, aggregateProps } = await getTable(t)
   const batches = await Promise.all([
     getCars(10),
     getCars(10)
@@ -101,7 +101,7 @@ test('can handle concurrent aggregates in ready state', async t => {
   let aggregatesResponses
   do {
     const table = await getTable(t)
-    tableName = table.tableName
+    aggregateTableName = table.aggregateTableName
     aggregateProps = table.aggregateProps
 
     aggregatesResponses = await Promise.all(
@@ -111,7 +111,7 @@ test('can handle concurrent aggregates in ready state', async t => {
 
   // Concurrent requests resulted in concurrent aggregates ingesting
   t.not(aggregatesResponses[0].aggregateId, aggregatesResponses[1].aggregateId)
-  const concurrentIngestingAggregates = await getAggregates(t.context.dynamoClient, tableName)
+  const concurrentIngestingAggregates = await getAggregates(t.context.dynamoClient, aggregateTableName)
   t.is(concurrentIngestingAggregates.length, 2)
   
   for (const aggregate of concurrentIngestingAggregates) {
@@ -139,17 +139,18 @@ test('can handle concurrent aggregates in ready state', async t => {
  * @param {import("ava").ExecutionContext<import("./helpers/context.js").AggregateContext>} t
  */
 async function getTable (t) {
-  const { tableName } = await prepareResources(t.context.dynamoClient)
+  const { aggregateTableName, ferryTableName } = await prepareResources(t.context.dynamoClient)
   const aggregateProps = {
     region: REGION,
-    tableName,
+    tableName: aggregateTableName,
     options: {
+      ferryTableName,
       endpoint: t.context.dbEndpoint,
       minSize: 1
     }
   }
 
-  return { aggregateProps, tableName }
+  return { aggregateProps, aggregateTableName }
 }
 
 /**
@@ -172,14 +173,14 @@ async function getAggregates (dynamo, tableName, options = {}) {
  * @param {import("@aws-sdk/client-dynamodb").DynamoDBClient} dynamoClient
  */
 async function prepareResources (dynamoClient) {
-  const id = customAlphabet('1234567890abcdefghijklmnopqrstuvwxyz', 10)
-  const [ tableName ] = await Promise.all([
+  const [ aggregateTableName, ferryTableName ] = await Promise.all([
     createDynamoAggregateTable(dynamoClient),
+    createDynamoFerryTable(dynamoClient),
   ])
 
   return {
-    tableName,
-    redisKey: id()
+    aggregateTableName,
+    ferryTableName
   }
 }
 
@@ -193,6 +194,25 @@ async function createDynamoAggregateTable(dynamo) {
   await dynamo.send(new CreateTableCommand({
     TableName: tableName,
     ...dynamoDBTableConfig(aggregateTableProps),
+    ProvisionedThroughput: {
+      ReadCapacityUnits: 1,
+      WriteCapacityUnits: 1
+    }
+  }))
+
+  return tableName
+}
+
+/**
+ * @param {import("@aws-sdk/client-dynamodb").DynamoDBClient} dynamo
+ */
+async function createDynamoFerryTable(dynamo) {
+  const id = customAlphabet('1234567890abcdefghijklmnopqrstuvwxyz', 10)
+  const tableName = id()
+
+  await dynamo.send(new CreateTableCommand({
+    TableName: tableName,
+    ...dynamoDBTableConfig(ferryTableProps),
     ProvisionedThroughput: {
       ReadCapacityUnits: 1,
       WriteCapacityUnits: 1

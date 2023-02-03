@@ -2,8 +2,11 @@ import {
   DynamoDBClient,
   UpdateItemCommand,
   QueryCommand,
+  TransactWriteItemsCommand,
 } from '@aws-sdk/client-dynamodb'
 import { marshall, unmarshall } from '@aws-sdk/util-dynamodb'
+
+import { MAX_TRANSACT_WRITE_ITEMS } from './constants.js'
 
 /**
  * @typedef {import('../types').AggregateOpts} AggregateOpts
@@ -39,6 +42,7 @@ export function createAggregateTable (region, tableName, options = {}) {
   })
   const minSize = options.minSize || MIN_SIZE
   const maxSize = options.maxSize || MAX_SIZE
+  const ferryTableName = options.ferryTableName
 
   return {
     /**
@@ -48,6 +52,10 @@ export function createAggregateTable (region, tableName, options = {}) {
      * @param {CarItem[]} cars 
      */
     appendCARs: async (aggregateId, cars) => {
+      if (cars.length > MAX_TRANSACT_WRITE_ITEMS - 1) {
+        throw new RangeError('maximum batch size exceeded')
+      }
+
       const links = cars.map(car => car.link)
       const updateAccumSize = cars.reduce((acc, car) => acc + car.size, 0)
       const maxSizeBeforeUpdate = maxSize - updateAccumSize
@@ -57,47 +65,60 @@ export function createAggregateTable (region, tableName, options = {}) {
       }
 
       const insertedAt = new Date().toISOString()
-
-      const updateItemCommand = new UpdateItemCommand({
-        TableName: tableName,
-        Key: marshall({
-          aggregateId
-        }),
-        ExpressionAttributeValues: {
-          ':insertedAt': { S: insertedAt },
-          ':updatedAt': { S: insertedAt },
-          ':ingestingStat': { S: AGGREGATE_STATE.ingesting },
-          ':updateAccumSize': { N: `${updateAccumSize}` },
-          ':maxSizeBeforeUpdate': { N: `${maxSizeBeforeUpdate}` },
-          ':links' :{ SS: links } // SS is "String Set"
-        },
-        // Condition expression runs before update. Guarantees that this operation only suceeds:
-        // - when stat is ingesting
-        // - when there is still enough space in the aggregate for this batch size
-        ConditionExpression: `
-        (
-          attribute_not_exists(stat) OR stat = :ingestingStat
-        )
-        AND
-        (
-          attribute_not_exists(size) OR size <= :maxSizeBeforeUpdate
-        )
-        `,
-        // Update row table with:
-        // - insertedAt if row does not exist already
-        // - updatedAt updated with current timestamp
-        // - set state as ingesting if row does not exist already
-        // - increment size
-        UpdateExpression: `
-        SET insertedAt = if_not_exists(insertedAt, :insertedAt),
-          updatedAt = :updatedAt,
-          stat = if_not_exists(stat, :ingestingStat)
-        ADD size :updateAccumSize,
-          cars :links
-        `,
+      const cmd = new TransactWriteItemsCommand({
+        TransactItems: [
+          // Add mapping of CARs to aggregate
+          ...links.map(link => ({
+            Put: {
+              TableName: ferryTableName,
+              Item: {
+                link: { 'S': link },
+                aggregateId: { 'S': aggregateId },
+              },
+            }
+          })),
+          {
+            Update: {
+              TableName: tableName,
+              Key: marshall({
+                aggregateId
+              }),
+              ExpressionAttributeValues: {
+                ':insertedAt': { S: insertedAt },
+                ':updatedAt': { S: insertedAt },
+                ':ingestingStat': { S: AGGREGATE_STATE.ingesting },
+                ':updateAccumSize': { N: `${updateAccumSize}` },
+                ':maxSizeBeforeUpdate': { N: `${maxSizeBeforeUpdate}` }
+              },
+              // Condition expression runs before update. Guarantees that this operation only suceeds:
+              // - when stat is ingesting
+              // - when there is still enough space in the aggregate for this batch size
+              ConditionExpression: `
+              (
+                attribute_not_exists(stat) OR stat = :ingestingStat
+              )
+              AND
+              (
+                attribute_not_exists(size) OR size <= :maxSizeBeforeUpdate
+              )
+              `,
+              // Update row table with:
+              // - insertedAt if row does not exist already
+              // - updatedAt updated with current timestamp
+              // - set state as ingesting if row does not exist already
+              // - increment size
+              UpdateExpression: `
+              SET insertedAt = if_not_exists(insertedAt, :insertedAt),
+                updatedAt = :updatedAt,
+                stat = if_not_exists(stat, :ingestingStat)
+              ADD size :updateAccumSize
+              `,
+            }
+          }
+        ]
       })
 
-      await dynamoDb.send(updateItemCommand)
+      await dynamoDb.send(cmd)
     },
     /**
      * Get an aggregate that is ready to track more CARs.
