@@ -10,6 +10,8 @@ Sentry.AWSLambda.init({
   tracesSampleRate: 1.0,
 })
 
+const AWS_REGION = mustGetEnv('AWS_REGION')
+
 /**
  * @param {import('aws-lambda').DynamoDBStreamEvent} event
  */
@@ -17,8 +19,7 @@ async function handler(event) {
   const {
     AGGREGATE_TABLE_NAME,
     AGGREGATE_MIN_SIZE,
-    AGGREGATE_MAX_SIZE,
-    AWS_REGION
+    AGGREGATE_MAX_SIZE
   } = getEnv()
 
   const records = parseDynamoDbEvent(event)
@@ -46,9 +47,7 @@ function getEnv() {
   return {
     AGGREGATE_TABLE_NAME: mustGetEnv('AGGREGATE_TABLE_NAME'),
     AGGREGATE_MIN_SIZE: Number(mustGetEnv('AGGREGATE_MIN_SIZE')),
-    AGGREGATE_MAX_SIZE: Number(mustGetEnv('AGGREGATE_MAX_SIZE')),
-    // Automatically set
-    AWS_REGION: mustGetEnv('AWS_REGION')
+    AGGREGATE_MAX_SIZE: Number(mustGetEnv('AGGREGATE_MAX_SIZE'))
   }
 }
 
