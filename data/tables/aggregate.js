@@ -67,7 +67,6 @@ export function createAggregateTable (region, tableName, options = {}) {
           ':insertedAt': { S: insertedAt },
           ':updatedAt': { S: insertedAt },
           ':ingestingStat': { S: AGGREGATE_STATE.ingesting },
-          ':initialSize': { N: `0` },
           ':updateAccumSize': { N: `${updateAccumSize}` },
           ':maxSizeBeforeUpdate': { N: `${maxSizeBeforeUpdate}` },
           ':links' :{ SS: links } // SS is "String Set"
@@ -92,9 +91,9 @@ export function createAggregateTable (region, tableName, options = {}) {
         UpdateExpression: `
         SET insertedAt = if_not_exists(insertedAt, :insertedAt),
           updatedAt = :updatedAt,
-          stat = if_not_exists(stat, :ingestingStat),
-          size = if_not_exists(size, :initialSize) + :updateAccumSize
-        ADD cars :links
+          stat = if_not_exists(stat, :ingestingStat)
+        ADD size :updateAccumSize,
+          cars :links
         `,
       })
 
