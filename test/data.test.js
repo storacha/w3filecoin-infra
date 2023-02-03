@@ -5,7 +5,7 @@ import { marshall, unmarshall } from '@aws-sdk/util-dynamodb'
 import pWaitFor from 'p-wait-for'
 
 import { createCarTable } from '../data/tables/car.js'
-import { AGGREGATE_STAT } from '../data/tables/aggregate.js'
+import { AGGREGATE_STATE } from '../data/tables/aggregate.js'
 
 import { getCars } from '../data/test/helpers/car.js'
 import {
@@ -80,7 +80,7 @@ test('can write in car table and gets propagated into aggregate when batch size 
 
   const aggregatesAfterWrite = await getTableRows(aggregateDynamo.client, aggregateDynamo.tableName)
   t.truthy(aggregatesAfterWrite.length >= 1)
-  t.is(aggregatesAfterWrite[0].stat, AGGREGATE_STAT.ingesting)
+  t.is(aggregatesAfterWrite[0].stat, AGGREGATE_STATE.ingesting)
   t.truthy(aggregatesAfterWrite[0].insertedAt)
   t.truthy(aggregatesAfterWrite[0].updatedAt)
   // Might go to other aggregates depending on events
@@ -127,7 +127,7 @@ test('can write in car table until an aggregate gets in ready state', async t =>
   // This makes test not fail for these sporadic cases
   if (aggregatesAfterWrite.length >= 2) {
     // First aggregate to write should have stat ready if more than one already exist
-    const readyAggregate = aggregatesAfterWrite.find(agg => agg.stat === AGGREGATE_STAT.ready)
+    const readyAggregate = aggregatesAfterWrite.find(agg => agg.stat === AGGREGATE_STATE.ready)
     t.truthy(readyAggregate)
   }
 })

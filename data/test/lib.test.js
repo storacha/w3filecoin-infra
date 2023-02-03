@@ -7,8 +7,9 @@ import { unmarshall } from '@aws-sdk/util-dynamodb'
 import { customAlphabet } from 'nanoid'
 
 import { aggregateTableProps } from '../tables/index.js'
-import { AGGREGATE_STAT } from '../tables/aggregate.js'
-import { addCarsToAggregate, setAggregateAsReady } from '../index.js'
+import { AGGREGATE_STATE } from '../tables/aggregate.js'
+import { addCarsToAggregate } from '../lib/add-cars-to-aggregate.js'
+import { setAggregateAsReady } from '../lib/set-aggregate-as-ready.js'
 
 const REGION = 'us-west-2'
 
@@ -31,7 +32,7 @@ test('can add cars to given aggregate', async t => {
   const aggregates = await getAggregates(t.context.dynamoClient, tableName)
   t.is(aggregates.length, 1)
   t.is(aggregates[0].aggregateId, aggregateId)
-  t.is(aggregates[0].stat, AGGREGATE_STAT.ingesting)
+  t.is(aggregates[0].stat, AGGREGATE_STATE.ingesting)
 })
 
 test('can add cars to same aggregate', async t => {
@@ -46,7 +47,7 @@ test('can add cars to same aggregate', async t => {
   const aggregatesAfterFirstBatch = await getAggregates(t.context.dynamoClient, tableName)
   t.is(aggregatesAfterFirstBatch.length, 1)
   t.is(aggregatesAfterFirstBatch[0].aggregateId, aggregateId0)
-  t.is(aggregatesAfterFirstBatch[0].stat, AGGREGATE_STAT.ingesting)
+  t.is(aggregatesAfterFirstBatch[0].stat, AGGREGATE_STATE.ingesting)
 
   const { aggregateId: aggregateId1 } = await addCarsToAggregate(batches[1], aggregateProps)
   t.is(aggregateId0, aggregateId1)
@@ -54,7 +55,7 @@ test('can add cars to same aggregate', async t => {
   const aggregatesAfterSecondBatch = await getAggregates(t.context.dynamoClient, tableName)
   t.is(aggregatesAfterSecondBatch.length, 1)
   t.is(aggregatesAfterSecondBatch[0].aggregateId, aggregateId1)
-  t.is(aggregatesAfterSecondBatch[0].stat, AGGREGATE_STAT.ingesting)
+  t.is(aggregatesAfterSecondBatch[0].stat, AGGREGATE_STATE.ingesting)
 })
 
 test('can set an aggregate as ready', async t => {
@@ -62,12 +63,12 @@ test('can set an aggregate as ready', async t => {
   const cars = await getCars(10)
 
   const { aggregateId } = await addCarsToAggregate(cars, aggregateProps)
-  await setAggregateAsReady({ aggregateId }, aggregateProps)
+  await setAggregateAsReady(aggregateId, aggregateProps)
 
   const aggregates = await getAggregates(t.context.dynamoClient, tableName)
   t.is(aggregates.length, 1)
   t.is(aggregates[0].aggregateId, aggregateId)
-  t.is(aggregates[0].stat, AGGREGATE_STAT.ready)
+  t.is(aggregates[0].stat, AGGREGATE_STATE.ready)
 })
 
 test('can handle concurrent set of aggregate as ready', async t => {
@@ -78,14 +79,14 @@ test('can handle concurrent set of aggregate as ready', async t => {
 
   // Concurrent set aggregate as ready request
   await Promise.all([
-    setAggregateAsReady({ aggregateId }, aggregateProps),
-    setAggregateAsReady({ aggregateId }, aggregateProps)
+    setAggregateAsReady(aggregateId, aggregateProps),
+    setAggregateAsReady(aggregateId, aggregateProps)
   ])
 
   const aggregates = await getAggregates(t.context.dynamoClient, tableName)
   t.is(aggregates.length, 1)
   t.is(aggregates[0].aggregateId, aggregateId)
-  t.is(aggregates[0].stat, AGGREGATE_STAT.ready)
+  t.is(aggregates[0].stat, AGGREGATE_STATE.ready)
 })
 
 test('can handle concurrent aggregates in ready state', async t => {
@@ -114,7 +115,7 @@ test('can handle concurrent aggregates in ready state', async t => {
   t.is(concurrentIngestingAggregates.length, 2)
   
   for (const aggregate of concurrentIngestingAggregates) {
-    t.is(aggregate.stat, AGGREGATE_STAT.ingesting)
+    t.is(aggregate.stat, AGGREGATE_STATE.ingesting)
   }
 
   const moreBatches = await Promise.all([
@@ -127,7 +128,7 @@ test('can handle concurrent aggregates in ready state', async t => {
   t.truthy(aggregatesResponses.find(res => res.aggregateId === aggregateId0))
   
   // Adds to other previous aggregate when one finishes
-  await setAggregateAsReady({ aggregateId: aggregateId0 }, aggregateProps)
+  await setAggregateAsReady(aggregateId0, aggregateProps)
   const { aggregateId: aggregateId1 } = await addCarsToAggregate(moreBatches[0], aggregateProps)
   t.truthy(aggregatesResponses.find(res => res.aggregateId === aggregateId1))
 

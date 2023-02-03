@@ -1,4 +1,4 @@
-export type AggregateStat = 'INGESTING' | 'READY' | 'DEAL_PENDING' | 'DEAL_PROCESSED'
+export type AggregateState = 'INGESTING' | 'READY' | 'DEAL_PENDING' | 'DEAL_PROCESSED'
 
 export interface CarItem {
   link: string
@@ -14,7 +14,7 @@ export interface CarItemAggregate {
 }
 
 export interface AggregateTable {
-  add: (aggregateId: string, items: CarItemAggregate[]) => Promise<void>
+  appendCARs: (aggregateId: string, items: CarItemAggregate[]) => Promise<void>
   getAggregateIngesting: () => Promise<string>
   setAsReady: (aggregateId: string) => Promise<void>
   setAsDealPending: (aggregateId: string) => Promise<void>

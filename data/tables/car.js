@@ -24,7 +24,7 @@ export function createCarTable (region, tableName, options = {}) {
   return {
     batchWrite: async (cars) => {
       if (cars.length > MAX_TRANSACT_WRITE_ITEMS) {
-        throw new Error('Given CARs do not fit in a single transaction')
+        throw new RangeError('maximum batch size exceeded')
       }
 
       const insertedAt = new Date().toISOString()

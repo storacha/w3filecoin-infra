@@ -7,21 +7,21 @@ import { marshall, unmarshall } from '@aws-sdk/util-dynamodb'
 
 /**
  * @typedef {import('../types').AggregateOpts} AggregateOpts
- * @typedef {import('../types').AggregateStat} AggregateStat
+ * @typedef {import('../types').AggregateState} AggregateState
  * @typedef {import('../types').AggregateTable} AggregateTable
  * @typedef {import('../types').CarItemAggregate} CarItem
  */
 
-/** @type {Record<string, AggregateStat>} */
-export const AGGREGATE_STAT = {
+/** @type {Record<string, AggregateState>} */
+export const AGGREGATE_STATE = {
   ingesting: 'INGESTING',
   ready: 'READY',
   dealPending: 'DEAL_PENDING',
   dealProcessed: 'DEAL_PROCESSED'
 }
 
-const DEFAULT_MAX_SIZE = 127*(1<<28)
-const DEFAULT_MIN_SIZE = 1+127*(1<<27)
+const MAX_SIZE = 127*(1<<28)
+const MIN_SIZE = 1+127*(1<<27)
 
 
 /**
@@ -37,28 +37,28 @@ export function createAggregateTable (region, tableName, options = {}) {
     region,
     endpoint: options.endpoint
   })
-  const minSize = options.minSize || DEFAULT_MIN_SIZE
-  const maxSize = options.maxSize || DEFAULT_MAX_SIZE
+  const minSize = options.minSize || MIN_SIZE
+  const maxSize = options.maxSize || MAX_SIZE
 
   return {
     /**
-     * Add new CARs to the given aggregate if still with enough space.
+     * Append given CARs to the given aggregate if still with enough space.
      *
      * @param {string} aggregateId
      * @param {CarItem[]} cars 
      */
-    add: async (aggregateId, cars) => {
+    appendCARs: async (aggregateId, cars) => {
       const links = cars.map(car => car.link)
       const updateAccumSize = cars.reduce((acc, car) => acc + car.size, 0)
       const maxSizeBeforeUpdate = maxSize - updateAccumSize
 
       if (maxSizeBeforeUpdate < 0) {
-        throw new Error('Given cars do not fit inside the given aggregate')
+        throw new RangeError('Given CARs exceed maximum aggregate size for given aggregate')
       }
 
       const insertedAt = new Date().toISOString()
 
-      const updateItemcommand = new UpdateItemCommand({
+      const updateItemCommand = new UpdateItemCommand({
         TableName: tableName,
         Key: marshall({
           aggregateId
@@ -66,8 +66,8 @@ export function createAggregateTable (region, tableName, options = {}) {
         ExpressionAttributeValues: {
           ':insertedAt': { S: insertedAt },
           ':updatedAt': { S: insertedAt },
-          ':ingestingStat': { S: AGGREGATE_STAT.ingesting },
-          ':initialSize': { N: `${0}` },
+          ':ingestingStat': { S: AGGREGATE_STATE.ingesting },
+          ':initialSize': { N: `0` },
           ':updateAccumSize': { N: `${updateAccumSize}` },
           ':maxSizeBeforeUpdate': { N: `${maxSizeBeforeUpdate}` },
           ':links' :{ SS: links } // SS is "String Set"
@@ -98,7 +98,7 @@ export function createAggregateTable (region, tableName, options = {}) {
         `,
       })
 
-      await dynamoDb.send(updateItemcommand)
+      await dynamoDb.send(updateItemCommand)
     },
     /**
      * Get an aggregate that is ready to track more CARs.
@@ -109,7 +109,7 @@ export function createAggregateTable (region, tableName, options = {}) {
         IndexName: 'indexStat',
         Limit: 1,
         ExpressionAttributeValues: {
-          ':ingestingStat': { S: AGGREGATE_STAT.ingesting },
+          ':ingestingStat': { S: AGGREGATE_STATE.ingesting },
         },
         KeyConditionExpression: 'stat = :ingestingStat'
       })
@@ -134,8 +134,8 @@ export function createAggregateTable (region, tableName, options = {}) {
         }),
         ExpressionAttributeValues: {
           ':updatedAt': { S: updatedAt },
-          ':initialStat': { S: AGGREGATE_STAT.ingesting },
-          ':updateStat': { S: AGGREGATE_STAT.ready },
+          ':initialStat': { S: AGGREGATE_STATE.ingesting },
+          ':updateStat': { S: AGGREGATE_STATE.ready },
           ':minSize': { N: `${minSize}` },
         },
         // Can only succeed when:
@@ -161,8 +161,8 @@ export function createAggregateTable (region, tableName, options = {}) {
         }),
         ExpressionAttributeValues: {
           ':updatedAt': { S: updatedAt },
-          ':readyStat': { S: AGGREGATE_STAT.ready },
-          ':updateStat': { S: AGGREGATE_STAT.dealPending },
+          ':readyStat': { S: AGGREGATE_STATE.ready },
+          ':updateStat': { S: AGGREGATE_STATE.dealPending },
         },
         // Can only succeed when aggregate stat is in Ingesting state
         ConditionExpression: `
@@ -186,8 +186,8 @@ export function createAggregateTable (region, tableName, options = {}) {
         ExpressionAttributeValues: {
           ':updatedAt': { S: updatedAt },
           ':commP': { S: commP },
-          ':pendingStat': { S: AGGREGATE_STAT.dealPending },
-          ':updateStat': { S: AGGREGATE_STAT.dealProcessed },
+          ':pendingStat': { S: AGGREGATE_STATE.dealPending },
+          ':updateStat': { S: AGGREGATE_STATE.dealProcessed },
         },
         // Can only succeed when aggregate stat is in Ingesting state
         ConditionExpression: `

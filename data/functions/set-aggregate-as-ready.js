@@ -1,7 +1,7 @@
 import * as Sentry from '@sentry/serverless'
 import { unmarshall } from '@aws-sdk/util-dynamodb'
 
-import { setAggregateAsReady } from '../index.js'
+import { setAggregateAsReady } from '../lib/set-aggregate-as-ready.js'
 import { parseDynamoDbEvent } from '../utils/parse-dynamodb-event.js'
 
 Sentry.AWSLambda.init({
@@ -9,8 +9,6 @@ Sentry.AWSLambda.init({
   dsn: process.env.SENTRY_DSN,
   tracesSampleRate: 1.0,
 })
-
-const AWS_REGION = process.env.AWS_REGION || 'us-west-2'
 
 /**
  * @param {import('aws-lambda').DynamoDBStreamEvent} event
@@ -20,6 +18,7 @@ async function handler(event) {
     AGGREGATE_TABLE_NAME,
     AGGREGATE_MIN_SIZE,
     AGGREGATE_MAX_SIZE,
+    AWS_REGION
   } = getEnv()
 
   const records = parseDynamoDbEvent(event)
@@ -45,8 +44,7 @@ async function handler(event) {
     }
   }
 
-  // @ts-expect-error unmarshall does not infer type
-  await setAggregateAsReady(newRecord, aggregateProps)
+  await setAggregateAsReady(newRecord.aggregateId, aggregateProps)
 }
 
 export const consumer = Sentry.AWSLambda.wrapHandler(handler)
@@ -59,6 +57,8 @@ function getEnv() {
     AGGREGATE_TABLE_NAME: mustGetEnv('AGGREGATE_TABLE_NAME'),
     AGGREGATE_MIN_SIZE: Number(mustGetEnv('AGGREGATE_MIN_SIZE')),
     AGGREGATE_MAX_SIZE: Number(mustGetEnv('AGGREGATE_MAX_SIZE')),
+    // Automatically set
+    AWS_REGION: mustGetEnv('AWS_REGION')
   }
 }
 
