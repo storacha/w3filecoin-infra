@@ -138,6 +138,9 @@ export function createFerryTable (region, tableName, options = {}) {
       if (res.Items?.length) {
         return unmarshall(res.Items[0]).id
       }
+
+      // Set new one if no ferry is loading
+      return `${Date.now()}`
     },
     /**
      * Set given ferry as ready for a deal, not allowing any more data in.

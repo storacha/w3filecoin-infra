@@ -3,6 +3,7 @@ import { unmarshall } from '@aws-sdk/util-dynamodb'
 
 import { addCarsToFerry } from '../lib/add-cars-to-ferry.js'
 import { parseDynamoDbEvent } from '../utils/parse-dynamodb-event.js'
+import { mustGetEnv } from '../lib/utils.js'
 
 Sentry.AWSLambda.init({
   environment: process.env.SST_STAGE,
@@ -52,18 +53,4 @@ function getEnv() {
     FERRY_CARGO_MAX_SIZE: Number(mustGetEnv('FERRY_CARGO_MAX_SIZE')),
     CARGO_TABLE_NAME: mustGetEnv('CARGO_TABLE_NAME')
   }
-}
-
-/**
- * 
- * @param {string} name 
- * @returns {string}
- */
-function mustGetEnv (name) {
-  if (!process.env[name]) {
-    throw new Error(`Missing env var: ${name}`)
-  }
-
-  // @ts-expect-error there will always be a string there, but typescript does not believe
-  return process.env[name]
 }

@@ -3,6 +3,7 @@ import { unmarshall } from '@aws-sdk/util-dynamodb'
 
 import { setFerryAsReady } from '../lib/set-ferry-as-ready.js'
 import { parseDynamoDbEvent } from '../utils/parse-dynamodb-event.js'
+import { mustGetEnv } from '../lib/utils.js'
 
 Sentry.AWSLambda.init({
   environment: process.env.SST_STAGE,
@@ -32,7 +33,7 @@ async function handler(event) {
 
   // Still not ready - TODO this should be handled by a filter when supported
   if (newRecord.size < FERRY_CARGO_MIN_SIZE) {
-    console.log(`ferry still not ready: ${newRecord.size} for a minimum of ${FERRY_CARGO_MIN_SIZE}`)
+    console.log(`ferry not ready: ${newRecord.size} < ${FERRY_CARGO_MIN_SIZE}`)
     return
   }
 
@@ -59,18 +60,4 @@ function getEnv() {
     FERRY_CARGO_MIN_SIZE: Number(mustGetEnv('FERRY_CARGO_MIN_SIZE')),
     FERRY_CARGO_MAX_SIZE: Number(mustGetEnv('FERRY_CARGO_MAX_SIZE')),
   }
-}
-
-/**
- * 
- * @param {string} name 
- * @returns {string}
- */
-function mustGetEnv (name) {
-  if (!process.env[name]) {
-    throw new Error(`Missing env var: ${name}`)
-  }
-
-  // @ts-expect-error there will always be a string there, but typescript does not believe
-  return process.env[name]
 }

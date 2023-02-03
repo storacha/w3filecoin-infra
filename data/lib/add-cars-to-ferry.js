@@ -19,12 +19,7 @@ import { createFerryTable } from '../tables/ferry.js'
 export async function addCarsToFerry (cars, ferryProps) {
   const ferryTable = createFerryTable(ferryProps.region, ferryProps.tableName, ferryProps.options)
 
-  let ferryId = await ferryTable.getFerryLoading()
-  if (!ferryId) {
-    // Set new one if no ferry is loading
-    ferryId = `${Date.now()}`
-  }
-
+  const ferryId = await ferryTable.getFerryLoading()
   await ferryTable.addCargo(ferryId, cars)
 
   return {
