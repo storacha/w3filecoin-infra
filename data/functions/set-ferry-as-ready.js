@@ -1,7 +1,7 @@
 import * as Sentry from '@sentry/serverless'
 import { unmarshall } from '@aws-sdk/util-dynamodb'
 
-import { setAggregateAsReady } from '../lib/set-aggregate-as-ready.js'
+import { setFerryAsReady } from '../lib/set-ferry-as-ready.js'
 import { parseDynamoDbEvent } from '../utils/parse-dynamodb-event.js'
 
 Sentry.AWSLambda.init({
@@ -17,35 +17,35 @@ const AWS_REGION = mustGetEnv('AWS_REGION')
  */
 async function handler(event) {
   const {
-    AGGREGATE_TABLE_NAME,
-    AGGREGATE_MIN_SIZE,
-    AGGREGATE_MAX_SIZE
+    FERRY_TABLE_NAME,
+    FERRY_CARGO_MIN_SIZE,
+    FERRY_CARGO_MAX_SIZE,
   } = getEnv()
 
   const records = parseDynamoDbEvent(event)
   if (records.length > 1) {
-    throw new Error('Should only receive one aggregate to update')
+    throw new Error('Should only receive one ferry to update')
   }
 
   // @ts-expect-error can't figure out type of new
   const newRecord = unmarshall(records[0].new)
 
   // Still not ready - TODO this should be handled by a filter when supported
-  if (newRecord.size < AGGREGATE_MIN_SIZE) {
-    console.log(`aggregate still not ready: ${newRecord.size} for a minimum of ${AGGREGATE_MIN_SIZE}`)
+  if (newRecord.size < FERRY_CARGO_MIN_SIZE) {
+    console.log(`ferry still not ready: ${newRecord.size} for a minimum of ${FERRY_CARGO_MIN_SIZE}`)
     return
   }
 
-  const aggregateProps = {
+  const ferryProps = {
     region: AWS_REGION,
-    tableName: AGGREGATE_TABLE_NAME,
+    tableName: FERRY_TABLE_NAME,
     options: {
-      minSize: AGGREGATE_MIN_SIZE,
-      maxSize: AGGREGATE_MAX_SIZE
+      minSize: FERRY_CARGO_MIN_SIZE,
+      maxSize: FERRY_CARGO_MAX_SIZE
     }
   }
 
-  await setAggregateAsReady(newRecord.aggregateId, aggregateProps)
+  await setFerryAsReady(newRecord.id, ferryProps)
 }
 
 export const consumer = Sentry.AWSLambda.wrapHandler(handler)
@@ -55,9 +55,9 @@ export const consumer = Sentry.AWSLambda.wrapHandler(handler)
  */
 function getEnv() {
   return {
-    AGGREGATE_TABLE_NAME: mustGetEnv('AGGREGATE_TABLE_NAME'),
-    AGGREGATE_MIN_SIZE: Number(mustGetEnv('AGGREGATE_MIN_SIZE')),
-    AGGREGATE_MAX_SIZE: Number(mustGetEnv('AGGREGATE_MAX_SIZE'))
+    FERRY_TABLE_NAME: mustGetEnv('FERRY_TABLE_NAME'),
+    FERRY_CARGO_MIN_SIZE: Number(mustGetEnv('FERRY_CARGO_MIN_SIZE')),
+    FERRY_CARGO_MAX_SIZE: Number(mustGetEnv('FERRY_CARGO_MAX_SIZE')),
   }
 }
 

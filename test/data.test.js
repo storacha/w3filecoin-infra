@@ -5,7 +5,7 @@ import { marshall, unmarshall } from '@aws-sdk/util-dynamodb'
 import pWaitFor from 'p-wait-for'
 
 import { createCarTable } from '../data/tables/car.js'
-import { AGGREGATE_STATE } from '../data/tables/aggregate.js'
+import { FERRY_STATE } from '../data/tables/ferry.js'
 
 import { getCars } from '../data/test/helpers/car.js'
 import {
@@ -15,15 +15,15 @@ import {
 
 test.before(async t => {
   const region = getAwsRegion()
-  const aggregateDynamo = getDynamoDb('aggregate')
   const carDynamo = getDynamoDb('car')
+  const cargoDynamo = getDynamoDb('cargo')
   const ferryDynamo = getDynamoDb('ferry')
 
   t.context = {
     region,
     carDynamo,
-    aggregateDynamo,
-    ferryDynamo
+    ferryDynamo,
+    cargoDynamo
   }
 
   await deleteAll(t.context)
@@ -33,124 +33,124 @@ test.afterEach(async t => {
   await deleteAll(t.context)
 })
 
-test('can write in car table and gets propagated into aggregate when batch size ready', async t => {
-  const { aggregateDynamo, carDynamo, ferryDynamo, region } = t.context
+test('can write in car table and gets loaded into ferry when batch size ready', async t => {
+  const { ferryDynamo, carDynamo, cargoDynamo, region } = t.context
   const batchCount = 2
   const batchSize = 40
 
   const carTableClient = createCarTable(region, carDynamo.tableName, { endpoint: carDynamo.endpoint })
   const batches = await getBatchesToWrite(batchCount, batchSize)
-  const totalSizeToAggregate = batches.flat().reduce((accum, car) => accum + car.size, 0)
+  const totalSizeToLoad = batches.flat().reduce((accum, car) => accum + car.size, 0)
 
-  // No aggregates
-  const aggregateItemsBeforeWrites = await getTableRows(aggregateDynamo.client, aggregateDynamo.tableName)
-  t.is(aggregateItemsBeforeWrites.length, 0)
+  // No ferries
+  const ferryItemsBeforeWrites = await getTableRows(ferryDynamo.client, ferryDynamo.tableName)
+  t.is(ferryItemsBeforeWrites.length, 0)
 
   // First batch succeeds to insert
   await carTableClient.batchWrite(batches[0])
   const carItemsAfterFirstBatch = await getTableRows(carDynamo.client, carDynamo.tableName)
   t.is(carItemsAfterFirstBatch.length, batchSize)
 
-  // No aggregates while a batch not ready
-  const aggregateItemsAfterFirstWrite = await getTableRows(aggregateDynamo.client, aggregateDynamo.tableName)
-  t.is(aggregateItemsAfterFirstWrite.length, 0)
+  // No ferries while a batch is not ready
+  const ferryItemsAfterFirstWrite = await getTableRows(ferryDynamo.client, ferryDynamo.tableName)
+  t.is(ferryItemsAfterFirstWrite.length, 0)
 
-  // Second batch succeeds (already more than needed batch to add to aggregate)
+  // Second batch succeeds (already more than needed batch to add to ferry)
   await carTableClient.batchWrite(batches[1])
   const carItemsAfterSecondBatch = await getTableRows(carDynamo.client, carDynamo.tableName)
   t.is(carItemsAfterSecondBatch.length, batchSize * 2)
 
-  // Await for events to be triggered from car table and get written into aggregate table
+  // Await for events to be triggered from car table and get written into ferry table
   await pWaitFor(async () => {
-    const aggrs = await getTableRows(aggregateDynamo.client, aggregateDynamo.tableName)
+    const ferries = await getTableRows(ferryDynamo.client, ferryDynamo.tableName)
 
-    // Wait until all CARs are added to aggregates
-    const aggregatesTotalSize = aggrs.reduce((acc, agg) => acc + agg.size, 0)
-    return Boolean(aggrs.length) && aggregatesTotalSize === totalSizeToAggregate
+    // Wait until all CARs are added to ferries
+    const ferriesTotalSize = ferries.reduce((acc, agg) => acc + agg.size, 0)
+    return Boolean(ferries.length) && ferriesTotalSize === totalSizeToLoad
   }, {
     interval: 100
   })
 
-  const aggregatesAfterWrite = await getTableRows(aggregateDynamo.client, aggregateDynamo.tableName)
-  t.truthy(aggregatesAfterWrite.length >= 1)
-  t.is(aggregatesAfterWrite[0].stat, AGGREGATE_STATE.ingesting)
-  t.truthy(aggregatesAfterWrite[0].insertedAt)
-  t.truthy(aggregatesAfterWrite[0].updatedAt)
-  // Might go to other aggregates depending on events
-  t.is(aggregatesAfterWrite.reduce((acc, agg) => acc + agg.size, 0), totalSizeToAggregate)
+  const ferriesAfterWrite = await getTableRows(ferryDynamo.client, ferryDynamo.tableName)
+  t.truthy(ferriesAfterWrite.length >= 1)
+  t.is(ferriesAfterWrite[0].stat, FERRY_STATE.loading)
+  t.truthy(ferriesAfterWrite[0].insertedAt)
+  t.truthy(ferriesAfterWrite[0].updatedAt)
+  // Might go to other ferries depending on events propagation timing
+  t.is(ferriesAfterWrite.reduce((acc, agg) => acc + agg.size, 0), totalSizeToLoad)
 
   // Ferry items written
-  const ferryItems = await getTableRows(ferryDynamo.client, ferryDynamo.tableName)
+  const ferryItems = await getTableRows(cargoDynamo.client, cargoDynamo.tableName)
   t.is(ferryItems.length, batchSize * batchCount)
 })
 
-test('can write in car table until an aggregate gets in ready state', async t => {
-  const { aggregateDynamo, carDynamo, ferryDynamo, region } = t.context
+test('can write in car table until a ferry gets in ready state', async t => {
+  const { ferryDynamo, carDynamo, cargoDynamo, region } = t.context
   const batchCount = 4
   const batchSize = 40
 
   const carTableClient = createCarTable(region, carDynamo.tableName, { endpoint: carDynamo.endpoint })
   const batches = await getBatchesToWrite(batchCount, batchSize)
-  const totalSizeToAggregate = batches.flat().reduce((accum, car) => accum + car.size, 0)
+  const totalSizeToLoad = batches.flat().reduce((accum, car) => accum + car.size, 0)
 
-  // No aggregates
-  const aggregateItemsBeforeWrites = await getTableRows(aggregateDynamo.client, aggregateDynamo.tableName)
-  t.is(aggregateItemsBeforeWrites.length, 0)
+  // No ferries
+  const ferryItemsBeforeWrites = await getTableRows(ferryDynamo.client, ferryDynamo.tableName)
+  t.is(ferryItemsBeforeWrites.length, 0)
 
   // Insert batches into car table
   for (const batch of batches) {
     await carTableClient.batchWrite(batch)
   }
 
-  // Await for events to be triggered from car table and get written into aggregate table
+  // Await for events to be triggered from car table and get written into ferry table
   await pWaitFor(async () => {
-    const aggrs = await getTableRows(aggregateDynamo.client, aggregateDynamo.tableName)
+    const ferries = await getTableRows(ferryDynamo.client, ferryDynamo.tableName)
 
-    // Wait until all CARs are added to aggregates
-    const aggregatesTotalSize = aggrs.reduce((acc, agg) => acc + agg.size, 0)
-    return Boolean(aggrs.length) && aggregatesTotalSize === totalSizeToAggregate
+    // Wait until all CARs are added to ferries
+    const ferriesTotalSize = ferries.reduce((acc, agg) => acc + agg.size, 0)
+    return Boolean(ferries.length) && ferriesTotalSize === totalSizeToLoad
   }, {
     interval: 100
   })
 
-  const aggregatesAfterWrite = await getTableRows(aggregateDynamo.client, aggregateDynamo.tableName)
-  t.truthy(aggregatesAfterWrite.length)
+  const ferriesAfterWrite = await getTableRows(ferryDynamo.client, ferryDynamo.tableName)
+  t.truthy(ferriesAfterWrite.length)
   // Must have all CARs and Size expected
-  t.is(aggregatesAfterWrite.reduce((acc, agg) => acc + agg.size, 0), totalSizeToAggregate)
+  t.is(ferriesAfterWrite.reduce((acc, agg) => acc + agg.size, 0), totalSizeToLoad)
 
   // Ferry items written
-  const ferryItems = await getTableRows(ferryDynamo.client, ferryDynamo.tableName)
+  const ferryItems = await getTableRows(cargoDynamo.client, cargoDynamo.tableName)
   t.is(ferryItems.length, batchSize * batchCount)
 
-  // How events propagate in terms of timing, might mean everything can go to one aggregate
+  // How events propagate in terms of timing, might mean everything can go to one ferry
   // This makes test not fail for these sporadic cases
-  if (aggregatesAfterWrite.length >= 2) {
-    // First aggregate to write should have stat ready if more than one already exist
-    const readyAggregate = aggregatesAfterWrite.find(agg => agg.stat === AGGREGATE_STATE.ready)
-    t.truthy(readyAggregate)
+  if (ferriesAfterWrite.length >= 2) {
+    // First ferry to write should have stat ready if more than one already exist
+    const readyFerry = ferriesAfterWrite.find(agg => agg.stat === FERRY_STATE.ready)
+    t.truthy(readyFerry)
   }
 })
 
 
 /**
- * @param {{ region?: string; aggregateDynamo: any; carDynamo: any; ferryDynamo: any; }} context
+ * @param {{ region?: string; ferryDynamo: any; carDynamo: any; cargoDynamo: any; }} context
  */
 async function deleteAll (context) {
-  const { carDynamo, aggregateDynamo, ferryDynamo } = context
+  const { carDynamo, ferryDynamo, cargoDynamo } = context
 
   // Delete Car Table
   await deleteCarTableRows(carDynamo.client, carDynamo.tableName, 
     await getTableRows(carDynamo.client, carDynamo.tableName)
   )
 
-  // Delete Aggregate Table
-  await deleteAggregateTableRows(aggregateDynamo.client, aggregateDynamo.tableName, 
-    await getTableRows(aggregateDynamo.client, aggregateDynamo.tableName)
-  )
-
   // Delete Ferry Table
   await deleteFerryTableRows(ferryDynamo.client, ferryDynamo.tableName, 
     await getTableRows(ferryDynamo.client, ferryDynamo.tableName)
+  )
+
+  // Delete Cargo Table
+  await deleteCargoTableRows(cargoDynamo.client, cargoDynamo.tableName, 
+    await getTableRows(cargoDynamo.client, cargoDynamo.tableName)
   )
 }
 
@@ -199,13 +199,13 @@ async function deleteCarTableRows (dynamo, tableName, rows) {
  * @param {string} tableName
  * @param {Record<string, any>[]} rows
  */
-async function deleteAggregateTableRows (dynamo, tableName, rows) {
+async function deleteFerryTableRows (dynamo, tableName, rows) {
   const deleteRows = [...rows]
 
   while (deleteRows.length) {
     const requests = deleteRows.splice(0, 25).map(row => ({
       DeleteRequest: {
-        Key: marshall({ aggregateId: row.aggregateId })
+        Key: marshall({ id: row.id })
       }
     }))
     const cmd = new BatchWriteItemCommand({
@@ -223,14 +223,14 @@ async function deleteAggregateTableRows (dynamo, tableName, rows) {
  * @param {string} tableName
  * @param {Record<string, any>[]} rows
  */
-async function deleteFerryTableRows (dynamo, tableName, rows) {
+async function deleteCargoTableRows (dynamo, tableName, rows) {
   const deleteRows = [...rows]
 
   while (deleteRows.length) {
     const requests = deleteRows.splice(0, 25).map(row => ({
       DeleteRequest: {
         Key: marshall({
-          aggregateId: row.aggregateId,
+          ferryId: row.ferryId,
           link: row.link
         })
       }

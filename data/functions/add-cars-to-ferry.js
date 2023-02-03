@@ -1,7 +1,7 @@
 import * as Sentry from '@sentry/serverless'
 import { unmarshall } from '@aws-sdk/util-dynamodb'
 
-import { addCarsToAggregate } from '../lib/add-cars-to-aggregate.js'
+import { addCarsToFerry } from '../lib/add-cars-to-ferry.js'
 import { parseDynamoDbEvent } from '../utils/parse-dynamodb-event.js'
 
 Sentry.AWSLambda.init({
@@ -17,27 +17,27 @@ const AWS_REGION = mustGetEnv('AWS_REGION')
  */
 async function handler(event) {
   const {
-    AGGREGATE_TABLE_NAME,
-    AGGREGATE_MIN_SIZE,
-    AGGREGATE_MAX_SIZE,
-    FERRY_TABLE_NAME
+    FERRY_TABLE_NAME,
+    FERRY_CARGO_MIN_SIZE,
+    FERRY_CARGO_MAX_SIZE,
+    CARGO_TABLE_NAME
   } = getEnv()
 
   const records = parseDynamoDbEvent(event)
   // @ts-ignore needs to have unmarshall given records come in dynamodb format
   const cars = records.map(record => unmarshall(record.new))
-  const aggregateProps = {
+  const ferryProps = {
     region: AWS_REGION,
-    tableName: AGGREGATE_TABLE_NAME,
+    tableName: FERRY_TABLE_NAME,
     options: {
-      ferryTableName: FERRY_TABLE_NAME,
-      minSize: AGGREGATE_MIN_SIZE,
-      maxSize: AGGREGATE_MAX_SIZE
+      cargoTableName: CARGO_TABLE_NAME,
+      minSize: FERRY_CARGO_MIN_SIZE,
+      maxSize: FERRY_CARGO_MAX_SIZE
     }
   }
 
   // @ts-expect-error unmarshall does not infer type
-  await addCarsToAggregate(cars, aggregateProps)
+  await addCarsToFerry(cars, ferryProps)
 }
 
 export const consumer = Sentry.AWSLambda.wrapHandler(handler)
@@ -47,10 +47,10 @@ export const consumer = Sentry.AWSLambda.wrapHandler(handler)
  */
 function getEnv() {
   return {
-    AGGREGATE_TABLE_NAME: mustGetEnv('AGGREGATE_TABLE_NAME'),
-    AGGREGATE_MIN_SIZE: Number(mustGetEnv('AGGREGATE_MIN_SIZE')),
-    AGGREGATE_MAX_SIZE: Number(mustGetEnv('AGGREGATE_MAX_SIZE')),
-    FERRY_TABLE_NAME: mustGetEnv('FERRY_TABLE_NAME')
+    FERRY_TABLE_NAME: mustGetEnv('FERRY_TABLE_NAME'),
+    FERRY_CARGO_MIN_SIZE: Number(mustGetEnv('FERRY_CARGO_MIN_SIZE')),
+    FERRY_CARGO_MAX_SIZE: Number(mustGetEnv('FERRY_CARGO_MAX_SIZE')),
+    CARGO_TABLE_NAME: mustGetEnv('CARGO_TABLE_NAME')
   }
 }
 

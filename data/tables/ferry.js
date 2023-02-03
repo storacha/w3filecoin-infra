@@ -9,15 +9,15 @@ import { marshall, unmarshall } from '@aws-sdk/util-dynamodb'
 import { MAX_TRANSACT_WRITE_ITEMS } from './constants.js'
 
 /**
- * @typedef {import('../types').AggregateOpts} AggregateOpts
- * @typedef {import('../types').AggregateState} AggregateState
- * @typedef {import('../types').AggregateTable} AggregateTable
- * @typedef {import('../types').CarItemAggregate} CarItem
+ * @typedef {import('../types').FerryOpts} FerryOpts
+ * @typedef {import('../types').FerryState} FerryState
+ * @typedef {import('../types').FerryTable} FerryTable
+ * @typedef {import('../types').CarItemFerry} CarItem
  */
 
-/** @type {Record<string, AggregateState>} */
-export const AGGREGATE_STATE = {
-  ingesting: 'INGESTING',
+/** @type {Record<string, FerryState>} */
+export const FERRY_STATE = {
+  loading: 'LOADING',
   ready: 'READY',
   dealPending: 'DEAL_PENDING',
   dealProcessed: 'DEAL_PROCESSED'
@@ -28,30 +28,30 @@ const MIN_SIZE = 1+127*(1<<27)
 
 
 /**
- * Abstraction layer to handle operations for aggregates to send to Spade.
+ * Abstraction layer to handle operations on ferries with cargo to deliver to Spade.
  *
  * @param {string} region
  * @param {string} tableName
- * @param {AggregateOpts} [options]
- * @returns {import('../types').AggregateTable}
+ * @param {FerryOpts} [options]
+ * @returns {import('../types').FerryTable}
  */
-export function createAggregateTable (region, tableName, options = {}) {
+export function createFerryTable (region, tableName, options = {}) {
   const dynamoDb = new DynamoDBClient({
     region,
     endpoint: options.endpoint
   })
   const minSize = options.minSize || MIN_SIZE
   const maxSize = options.maxSize || MAX_SIZE
-  const ferryTableName = options.ferryTableName
+  const cargoTableName = options.cargoTableName
 
   return {
     /**
-     * Append given CARs to the given aggregate if still with enough space.
+     * Add given CARs as cargo to a ferry (if given ferry has still enough space).
      *
-     * @param {string} aggregateId
+     * @param {string} id
      * @param {CarItem[]} cars 
      */
-    appendCARs: async (aggregateId, cars) => {
+    addCargo: async (id, cars) => {
       if (cars.length > MAX_TRANSACT_WRITE_ITEMS - 1) {
         throw new RangeError('maximum batch size exceeded')
       }
@@ -61,19 +61,19 @@ export function createAggregateTable (region, tableName, options = {}) {
       const maxSizeBeforeUpdate = maxSize - updateAccumSize
 
       if (maxSizeBeforeUpdate < 0) {
-        throw new RangeError('Given CARs exceed maximum aggregate size for given aggregate')
+        throw new RangeError('Given CARs exceed maximum ferry size for given ferry')
       }
 
       const insertedAt = new Date().toISOString()
       const cmd = new TransactWriteItemsCommand({
         TransactItems: [
-          // Add mapping of CARs to aggregate
+          // Add mapping of CARs to ferry
           ...links.map(link => ({
             Put: {
-              TableName: ferryTableName,
+              TableName: cargoTableName,
               Item: {
                 link: { 'S': link },
-                aggregateId: { 'S': aggregateId },
+                ferryId: { 'S': id },
               },
             }
           })),
@@ -81,21 +81,21 @@ export function createAggregateTable (region, tableName, options = {}) {
             Update: {
               TableName: tableName,
               Key: marshall({
-                aggregateId
+                id
               }),
               ExpressionAttributeValues: {
                 ':insertedAt': { S: insertedAt },
                 ':updatedAt': { S: insertedAt },
-                ':ingestingStat': { S: AGGREGATE_STATE.ingesting },
+                ':loadingStat': { S: FERRY_STATE.loading },
                 ':updateAccumSize': { N: `${updateAccumSize}` },
                 ':maxSizeBeforeUpdate': { N: `${maxSizeBeforeUpdate}` }
               },
               // Condition expression runs before update. Guarantees that this operation only suceeds:
-              // - when stat is ingesting
-              // - when there is still enough space in the aggregate for this batch size
+              // - when stat is loading
+              // - when there is still enough space in the ferry for this batch size
               ConditionExpression: `
               (
-                attribute_not_exists(stat) OR stat = :ingestingStat
+                attribute_not_exists(stat) OR stat = :loadingStat
               )
               AND
               (
@@ -105,12 +105,12 @@ export function createAggregateTable (region, tableName, options = {}) {
               // Update row table with:
               // - insertedAt if row does not exist already
               // - updatedAt updated with current timestamp
-              // - set state as ingesting if row does not exist already
+              // - set state as loading if row does not exist already
               // - increment size
               UpdateExpression: `
               SET insertedAt = if_not_exists(insertedAt, :insertedAt),
                 updatedAt = :updatedAt,
-                stat = if_not_exists(stat, :ingestingStat)
+                stat = if_not_exists(stat, :loadingStat)
               ADD size :updateAccumSize
               `,
             }
@@ -121,48 +121,48 @@ export function createAggregateTable (region, tableName, options = {}) {
       await dynamoDb.send(cmd)
     },
     /**
-     * Get an aggregate that is ready to track more CARs.
+     * Get a ferry that is ready to load more CARs.
      */
-    getAggregateIngesting: async () => {
+    getFerryLoading: async () => {
       const queryCommand = new QueryCommand({
         TableName: tableName,
         IndexName: 'indexStat',
         Limit: 1,
         ExpressionAttributeValues: {
-          ':ingestingStat': { S: AGGREGATE_STATE.ingesting },
+          ':loadingStat': { S: FERRY_STATE.loading },
         },
-        KeyConditionExpression: 'stat = :ingestingStat'
+        KeyConditionExpression: 'stat = :loadingStat'
       })
 
       const res = await dynamoDb.send(queryCommand)
       if (res.Items?.length) {
-        return unmarshall(res.Items[0]).aggregateId
+        return unmarshall(res.Items[0]).id
       }
     },
     /**
-     * Set given aggregate as ready for a deal, not allowing any more data in.
+     * Set given ferry as ready for a deal, not allowing any more data in.
      *
-     * @param {string} aggregateId
+     * @param {string} id
      */
-    setAsReady: async (aggregateId) => {
+    setAsReady: async (id) => {
       const updatedAt = new Date().toISOString()
 
       const cmd = new UpdateItemCommand({
         TableName: tableName,
         Key: marshall({
-          aggregateId
+          id
         }),
         ExpressionAttributeValues: {
           ':updatedAt': { S: updatedAt },
-          ':initialStat': { S: AGGREGATE_STATE.ingesting },
-          ':updateStat': { S: AGGREGATE_STATE.ready },
+          ':loadingStat': { S: FERRY_STATE.loading },
+          ':updateStat': { S: FERRY_STATE.ready },
           ':minSize': { N: `${minSize}` },
         },
         // Can only succeed when:
-        // - aggregate stat is in ingesting state
+        // - ferry stat is in loading state
         // - size is enough
         ConditionExpression: `
-        stat = :initialStat AND size >= :minSize
+        stat = :loadingStat AND size >= :minSize
         `,
         UpdateExpression: `
         SET updatedAt = :updatedAt,
@@ -172,19 +172,19 @@ export function createAggregateTable (region, tableName, options = {}) {
 
       await dynamoDb.send(cmd)
     },
-    setAsDealPending: async (aggregateId) => {
+    setAsDealPending: async (id) => {
       const updatedAt = new Date().toISOString()
       const cmd = new UpdateItemCommand({
         TableName: tableName,
         Key: marshall({
-          aggregateId
+          id
         }),
         ExpressionAttributeValues: {
           ':updatedAt': { S: updatedAt },
-          ':readyStat': { S: AGGREGATE_STATE.ready },
-          ':updateStat': { S: AGGREGATE_STATE.dealPending },
+          ':readyStat': { S: FERRY_STATE.ready },
+          ':updateStat': { S: FERRY_STATE.dealPending },
         },
-        // Can only succeed when aggregate stat is in Ingesting state
+        // Can only succeed when ferry stat is in loading state
         ConditionExpression: `
           stat = :readyStat
         `,
@@ -196,20 +196,20 @@ export function createAggregateTable (region, tableName, options = {}) {
 
       await dynamoDb.send(cmd)
     },
-    setAsDealProcessed: async (aggregateId, commP) => {
+    setAsDealProcessed: async (id, commP) => {
       const updatedAt = new Date().toISOString()
       const cmd = new UpdateItemCommand({
         TableName: tableName,
         Key: marshall({
-          aggregateId
+          id
         }),
         ExpressionAttributeValues: {
           ':updatedAt': { S: updatedAt },
           ':commP': { S: commP },
-          ':pendingStat': { S: AGGREGATE_STATE.dealPending },
-          ':updateStat': { S: AGGREGATE_STATE.dealProcessed },
+          ':pendingStat': { S: FERRY_STATE.dealPending },
+          ':updateStat': { S: FERRY_STATE.dealProcessed },
         },
-        // Can only succeed when aggregate stat is in Ingesting state
+        // Can only succeed when ferry stat is in loading state
         ConditionExpression: `
           stat = :pendingStat
         `,

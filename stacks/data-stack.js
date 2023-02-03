@@ -2,12 +2,12 @@ import { Table } from '@serverless-stack/resources'
 import { StartingPosition } from 'aws-cdk-lib/aws-lambda'
 
 import {
-  aggregateTableProps,
   carTableProps,
+  cargoTableProps,
   ferryTableProps
 } from '../data/tables/index.js'
 import {
-  getAggregateConfig,
+  getFerryConfig,
   setupSentry,
 } from './config.js'
 
@@ -23,7 +23,7 @@ export function DataStack({ stack, app }) {
   setupSentry(app, stack)
 
   /**
-   * This table tracks CARs pending a Filecoin deal, including their metadata.
+   * This table tracks CARs pending a Filecoin deal together with their metadata.
    */
   const carTable = new Table(stack, 'car', {
     ...carTableProps,
@@ -32,36 +32,36 @@ export function DataStack({ stack, app }) {
   })
 
   /**
-   * This table tracks CARs pending a Filecoin deal, including their metadata.
+   * This table tracks cars that are set to go on a ferry to a filecoin miner (cargo).
    */
-  const aggregateTable = new Table(stack, 'aggregate', {
-    ...aggregateTableProps,
+  const cargoTable = new Table(stack, 'cargo', {
+    ...cargoTableProps,
+  })
+
+  /**
+   * Table representing a boat load of 'cargo'
+   */
+  const ferryTable = new Table(stack, 'ferry', {
+    ...ferryTableProps,
     // information that will be written to the stream
     stream: 'new_and_old_images'
   })
 
-  /**
-   * This table maps aggregates with the CARs they "transport" to Filecoin deals.
-   */
-  const ferryTable = new Table(stack, 'ferry', {
-    ...ferryTableProps,
-  })
-
-  const aggregateConfig = getAggregateConfig(stack)
+  const ferryConfig = getFerryConfig(stack)
 
   // car dynamodb table stream consumers
   carTable.addConsumers(stack, {
-    // Car table stream consumer for aggregation
-    addCarsToAggregate: {
+    // Car table stream consumer for adding to ferry
+    addCarsToFerry: {
       function: {
-        handler: 'functions/add-cars-to-aggregate.consumer',
+        handler: 'functions/add-cars-to-ferry.consumer',
         environment: {
-          AGGREGATE_TABLE_NAME: aggregateTable.tableName,
-          AGGREGATE_MIN_SIZE: aggregateConfig.aggregateMinSize,
-          AGGREGATE_MAX_SIZE: aggregateConfig.aggregateMaxSize,
           FERRY_TABLE_NAME: ferryTable.tableName,
+          FERRY_CARGO_MIN_SIZE: ferryConfig.ferryCargoMinSize,
+          FERRY_CARGO_MAX_SIZE: ferryConfig.ferryCargoMaxSize,
+          CARGO_TABLE_NAME: cargoTable.tableName,
         },
-        permissions: [aggregateTable, ferryTable],
+        permissions: [cargoTable, ferryTable],
         timeout: 3 * 60,
       },
       cdk: {
@@ -72,7 +72,7 @@ export function DataStack({ stack, app }) {
           startingPosition: StartingPosition.TRIM_HORIZON,
           // If the function returns an error, split the batch in two and retry.
           bisectBatchOnError: true,
-          maxBatchingWindow: aggregateConfig.maxBatchingWindow,
+          maxBatchingWindow: ferryConfig.maxBatchingWindow,
           // TODO: Add error queue
           // https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_lambda_event_sources.DynamoEventSourceProps.html#onfailure
         }
@@ -85,23 +85,23 @@ export function DataStack({ stack, app }) {
     },
   })
 
-  // Aggregate state machine
-  // INGESTING -> READY = state change + redis aggregate ID update
+  // Ferry state machine
+  // LOADING -> READY = state change when size ready
   // READY -> DEAL_PENDING = request Spade
   // DEAL_PENDING -> DEAL_PROCESSED = deal succeeded + GC
 
-  // aggregate dynamodb table stream consumers
-  aggregateTable.addConsumers(stack, {
-    // Aggregate table stream consumer for requesting deals on ready
-    setAggregateAsReady: {
+  // ferry dynamodb table stream consumers
+  ferryTable.addConsumers(stack, {
+    // Ferry table stream consumer for requesting deals on ready
+    setFerryAsReady: {
       function: {
-        handler: 'functions/set-aggregate-as-ready.consumer',
+        handler: 'functions/set-ferry-as-ready.consumer',
         environment: {
-          AGGREGATE_TABLE_NAME: aggregateTable.tableName,
-          AGGREGATE_MIN_SIZE: aggregateConfig.aggregateMinSize,
-          AGGREGATE_MAX_SIZE: aggregateConfig.aggregateMaxSize,
+          FERRY_TABLE_NAME: ferryTable.tableName,
+          FERRY_CARGO_MIN_SIZE: ferryConfig.ferryCargoMinSize,
+          FERRY_CARGO_MAX_SIZE: ferryConfig.ferryCargoMaxSize,
         },
-        permissions: [aggregateTable],
+        permissions: [ferryTable],
         timeout: 15 * 60,
       },
       cdk: {
@@ -121,10 +121,10 @@ export function DataStack({ stack, app }) {
               // TODO: we need to do this filtering inside lambda for now...
               // https://repost.aws/questions/QUxxQDRk5mQ22jR4L3KsTkKQ/dynamo-db-streams-filter-with-nested-fields-not-working
               // size: {
-              //   N: ['>', Number(aggregateConfig.aggregateMinSize)]
+              //   N: ['>', Number(ferryConfig.ferryCargoMinSize)]
               // },
               stat: {
-                S: ['INGESTING']
+                S: ['LOADING']
               }
             }
           }
@@ -135,7 +135,7 @@ export function DataStack({ stack, app }) {
 
   return {
     carTable,
-    aggregateTable,
-    ferryTable
+    cargoTable,
+    ferryTable,
   }
 }

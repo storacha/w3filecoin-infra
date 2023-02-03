@@ -2,8 +2,8 @@ import { createRequire } from 'module'
 import git from 'git-rev-sync'
 import { Duration } from 'aws-cdk-lib'
 
-const DEFAULT_AGGREGATE_MAX_SIZE = 127*(1<<28)
-const DEFAULT_AGGREGATE_MIN_SIZE = 1+127*(1<<27)
+const DEFAULT_FERRY_CARGO_MAX_SIZE = 127*(1<<28)
+const DEFAULT_FERRY_CARGO_MIN_SIZE = 1+127*(1<<27)
 
 /**
  * Return the custom domain config for http api
@@ -59,19 +59,19 @@ export function setupSentry (app, stack) {
 /**
  * @param {import('@serverless-stack/resources').Stack} stack
  */
-export function getAggregateConfig (stack) {
+export function getFerryConfig (stack) {
   if (stack.stage !== 'production') {
-    const { AGGREGATE_MAX_SIZE, AGGREGATE_MIN_SIZE } = process.env
+    const { FERRY_CARGO_MAX_SIZE, FERRY_CARGO_MIN_SIZE } = process.env
     return {
-      aggregateMaxSize: AGGREGATE_MAX_SIZE || `${DEFAULT_AGGREGATE_MAX_SIZE}`,
-      aggregateMinSize: AGGREGATE_MIN_SIZE || `${20_000}`,
+      ferryCargoMaxSize: FERRY_CARGO_MAX_SIZE || `${DEFAULT_FERRY_CARGO_MAX_SIZE}`,
+      ferryCargoMinSize: FERRY_CARGO_MIN_SIZE || `${20_000}`,
       maxBatchingWindow: Duration.seconds(15)
     }
   }
 
   return {
-    aggregateMaxSize: `${DEFAULT_AGGREGATE_MAX_SIZE}`,
-    aggregateMinSize: `${DEFAULT_AGGREGATE_MIN_SIZE}`,
+    ferryCargoMaxSize: `${DEFAULT_FERRY_CARGO_MAX_SIZE}`,
+    ferryCargoMinSize: `${DEFAULT_FERRY_CARGO_MIN_SIZE}`,
     maxBatchingWindow: Duration.minutes(5)
   }
 }
@@ -81,8 +81,8 @@ export function getAggregateConfig (stack) {
  */
 function getEnv() {
   return {
-    AGGREGATE_MAX_SIZE: process.env.AGGREGATE_MAX_SIZE,
-    AGGREGATE_MIN_SIZE: process.env.AGGREGATE_MIN_SIZE,
+    FERRY_CARGO_MAX_SIZE: process.env.FERRY_CARGO_MAX_SIZE,
+    FERRY_CARGO_MIN_SIZE: process.env.FERRY_CARGO_MIN_SIZE,
     SENTRY_DSN: mustGetEnv('SENTRY_DSN'),
   }
 }

@@ -1,4 +1,4 @@
-export type AggregateState = 'INGESTING' | 'READY' | 'DEAL_PENDING' | 'DEAL_PROCESSED'
+export type FerryState = 'LOADING' | 'READY' | 'DEAL_PENDING' | 'DEAL_PROCESSED'
 
 export interface CarItem {
   link: string
@@ -8,24 +8,24 @@ export interface CarItem {
   md5: string
 }
 
-export interface CarItemAggregate {
+export interface CarItemFerry {
   link: string
   size: number
 }
 
-export interface AggregateTable {
-  appendCARs: (aggregateId: string, items: CarItemAggregate[]) => Promise<void>
-  getAggregateIngesting: () => Promise<string>
-  setAsReady: (aggregateId: string) => Promise<void>
-  setAsDealPending: (aggregateId: string) => Promise<void>
-  setAsDealProcessed: (aggregateId: string, commP: string) => Promise<void>
+export interface FerryTable {
+  addCargo: (id: string, items: CarItemFerry[]) => Promise<void>
+  getFerryLoading: () => Promise<string>
+  setAsReady: (id: string) => Promise<void>
+  setAsDealPending: (id: string) => Promise<void>
+  setAsDealProcessed: (id: string, commP: string) => Promise<void>
 }
 
-export interface AggregateOpts {
+export interface FerryOpts {
   endpoint?: string
   maxSize?: number
   minSize?: number
-  ferryTableName?: string
+  cargoTableName?: string
 }
 
 export interface CarTable {
