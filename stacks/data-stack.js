@@ -32,7 +32,7 @@ export function DataStack({ stack, app }) {
   })
 
   /**
-   * This table tracks cars that are set to go on a ferry to a filecoin miner (cargo).
+   * This table tracks cars that are set to go on a ferry to a Filecoin storage provider (cargo).
    */
   const cargoTable = new Table(stack, 'cargo', {
     ...cargoTableProps,
