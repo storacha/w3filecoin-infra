@@ -35,7 +35,6 @@ test('can add cars to table uniquely', async (t) => {
     size: car.size,
     commP: 'commP',
     url: 'url',
-    md5: 'md5',
   }))
 
   await carTable.batchWrite(cars)

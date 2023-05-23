@@ -7,7 +7,6 @@ export const carTableProps = {
     size: 'number',         // `101`
     url: 'string',        // `https://...`
     commP: 'string',       // `commP...a`
-    md5: 'string',       // `md5...a`
     insertedAt: 'string',   // `2023-01-17T...`
   },
   // link
@@ -21,7 +20,7 @@ export const ferryTableProps = {
     size: 'number',         // `101`
     // Note: `state` and `status` are reserved keywords in dynamodb
     stat: 'string',        // 'LOADING' | 'READY' | 'DEAL_PENDING' | 'DEAL_PROCESSED'
-    commP: 'string',       // `bafy1...a`
+    commP: 'string',       // `commP...a`
     insertedAt: 'string',   // `2023-01-17T...`
   },
   // link
