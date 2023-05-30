@@ -30,7 +30,7 @@ export function ApiStack({ app, stack }) {
         environment: {
           NAME: pkg.name,
           VERSION: pkg.version,
-          COMMIT: git.commmit,
+          COMMIT: git.commit,
           STAGE: stack.stage,
         }
       }

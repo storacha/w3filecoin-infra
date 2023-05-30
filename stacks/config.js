@@ -33,7 +33,7 @@ export function getApiPackageJson () {
 
 export function getGitInfo () {
   return {
-    commmit: git.long('.'),
+    commit: git.long('.'),
     branch: git.branch('.')
   }
 }
