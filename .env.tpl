@@ -6,3 +6,10 @@
 
 # uncomment to set SENTRY_DSN
 # SENTRY_DSN = ''
+
+# web3.storage DID
+# DID = 'did:web:staging.web3.storage'
+
+# Aggregation service
+# AGGREGATION_SERVICE_DID = ''
+# AGGREGATION_SERVICE_URL = ''

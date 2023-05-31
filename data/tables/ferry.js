@@ -121,6 +121,38 @@ export function createFerryTable (region, tableName, options = {}) {
       await dynamoDb.send(cmd)
     },
     /**
+     * Get cargo from a ferry
+     *
+     * @param {string} id
+     * @param {object} [options]
+     * @param {number} [options.limit]
+     */
+    getCargo: async function * (id, options) {
+      /** @type {Record<string, import('@aws-sdk/client-dynamodb').AttributeValue> | undefined} */
+      let exclusiveStartKey
+
+      do {
+        const queryCommand = new QueryCommand({
+          TableName: cargoTableName,
+          Limit: options?.limit,
+          ExclusiveStartKey: exclusiveStartKey,
+          ExpressionAttributeValues: {
+            ':id': { S: id },
+          },
+          KeyConditionExpression: 'ferryId = :id',
+        })
+
+        const res = await dynamoDb.send(queryCommand)
+        if (res.Items?.length) {
+          for (const item of res.Items) {
+            yield /** @type {CarItem} */ (unmarshall(item))
+          }
+        }
+
+        exclusiveStartKey = res.LastEvaluatedKey
+      } while (exclusiveStartKey)
+    },
+    /**
      * Get a ferry that is ready to load more CARs.
      */
     getFerryLoading: async () => {

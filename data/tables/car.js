@@ -1,10 +1,18 @@
 import {
   DynamoDBClient,
+  BatchGetItemCommand,
   TransactWriteItemsCommand,
 } from '@aws-sdk/client-dynamodb'
-import { marshall } from '@aws-sdk/util-dynamodb'
+import { marshall, unmarshall } from '@aws-sdk/util-dynamodb'
 
-import { MAX_TRANSACT_WRITE_ITEMS } from './constants.js'
+import {
+  MAX_TRANSACT_WRITE_ITEMS,
+  MAX_BATCH_GET_ITEMS
+} from './constants.js'
+
+/**
+ * @typedef {import('../types').CarItem} CarItem
+ */
 
 /**
  * Abstraction layer to handle operations on Filecoin pending deal Car Table.
@@ -22,6 +30,27 @@ export function createCarTable (region, tableName, options = {}) {
   })
 
   return {
+    batchGet: async (cars) => {
+      if (cars.length > MAX_BATCH_GET_ITEMS) {
+        throw new RangeError('maximum batch size exceeded')
+      }
+      const cmd = new BatchGetItemCommand({
+        RequestItems: {
+          [tableName]: {
+            Keys: cars.map(car => ({
+              link: { S: car.link }
+            }))
+          }
+        }
+      })
+
+      const response = await dynamoDb.send(cmd)
+      if (!response.Responses) {
+        return []
+      }
+
+      return response.Responses[tableName].map(item => /** @type {CarItem} */ (unmarshall(item)))
+    },
     batchWrite: async (cars) => {
       if (cars.length > MAX_TRANSACT_WRITE_ITEMS) {
         throw new RangeError('maximum batch size exceeded')

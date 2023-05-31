@@ -7,6 +7,8 @@ export async function getCars (length) {
   return (await Promise.all(Array.from({ length }).map(() => randomCAR(128))))
     .map((car) => ({
       link: car.cid.toString(),
-      size: car.size
+      size: car.size,
+      commitmentProof: 'commP',
+      src: [`https://carpark.web3.storage/${car.cid.toString()}`],
     }))
 }

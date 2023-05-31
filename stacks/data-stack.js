@@ -1,4 +1,4 @@
-import { Table } from '@serverless-stack/resources'
+import { Table, Config } from '@serverless-stack/resources'
 import { StartingPosition } from 'aws-cdk-lib/aws-lambda'
 
 import {
@@ -22,6 +22,8 @@ export function DataStack({ stack, app }) {
   // Setup app monitoring with Sentry
   setupSentry(app, stack)
 
+  const privateKey = new Config.Secret(stack, 'PRIVATE_KEY')
+
   /**
    * This table tracks CARs pending a Filecoin deal together with their metadata.
    */
@@ -44,7 +46,7 @@ export function DataStack({ stack, app }) {
   const ferryTable = new Table(stack, 'ferry', {
     ...ferryTableProps,
     // information that will be written to the stream
-    stream: 'new_and_old_images'
+    stream: 'new_and_old_images',
   })
 
   const ferryConfig = getFerryConfig(stack)
@@ -90,9 +92,8 @@ export function DataStack({ stack, app }) {
   // READY -> DEAL_PENDING = request Spade
   // DEAL_PENDING -> DEAL_PROCESSED = deal succeeded + GC
 
-  // ferry dynamodb table stream consumers
+  // Ferry table stream consumer for setting ferries as ready when they have enough space
   ferryTable.addConsumers(stack, {
-    // Ferry table stream consumer for requesting deals on ready
     setFerryAsReady: {
       function: {
         handler: 'functions/set-ferry-as-ready.consumer',
@@ -133,9 +134,64 @@ export function DataStack({ stack, app }) {
     },
   })
 
+  // Ferry table stream consumer for requesting aggregate deals on ready
+  ferryTable.addConsumers(stack, {
+    offerDeal: {
+      function: {
+        handler: 'functions/offer-ferry-for-aggregate.consumer',
+        environment: {
+          CAR_TABLE_NAME: carTable.tableName,
+          FERRY_TABLE_NAME: ferryTable.tableName,
+          DID: mustGetEnv('DID'),
+          AGGREGATION_SERVICE_DID: mustGetEnv('AGGREGATION_SERVICE_DID'),
+          AGGREGATION_SERVICE_URL: mustGetEnv('AGGREGATION_SERVICE_URL')
+        },
+        permissions: [ferryTable],
+        timeout: 15 * 60,
+        bind: [privateKey]
+      },
+      cdk: {
+        eventSource: {
+          batchSize: 1,
+          // Start reading at the last untrimmed record in the shard in the system.
+          startingPosition: StartingPosition.TRIM_HORIZON,
+          // TODO: Add error queue
+          // https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_lambda_event_sources.DynamoEventSourceProps.html#onfailure
+        }
+      },
+      filters: [
+        // Trigger when there is enough data abd state is ingesting
+        {
+          dynamodb: {
+            OldImage: {
+              stat: {
+                S: ['LOADING']
+              }
+            },
+            NewImage: {
+              stat: {
+                S: ['READY']
+              }
+            }
+          }
+        }
+      ],
+    }
+  })
+
   return {
     carTable,
     cargoTable,
     ferryTable,
   }
+}
+
+/**
+ * @param {string} name 
+ * @returns {string}
+ */
+export function mustGetEnv (name) {
+  const value = process.env[name]
+  if (!value) throw new Error(`Missing env var: ${name}`)
+  return value
 }

@@ -23,6 +23,7 @@
     "@types/git-rev-sync": "^2.0.0",
     "@types/node": "^18.11.18",
     "aws-cdk-lib": "2.50.0",
+    "dotenv": "^16.0.3",
     "git-rev-sync": "^3.0.2",
     "hd-scripts": "^3.0.2",
     "lint-staged": "^13.0.3",
@@ -47,9 +48,11 @@
     },
     "rules": {
       "unicorn/explicit-length-check": "off",
+      "unicorn/expiring-todo-comments": "off",
       "unicorn/prefer-set-has": "off",
       "unicorn/no-array-callback-reference": "off",
       "unicorn/no-await-expression-member": "off",
+      "unicorn/no-negated-condition": "off",
       "unicorn/no-zero-fractions": "off",
       "no-console": "off",
       "no-warning-comments": "off"

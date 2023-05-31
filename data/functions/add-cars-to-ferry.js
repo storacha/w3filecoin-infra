@@ -1,7 +1,7 @@
 import * as Sentry from '@sentry/serverless'
 import { unmarshall } from '@aws-sdk/util-dynamodb'
 
-import { addCarsToFerry } from '../lib/add-cars-to-ferry.js'
+import { addCarsToFerry } from '../lib/index.js'
 import { parseDynamoDbEvent } from '../utils/parse-dynamodb-event.js'
 import { mustGetEnv } from '../lib/utils.js'
 
