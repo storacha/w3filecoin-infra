@@ -33,8 +33,8 @@ test('can add cars to table uniquely', async (t) => {
   const cars = (await getCars(10)).map(car => ({
     link: car.link.toString(),
     size: car.size,
-    commP: 'commP',
-    url: 'url',
+    commitmentProof: 'commitmentProof',
+    src: ['url'],
   }))
 
   await carTable.batchWrite(cars)

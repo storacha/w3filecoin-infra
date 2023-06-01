@@ -134,8 +134,8 @@ async function getBatchesToWrite (length, batchSize) {
       return cars.map(car => ({
         link: car.link.toString(),
         size: car.size,
-        commP: 'commP',
-        url: 'url',
+        commitmentProof: 'commitmentProof',
+        src: ['url'],
       }))
     })
   )
