@@ -5,8 +5,8 @@ export const carTableProps = {
   fields: {
     link: 'string',         // `bagy...1`
     size: 'number',         // `101`
-    url: 'string',        // `https://...`
-    commP: 'string',       // `commP...a`
+    src: 'string',        // `https://...`
+    commitmentProof: 'string',       // `commitmentProof...a`
     insertedAt: 'string',   // `2023-01-17T...`
   },
   // link
@@ -20,7 +20,7 @@ export const ferryTableProps = {
     size: 'number',         // `101`
     // Note: `state` and `status` are reserved keywords in dynamodb
     stat: 'string',        // 'LOADING' | 'READY' | 'DEAL_PENDING' | 'DEAL_PROCESSED'
-    commP: 'string',       // `commP...a`
+    commitmentProof: 'string',       // `commitmentProof...a`
     insertedAt: 'string',   // `2023-01-17T...`
   },
   // link
