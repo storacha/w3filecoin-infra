@@ -52,7 +52,7 @@ test('can register batch of CARs to ferry waiting list', async t => {
   
   for (const carRegistered of carsPendingDealAfterRegistrations) {
     t.truthy(cars.find(car => car.link.toString() === carRegistered.link))
-    t.is(carRegistered.url, `${endpoint}${carRegistered.link}`)
+    t.deepEqual(carRegistered.src, new Set([`${endpoint}${carRegistered.link}`]))
   }
 })
 
@@ -96,7 +96,7 @@ test('can handle partial failures registering a batch of CARs to ferry waiting l
 
   for (const carRegistered of carsPendingDealAfterRegistrations) {
     t.truthy(cars.find(car => car.link.toString() === carRegistered.link))
-    t.is(carRegistered.url, `${endpoint}${carRegistered.link}`)
+    t.deepEqual(carRegistered.src, new Set([`${endpoint}${carRegistered.link}`]))
   }
 
   // Validate not found car is not included

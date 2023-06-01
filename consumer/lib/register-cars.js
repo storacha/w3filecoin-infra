@@ -65,11 +65,11 @@ export async function getCarItem(car) {
 
   return {
     link,
-    url: car.url,
+    src: [car.url],
     size: Number(carItemHeadResponse.headers.get('content-length')),
     // TODO = get information from commP
     // This likely will need request to w3infra store table
     // if we go that wat, we can 
-    commP: 'commP',
+    commitmentProof: 'commP',
   }
 }
