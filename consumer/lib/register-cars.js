@@ -67,8 +67,6 @@ export async function getCarItem(car) {
     link,
     url: car.url,
     size: Number(carItemHeadResponse.headers.get('content-length')),
-    // md5 in base 16 like reported by R2/S3
-    md5: carItemHeadResponse.headers.get('etag') || '',
     // TODO = get information from commP
     // This likely will need request to w3infra store table
     // if we go that wat, we can 
