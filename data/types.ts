@@ -5,7 +5,6 @@ export interface CarItem {
   size: number
   commP: string
   url: string
-  md5: string
 }
 
 export interface CarItemFerry {

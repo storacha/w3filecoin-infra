@@ -40,7 +40,6 @@ export function createCarTable (region, tableName, options = {}) {
               size: { 'N': `${car.size}`},
               url: { 'S': car.url },
               commP: { 'S': car.commP },
-              md5: { 'S': car.md5 },
               insertedAt: { 'S': insertedAt },
             },
             ConditionExpression: 'attribute_not_exists(link)',
