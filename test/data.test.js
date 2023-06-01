@@ -251,7 +251,6 @@ async function getBatchesToWrite (length, batchSize) {
         size: car.size,
         commP: 'commP',
         url: 'url',
-        md5: 'md5',
       }))
     })
   )
