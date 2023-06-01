@@ -3,8 +3,8 @@ export type FerryState = 'LOADING' | 'READY' | 'DEAL_PENDING' | 'DEAL_PROCESSED'
 export interface CarItem {
   link: string
   size: number
-  commP: string
-  url: string
+  commitmentProof: string
+  src: string[]
 }
 
 export interface CarItemFerry {

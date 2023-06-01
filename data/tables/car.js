@@ -38,8 +38,8 @@ export function createCarTable (region, tableName, options = {}) {
             Item: {
               link: { 'S': car.link },
               size: { 'N': `${car.size}`},
-              url: { 'S': car.url },
-              commP: { 'S': car.commP },
+              src: { 'SS': car.src },
+              commitmentProof: { 'S': car.commitmentProof },
               insertedAt: { 'S': insertedAt },
             },
             ConditionExpression: 'attribute_not_exists(link)',
