@@ -9,6 +9,8 @@ export default function (app) {
   app.setDefaultFunctionProps({
     runtime: 'nodejs16.x',
     environment: {
+      // experimental fetch is needed so that we can use aggregate-client
+      // with ucanto client without passing a fetch implementation around
       NODE_OPTIONS: "--enable-source-maps  --experimental-fetch",
     },
     bundle: {

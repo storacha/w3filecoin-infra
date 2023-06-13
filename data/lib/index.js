@@ -75,7 +75,10 @@ export async function setFerryOffer (ferryId, ctx) {
   const ferryTable = createFerryTable(ctx.ferry.region, ctx.ferry.tableName, ctx.ferry.options)
   const aggregateService = await createAggregateService(ctx.storefront, ctx.aggregationServiceConnection)
 
-  // Create Offer
+  // Given ferry is ready to get unloaded to invoke `aggregate/offer`.
+  // Ferry cargo (reference to CARs in ferry) is read via async iterable
+  // followed by getting the CAR information of each cargo item in batches.
+  // Batches are limited by DynamoDB maximum batch sizes.
   /** @type {CarItem[]} */
   const offers = await pipe(
     ferryTable.getCargo(ferryId, { limit: MAX_BATCH_GET_ITEMS }),
@@ -101,7 +104,7 @@ export async function setFerryOffer (ferryId, ctx) {
   // Send offer
   const nOffers = offers.map(offer => ({
     ...offer,
-    link: CID.parse(offer.link).link()
+    link: CID.parse(offer.link)
   }))
   // @ts-expect-error CID versions
   await aggregateService.offer(nOffers)

@@ -141,12 +141,13 @@ export function DataStack({ stack, app }) {
         handler: 'functions/offer-ferry-for-aggregate.consumer',
         environment: {
           CAR_TABLE_NAME: carTable.tableName,
+          CARGO_TABLE_NAME: cargoTable.tableName,
           FERRY_TABLE_NAME: ferryTable.tableName,
           DID: mustGetEnv('DID'),
           AGGREGATION_SERVICE_DID: mustGetEnv('AGGREGATION_SERVICE_DID'),
           AGGREGATION_SERVICE_URL: mustGetEnv('AGGREGATION_SERVICE_URL')
         },
-        permissions: [ferryTable],
+        permissions: [carTable, cargoTable, ferryTable],
         timeout: 15 * 60,
         bind: [privateKey]
       },

@@ -20,6 +20,7 @@ const AWS_REGION = mustGetEnv('AWS_REGION')
 async function handler(event) {
   const {
     CAR_TABLE_NAME,
+    CARGO_TABLE_NAME,
     FERRY_TABLE_NAME,
     DID,
     AGGREGATION_SERVICE_DID,
@@ -42,7 +43,10 @@ async function handler(event) {
     },
     ferry: {
       region: AWS_REGION,
-      tableName: FERRY_TABLE_NAME
+      tableName: FERRY_TABLE_NAME,
+      options: {
+        cargoTableName: CARGO_TABLE_NAME
+      }
     },
     storefront: {
       DID,
@@ -63,8 +67,9 @@ export const consumer = Sentry.AWSLambda.wrapHandler(handler)
  */
 function getEnv() {
   return {
-    DID: process.env.DID,
+    DID: mustGetEnv('DID'),
     CAR_TABLE_NAME: mustGetEnv('CAR_TABLE_NAME'),
+    CARGO_TABLE_NAME: mustGetEnv('CARGO_TABLE_NAME'),
     FERRY_TABLE_NAME: mustGetEnv('FERRY_TABLE_NAME'),
     AGGREGATION_SERVICE_DID: mustGetEnv('AGGREGATION_SERVICE_DID'),
     AGGREGATION_SERVICE_URL: mustGetEnv('AGGREGATION_SERVICE_URL'),
