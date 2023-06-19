@@ -1,0 +1,3 @@
+export const DEFAULT_LIMIT = 100
+
+export const SQLSTATE_UNIQUE_VALUE_CONSTRAINT = 23_505
