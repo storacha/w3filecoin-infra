@@ -1,4 +1,4 @@
-import { Api } from '@serverless-stack/resources'
+import { Api } from 'sst/constructs'
 
 import {
   getApiPackageJson,
@@ -8,13 +8,9 @@ import {
 } from './config.js'
 
 /**
- * @param {import('@serverless-stack/resources').StackContext} properties
+ * @param {import('sst/constructs').StackContext} properties
  */
 export function ApiStack({ app, stack }) {
-  stack.setDefaultFunctionProps({
-    srcPath: 'api'
-  })
-
   // Setup app monitoring with Sentry
   setupSentry(app, stack)
 
@@ -36,9 +32,9 @@ export function ApiStack({ app, stack }) {
       }
     },
     routes: {
-      'GET /':        'functions/get.home',
-      'GET /error':   'functions/get.error',
-      'GET /version': 'functions/get.version'
+      'GET /':        'packages/functions/src/api/get.home',
+      'GET /error':   'packages/functions/src/api/get.error',
+      'GET /version': 'packages/functions/src/api/get.version'
     },
   })
 

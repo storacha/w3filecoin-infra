@@ -1,0 +1,29 @@
+{
+  "name": "@w3filecoin/core",
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "test": "ava --serial --no-worker-threads --verbose --timeout=60s test/{*.test.js,**/*.test.js}"
+  },
+  "dependencies": {
+    "@serverless-stack/node": "^1.18.4",
+    "@aws-sdk/client-rds-data": "^3.354.0",
+    "@ucanto/interface": "^8.0.0",
+    "@web3-storage/data-segment": "^2.0.0-dev-1",
+    "kysely": "^0.23.5",
+    "kysely-data-api": "^0.2.1",
+    "multiformats": "12.0.1"
+  },
+  "devDependencies": {
+    "@ipld/car": "5.1.1",
+    "@types/pg-pool": "^2.0.3",
+    "@ucanto/transport": "^8.0.0",
+    "ava": "^5.3.0",
+    "nanoid": "^4.0.0",
+    "pg-pool": "^3.6.0",
+    "testcontainers": "^9.8.0"
+  },
+  "engines": {
+    "node": ">=18.16"
+  }
+}
