@@ -1,7 +1,7 @@
 <h1 align="center">⁂<br/>web3.storage</h1>
 <p align="center">
 
-The filecoin pipeline infra for [w3protocol] built on [SST].
+The filecoin pipeline infra for [w3protocol] built on [SST]. w3filecoin is responsible for keeping the state over time from CAR files being ready to aggregate, to an aggregate landing in Filecoin Storage providers.
 
 ## Getting Started
 
@@ -14,7 +14,7 @@ The repo contains the infra deployment code and the service implementation.
 
 To work on this codebase **you need**:
 
-- Node.js >= v16 (prod env is node v16)
+- Node.js >= v18 (prod env is node v18)
 - An AWS account with the AWS CLI configured locally
 - Copy `.env.tpl` to `.env.local`
 - Install the deps with `npm i`
