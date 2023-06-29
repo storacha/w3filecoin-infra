@@ -5,7 +5,9 @@
   "scripts": {
     "typecheck": "tsc --build"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@w3filecoin/core": "*"
+  },
   "devDependencies": {
     "@sentry/serverless": "7.52.1",
     "sst": "^2.8.3",
