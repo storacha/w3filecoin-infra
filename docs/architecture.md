@@ -4,39 +4,38 @@
 
 ## Background
 
-[web3.storage](http://web3.storage) APIs enable users to easily upload CAR files, while getting them available on the IPFS Network and stored in multiple locations via Filecoin Storage Providers. 
+[web3.storage](http://web3.storage) is a Storefront providing APIs to enable users to easily upload CAR files, while getting them available on the IPFS Network and stored in multiple locations via Filecoin Storage Providers. It relies on Spade as a broker to get their user data into Filecoin Storage Providers. Currently, Spade requires a Filecoin Piece with size between 15.875GiB and 31.75GiB to create deals with Filecoin Storage Providers. Moreover, the closer a Filecoin Piece is closer to the upper bound, the most optimal are the associated storage costs.
 
-When CAR files are uploaded they go through a pipeline with multiple steps (like indexing blocks, validating blocks, generating commitment proofs, etc). There are two requirements for these CAR files to make their way to the w3filecoin pipeline via its consumer stack:
+Taking into account that [web3.storage](http://web3.storage) onboards any type of content (up to a maximum of 4GiB-padded shards to have better utilization of Fil sector space), multiple CAR files uploaded need to be aggregated into a bigger Piece that can be offered to Filecoin Storage Providers. w3filecoin pipeline keeps track of queued CARs (cargo) to be included in Storage Provider deals.
 
-- CAR file is written into web3.storage’s `carpark` bucket in R2
-- The piece commP and piece size are computed for the CAR file
-
-[web3.storage](http://web3.storage) relies on Spade as a broker to get their user data into Filecoin Storage Providers. Currently, Spade requires a Filecoin Piece with size between 15.875GiB and 31.75GiB to create deals with Filecoin Storage Providers. Moreover, the closer a Filecoin Piece is closer to the upper bound, the most optimal are the associated storage costs.
-
-Taking into account that [web3.storage](http://web3.storage) onboards any type of content (up to a maximum of 4GiB-padded shards to have better utilization of Fil sector space), multiple CAR files uploaded need to be aggregated into a bigger Piece that can be offered to Filecoin Storage Providers. w3filecoin pipeline keeps track of queued CARs (cargo) to be included in Aggregates (ferry), in order to offer these aggregates to Storage Providers. Moreover, w3filecoin operates the lifecycle of these cargo and ferries from ingestion until either succeeding landing into Filecoin deals, or failing.
+When a CAR file is written into a given web3.storage's bucket, its metadata gets into the w3filecoin processing pipeline. This pipeline is composed of multiple processing queues, together with a job scheduler per queue that will perform the processing. Each queue handles a processing stage with the goal of getting CAR files into Filecoin deals with Storage Providers.
 
 ## High Level design
 
 The high level flow for the w3filecoin Pipeline is:
 
-- Event is triggered once each CAR is copied into R2, its metadata {pieceSize+pieceLink+carLink} is added to the consumer of the w3filecoin pipeline (AWS SQS).
-    - This can be achieved by either waiting for a receipt of replication, or AWS Event Bridge event.
-- SQS lambda consumer will add given entries to a cargo tracking DB where we keep track of the CARs awaiting to be included into Storage Providers deals.
-- “Aggregates” (multiple CARs) will be offered to Storage Providers once the available CARs have enough size to fill up one.
-- w3filecoin will keep looking for updates about previously offered aggregates
+- **Event** is triggered once a CAR file is written into a bucket with its metadata {`link`, `size`, `bucketName`, `bucketEndpoint`}. This event is added to a `content_validator_queue`.
+- **Content Validator process** validates CARs and writes references to a `content` table.
+- On its own schedule, **Piece maker process** can pull queued content from a `content_queue`, derive piece info for them and write records to a `piece` & `inclusion` tables.
+  - a `inclusion` table enables same piece to be included in another aggregate if a deal fails.
+- **Agregagtor process** reads from a `cargo_queue` (backed by `inclusion` table), attempts to create an aggregate and if successful it writes to an `aggregate` table.
+- **Submission process** reads from the `aggregate_queue`, submits aggregates to the agency (spade proxy) and writes deal record with status "PENDING".
+- TBD deal flow
 
-The w3filecoin pipeline is modeled into 4 different SST Stacks that will be have their infrastructure provisioned in AWS via AWS CloudFormation. These are:
+![Pipeline processes](./processes.png)
+
+The w3filecoin pipeline is modeled into 4 different SST Stacks that will have their infrastructure provisioned in AWS via AWS CloudFormation. These are:
 
 - API Stack
 - Consumer Stack
 - DB Stack
-- CRON Stack
+- Processor Stack
 
 ![Architecture](./architecture.png)
 
 ## API Stack
 
-TODO
+TBC
 API Gateway to expose:
 - Report API for failed aggregates to land into Storage Providers
 - Get to know state of deals
@@ -44,128 +43,163 @@ API Gateway to expose:
 
 ## Consumer Stack
 
-w3filecoin relies on R2 bucket HTTP URLs as the source that Storage Providers will use to fetch CAR files. This way, we need to wait on the replicator to write CAR files into R2. In addition, w3filecoin requires that a `pieceCid` and `pieceSize` is computed for 
+w3filecoin relies on events from Buckets once CAR files are written into them. It is designed to enable multiple sources of CAR files to be easily integrated into the pipeline via its consumer stack.
 
-Once the above conditions are met, an external source triggers an event to the filecoin pipeline to let it know of a new car to be aggregated. Note that this allows us to make filecoin pipeline work with both w3up and CF Hosted APIs.
+As an example, w3filecoin is wired up with `w3infra` as a source of CAR files to get into Filecoin deals. `w3infra` will emit events once CAR files are written into desired buckets. This events should include necessary information of the location of the CAR file to enable w3filecoin to let Storage Providers know where they can fetch the CAR files from.
 
-Further down the line, in case we make writing to R2 first to better optimize gateway performance, it will also be an easy path forward to hook Filecoin pipeline with it, by leveraging receipts.
-
-For MVP the w3infra replicator lambda sends event to the event bridge, being `w3filecoin` responsible for listening on the event bridge for `car-replicated` events.
+Further down the line, consumer stack can be wired with the UCAN Log Stream and use receipts as the trigger.
 
 ## DB Stack
 
-To get CAR files into an aggregated deal, we will need to persist the metadata of these files pending being added to a Filecoin deal in a queue data structure. Potentially, this data structure could also have the concept of priority.
-
-Queue consumers can be triggered (e.g. via a CRON job) to grab items from the Queue and attempt to create an aggregate with them. In case an aggregate can be created, their state should be modified. We can see this as loading up a ferry with cargo once this shipment is ready to being offered via a broker.
+The DB stack relies on Amazon RDS Database to keep the necessary state for the w3filecoin pipeline. Its data model was designed with the aim of being the data structure for each of the processors running within the pipeline, while also enabling the tracking of state of each item in the pipeline and to get a mapping between content CIDs and piece CIDs.
 
 ### Schema
 
-There are two tables within the DB Stack:
-* Cargo - keeps track of cargo (CAR Files ingested by web3.storage) state
-* Ferry - keeps track of aggregates state
-
-Both tables enable an implementation of a Priority Queued based on a State Machine on top of AWS RDS.
-
 ```sql
-CREATE TABLE cargo
+-- Table describes queue of verified CARs to be stored in filecoin
+-- CAR is considered in queue when there is no piece referencing it
+CREATE TABLE content
 (
-	-- Filecoin Piece CID - commP of CAR file
-	link TEXT PRIMARY KEY,
-	-- Filecoin Piece Size
-  size number NOT NULL,
-	-- CAR file CID
-	car_link TEXT NOT NULL,
-  -- State of the cargo in the pipeline
-  state CARGO_STATE NOT NULL,
-  -- Priority in the queue - for now likely same as queuedAt
-  priority TEXT NOT NULL,
-  -- Timestamp
-  inserted TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
-  -- TODO: Maybe timestamps for other stats?
-  -- Filecoin Aggregate CID - commP of commPs
-  ferry_link TEXT REFERENCES ferry(link),
-  -- Failed to add into aggregate code
-  ferry_failed_code TEXT,
-);
-
-CREATE INDEX cargo_stat_idx ON cargo (stat);
-CREATE INDEX cargo_car_link_idx ON cargo (car_link);
-CREATE INDEX cargo_aggregate_link_idx ON cargo (ferrylink);
-
-CREATE TABLE ferry
-(
-	-- Filecoin Aggregate CID - commP of commPs
+  -- CAR CID
   link TEXT PRIMARY KEY,
-  -- Aggregate size in bytes - TODO: maybe nice to have for metrics
+  -- CAR Size
   size number NOT NULL,
-  -- State of the ferry in the pipeline
-  state FERRY_STATE NOT NULL,
-  -- Priority in the queue - for now likely same as queuedAt
-  priority TEXT NOT NULL,
+  -- Bucket name where the CAR is
+	bucket_name TEXT NOT NULL,
+  -- Endpoint of the bucket
+  bucket_endpoint TEXT NOT NULL,
   -- Timestamp
+  inserted TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Table describes pieces derived corresponding to CARs in the content table. Link (commP) is
+-- unique even though cargo reference is not, that is because there may be an error in piece
+-- derivation and in that case another correct piece will reference the same content.
+CREATE TABLE piece
+(
+  -- Piece CID
+  link TEXT NOT NULL PRIMARY KEY,
+  -- Piece size
+  size number NOT NULL,
+  -- Reference to the content of this piece (CAR CID).
+  content TEXT NOT NULL REFERENCES content(link),
+  -- Time when the piece was derived from the content
+  inserted TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Content for which we need to derive piece CIDs. We will have a process that
+-- reads from this queue and writes into `piece` table.
+CREATE VIEW content_queue AS
+  SELECT content.*
+  FROM content
+  LEFT OUTER JOIN piece ON content.link = piece.content
+  WHERE piece.content IS NULL;
+
+-- Table describing pieces to be included into aggregates. If aggregate is NULL then the
+-- piece is queued for the aggregation.
+CREATE TABLE inclusion
+(
+  -- Piece CID. Notice that it is not unique because in case of bad piece
+  -- aggregate will be rejected and good pieces will be written back here
+  -- to be included into new aggregate
+  piece TEXT NOT NULL REFERENCES piece(link),
+  
+  -- Aggregate CID, if NULL the the piece is queued for the aggregation
+  aggregate TEXT REFERENCES aggregate(link) NULL,
+
+  -- Priority in the queue. I think it could be a counter on initial inserts hence
+  --  providing FIFO order. When piece is retried (after aggregate is rejected)
+  -- we could keep original priority hence prioritizing it over new items yet
+  -- keeping original FIFO order among rejects.
+  priority TEXT NOT NULL,
+
+  -- Time when the piece was added to the queue.
   inserted TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+
+  -- Piece may end up in multiple aggregates e.g. if aggregate was rejected
+  PRIMARY KEY (aggregate, piece)
+
+   -- We may also want to write inclusion proof here
 );
 
-CREATE INDEX ferry_stat_idx ON ferry (stat);
-
--- State of Cargo state machine
-CREATE TYPE CARGO_STATE AS ENUM
+-- Table for created aggregates. 
+CREATE TABLE aggregate
 (
-	'QUEUED',
-	'OFFERING',
-	'SUCCEED',
-	'FAILED'
+  -- commP of the aggregate (commP of the commPs)
+  link TEXT PRIMARY KEY NOT NULL,
+  -- Aggregate size
+  size number NOT NULL,
+  -- Time when the aggregate was created
+  inserted TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- State of Ferry state machine:
-CREATE TYPE FERRY_STATE AS ENUM
-(
-	'QUEUED',
-	'ARRANGING',
-	'SUCCEED',
-	'FAILED'
+-- View for inclusion records that do not have an aggregate.
+CREATE VIEW cargo AS
+  SELECT *
+  FROM inclusion
+  WHERE aggregate IS NULL;
+
+-- State of aggregate deals. When aggregate is send to spade-proxy status is 'PENDING'.
+-- When spade-proxy requests a wallet signature, status will be updated to 'SIGNED'. Once
+-- deal is accepted status changes to `APPROVED`, but if deal fails status will be set to
+-- `REJECTED`.
+CREATE TABLE deal (
+  aggregate TEXT PRIMARY KEY NOT NULL REFERENCES aggregate(link),
+  status DEAL_STATUS DEFAULT 'PENDING',
+  -- if status is an error this may contain details about the error e.g. json containing
+  -- piece CIDs that were invalid.
+  detail TEXT,
+  -- Time when aggregate was send to spade-proxy
+  inserted TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  -- Time when aggregate was signed
+  signed TIMESTAMP WITH TIME ZONE,
+  -- Time when aggregate was processed
+  processed TIMESTAMP WITH TIME ZONE
 );
+
+CREATE TYPE DEAL_STATUS AS ENUM
+(
+  'PENDING',
+  'SIGNED',
+  'APPROVED',
+  'REJECTED'
+);
+
+-- View of aggregates to be submitted to spade, that is all aggregates that we do not
+-- have deal records for.
+CREATE VIEW aggregate_queue AS
+  SELECT aggregate.*
+  FROM aggregate
+  LEFT OUTER JOIN deal ON aggregate.link = deal.aggregate
+  WHERE deal.aggregate IS NULL;
+
+-- State for the inclusions that made deals fail
+CREATE TABLE inclusion_failure {
+  -- Piece CID
+  piece TEXT NOT NULL REFERENCES piece(link),
+  -- Aggregate CID
+  aggregate TEXT NOT NULL REFERENCES aggregate(link),
+  -- Failure reason
+  reason TEXT NOT NULL,
+  -- Time when failure was reported
+  inserted TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+
+  PRIMARY KEY (aggregate, piece)
+}
 ```
 
 ![DB Schema](./db-schema.png)
 https://dbdiagram.io/d/649af07402bd1c4a5e249feb
 
-### State Machine
+## Processor Stack
 
-Cargo State Machine might have the following state changes:
-* `QUEUED` -> `OFFERING` - when cargo item is associated with an aggregate to offer for storage
-* `OFFERING` -> `SUCCEED` - end state as cargo is already available in Storage Providers
-* `OFFERING` -> `FAILED` - cargo could not make it to Storage Provider because this specific cargo failed (e.g. wrong commP, or could not be fetched)
-* `OFFERING` -> `QUEUED` - cargo could not make it to Storage Provider because other cargo in same aggregate failed, but there is no issue with this specific cargo reported. Therefore, it can be queued for other Aggregate inclusion
-* `FAILED` -> `SUCCEED` - cargo previously failed but reason behind it is now solved
+The w3infra processor stack manages the deployed schedulers that invoke lambda functions to consume the DB stack queues and attempt to make progress in their items to the following stages of the pipeline.
 
-Ferry State Machine might have the following state changes:
-* `QUEUED` -> `ARRANGING` - when given ferry was included in an `aggregate/offer` invocation to Storage Broker
-* `ARRANGING` -> `SUCCEED` - when `aggregate/offer` for ferry succeeded
-* `ARRANGING` -> `FAILED` - when `aggregate/offer` for ferry failed
+Each of the schedulers might have their own schedules and can act independently of each other.
 
-### Flow
+The processes running in these pipeline are:
 
-1. CAR Files get inserted into `cargo` Table once `R2 write` AND `commP write` events happen (Consumer stack context)
-2. CRON JOB triggers lambda function over time. Lambda performs:
-    1. queries cargo table for a page of cargo with stat `QUEUED`
-    2. sorts page results by their size and attempts to create an aggregate with a compatible size within the results. In case size is not enough, it attempts to get more pages until either having enough cargo or stopping until next cron call.
-    3. performs a DB transaction updating `stat` to `OFFERING` and setting `aggregateLink` AND insert entry to `ferry` Table with the `aggregate` information (it is required to guarantee previous state are the same and no concurrent job added something to other aggregate in the meantime)
-3. CRON JOB triggers lambda function over time. Lambda performs:
-    1. queries `ferry` table for an entry of stat `QUEUED`
-    2. invokes `aggregate/offer` to spade-proxy (Must be idempotent!!)
-    3. mutates stat to `ARRANGING` in case of partial failure in second write (first was offer invocation), 
-4. CRON keeps triggering Lambda function to check for `Receipts` for ferries with stat `ARRANGING`
-    1. Once receipt is available, `stat` is mutated to either `SUCCEED` or `FAILED`. In case `FAILED`, `cargo` should also have `aggregateFailedCode` updated.
-5. Exposed API endpoint can at any time receive report of offered aggregates failing to get into Filecoin Storage Providers
-    1. performs a DB transaction updating `stat` of ferry from `ARRANGING` to `FAILED`, as well as affected `cargo` to from `OFFERING` to either `QUEUED` or `FAILED` depending if the reason for aggregate to fail was that cargo itself, or not. When a cargo item was responsible for the failure of the aggregate offer (for instance due to wrong commP value provided) a reason code can also be persisted on this transaction.
-6. Exposed API endpoint can at any time receive requests for the state of a given aggregate or CAR file in a deal.
-    1. invokes `aggregate/get` to spade-proxy to grab information about it
-    2. Note that this should ideally be cached to avoid hammering Spade Oracle
-
-
-## Cron Stack
-
-The w3infra cron stack manages the deployed lambda functions that run to consume the DB stack queues and mutate their states as needed.
-
-For more details on these, please refer to the DB Stack Flow subsection.
+1. **Content Validator process** validates CARs and writes references to `content` table.
+2. **Piece maker process** pulls queued content from `content_queue`, derive piece info for them and write records to the `piece` & `inclusion` tables.
+3. **Aggregator process** reads from the `cargo` view, attempts to create an aggregate and, if successful, writes to aggregate table.
+4. **Submission process** reads from the `aggregate_queue`, submits aggregates to the agency (spade proxy) and writes pending deal record.
