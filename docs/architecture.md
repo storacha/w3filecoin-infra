@@ -172,20 +172,6 @@ CREATE VIEW aggregate_queue AS
   FROM aggregate
   LEFT OUTER JOIN deal ON aggregate.link = deal.aggregate
   WHERE deal.aggregate IS NULL;
-
--- State for the inclusions that made deals fail
-CREATE TABLE inclusion_failure {
-  -- Piece CID
-  piece TEXT NOT NULL REFERENCES piece(link),
-  -- Aggregate CID
-  aggregate TEXT NOT NULL REFERENCES aggregate(link),
-  -- Failure reason
-  reason TEXT NOT NULL,
-  -- Time when failure was reported
-  inserted TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
-
-  PRIMARY KEY (aggregate, piece)
-}
 ```
 
 ![DB Schema](./db-schema.png)
