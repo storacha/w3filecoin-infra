@@ -87,13 +87,17 @@ CREATE TABLE piece
   inserted TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+CREATE INDEX piece_content_idx ON piece (content);
+CREATE INDEX piece_inserted_idx ON piece (inserted);
+
 -- Content for which we need to derive piece CIDs. We will have a process that
 -- reads from this queue and writes into `piece` table.
 CREATE VIEW content_queue AS
   SELECT content.*
   FROM content
   LEFT OUTER JOIN piece ON content.link = piece.content
-  WHERE piece.content IS NULL;
+  WHERE piece.content IS NULL
+  ORDER BY piece.inserted;
 
 -- Table describing pieces to be included into aggregates. If aggregate is NULL then the
 -- piece is queued for the aggregation.
@@ -122,6 +126,8 @@ CREATE TABLE inclusion
    -- We may also want to write inclusion proof here
 );
 
+CREATE INDEX inclusion_inserted_idx ON inclusion (inserted);
+
 -- Table for created aggregates. 
 CREATE TABLE aggregate
 (
@@ -137,9 +143,10 @@ CREATE TABLE aggregate
 CREATE VIEW cargo AS
   SELECT *
   FROM inclusion
-  WHERE aggregate IS NULL;
+  WHERE aggregate IS NULL
+  ORDER BY inserted;
 
--- State of aggregate deals. When aggregate is send to spade-proxy status is 'PENDING'.
+-- State of aggregate deals. When aggregate is sent to spade-proxy status is 'PENDING'.
 -- When spade-proxy requests a wallet signature, status will be updated to 'SIGNED'. Once
 -- deal is accepted status changes to `APPROVED`, but if deal fails status will be set to
 -- `REJECTED`.
@@ -157,6 +164,11 @@ CREATE TABLE deal (
   processed TIMESTAMP WITH TIME ZONE
 );
 
+CREATE INDEX deal_inserted_idx ON deal (inserted);
+CREATE INDEX deal_signed_idx ON deal (signed);
+CREATE INDEX deal_signed_idx ON deal (signed);
+CREATE INDEX deal_status_idx ON deal (status);
+
 CREATE TYPE DEAL_STATUS AS ENUM
 (
   'PENDING',
@@ -172,6 +184,27 @@ CREATE VIEW aggregate_queue AS
   FROM aggregate
   LEFT OUTER JOIN deal ON aggregate.link = deal.aggregate
   WHERE deal.aggregate IS NULL;
+
+-- View for deals pending.
+CREATE VIEW deal_pending AS
+  SELECT *
+  FROM deal
+  WHERE status = "PENDING"
+  ORDER BY inserted;
+
+-- View for deals approved by storage providers.
+CREATE VIEW deal_approved AS
+  SELECT *
+  FROM deal
+  WHERE status = "APPROVED"
+  ORDER BY processed;
+
+-- View for deals rejected by storage providers.
+CREATE VIEW deal_rejected AS
+  SELECT *
+  FROM deal
+  WHERE status = "REJECTED"
+  ORDER BY processed;
 ```
 
 ![DB Schema](./db-schema.png)
