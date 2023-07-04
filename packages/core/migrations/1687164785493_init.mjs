@@ -144,9 +144,38 @@ export async function up(db) {
     .column('inserted')
     .execute()
   await db.schema
+    .createIndex('deal_signed_idx')
+    .on('deal')
+    .column('signed')
+    .execute()
+  await db.schema
+    .createIndex('deal_processed_idx')
+    .on('deal')
+    .column('processed')
+    .execute()
+  await db.schema
     .createIndex('deal_status_idx')
     .on('deal')
     .column('status')
+    .execute()
+
+  /**
+   * View of aggregates to be submitted to spade, that is all aggregates that we do not
+   * have deal records for.
+   */
+  await db.schema
+    .createView('aggregate_queue')
+    .as(
+      db.selectFrom('aggregate')
+        .leftJoin('deal', 'aggregate.link', 'deal.aggregate')
+        .where('deal.aggregate', 'is', null)
+        .select([
+          'aggregate.link',
+          'aggregate.size',
+          'aggregate.inserted',
+        ])
+        .orderBy('aggregate.inserted')
+    )
     .execute()
 
   /**

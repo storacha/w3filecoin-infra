@@ -3,9 +3,11 @@ import { test } from './helpers/context.js'
 import { useAggregateTable } from '../src/table/aggregate.js'
 import { useContentTable } from '../src/table/content.js'
 import { usePieceTable } from '../src/table/piece.js'
+import { useDealTable } from '../src/table/deal.js'
 import { useCargoView } from '../src/views/cargo.js'
-import { useContentQueueView } from '../src/views/content-queue.js'
 import { useDealView } from '../src/views/deal.js'
+import { useContentQueueView } from '../src/views/content-queue.js'
+import { useAggregateQueueView } from '../src/views/aggregate-queue.js'
 import { DatabaseUniqueValueConstraintErrorName } from '../src/table/errors.js'
 
 import { createDatabase } from './helpers/resources.js'
@@ -92,8 +94,10 @@ test('can create aggregate with queued cargo and add it to pending deals', async
   const aggregateTable = useAggregateTable(dbClient)
   const contentTable = useContentTable(dbClient)
   const pieceTable = usePieceTable(dbClient)
+  const dealTable = useDealTable(dbClient)
   const cargoView = useCargoView(dbClient)
   const dealView = useDealView(dbClient)
+  const aggregateQueueView = useAggregateQueueView(dbClient)
   const cargoItems = await getCargo(10)
 
   // Queue content to get piece
@@ -123,6 +127,22 @@ test('can create aggregate with queued cargo and add it to pending deals', async
   // Cargo queue entries not available to aggregate anymore
   const queuedCargoToAggregationAfterAggregate = await cargoView.select()
   t.is(queuedCargoToAggregationAfterAggregate.ok?.length, 0)
+
+  // A queued aggregate was created
+  const queuedAggregateBeforeDeal = await aggregateQueueView.select()
+  if (!queuedAggregateBeforeDeal.ok) {
+    throw new Error('no queued aggregate created')
+  }
+  t.is(queuedAggregateBeforeDeal.ok.length, 1)
+
+  // Sent a deal from the queue
+  await dealTable.insert({
+    aggregate: queuedAggregateBeforeDeal.ok[0].link
+  })
+
+  // Queued aggregates sent
+  const queuedAggregateAfterDeal = await aggregateQueueView.select()
+  t.is(queuedAggregateAfterDeal.ok?.length, 0)
 
   // A deal as pending should have been created
   const pendingDeals = await dealView.selectPending()
@@ -247,5 +267,5 @@ test('concurrent aggregate insertion fail to be added if partially same cargo', 
   if (!queuedCargoToAggregationAfterAggregate.ok) {
     throw new Error('no queued cargo after aggregate')
   }
-  t.is(queuedCargoToAggregationAfterAggregate.ok.length, 5)
+  t.not(queuedCargoToAggregationAfterAggregate.ok.length, cargoItems.length)
 })

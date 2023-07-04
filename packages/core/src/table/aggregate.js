@@ -1,7 +1,6 @@
 import { Kysely } from 'kysely'
 
 import { useInclusionTable } from './inclusion.js'
-import { useDealTable } from './deal.js'
 import { getDialect } from './utils.js'
 import {
   SQLSTATE_UNIQUE_VALUE_CONSTRAINT
@@ -44,8 +43,7 @@ export function useAggregateTable (dbClient) {
       try {
         // Transaction
         await dbClient.transaction().execute(async trx => {
-          // create deal and inclusion tables backed by transaction client
-          const dealTable = useDealTable(trx)
+          // create inclusion tables backed by transaction client
           const inclusionTable = useInclusionTable(trx)
 
           // Insert Aggregate and its dependencies
@@ -57,19 +55,12 @@ export function useAggregateTable (dbClient) {
             })
             .execute()
 
-          const responses = await Promise.all([
-            // Set inclusion items
-            inclusionTable.aggregate(
-              pieceItems,
-              aggregateItem.link
-            ),
-            // Insert to deal table
-            dealTable.insert({
-              aggregate: aggregateItem.link
-            })
-          ])
+          // Set inclusion items
+          const { error } = await inclusionTable.aggregate(
+            pieceItems,
+            aggregateItem.link
+          )
 
-          const error = responses.find(r => r.error)
           if (error) {
             throw error
           }

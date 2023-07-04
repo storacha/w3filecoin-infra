@@ -16,6 +16,12 @@ export interface Aggregate {
   inserted: Generated<Timestamp | null>;
 }
 
+export interface AggregateQueue {
+  link: string | null;
+  size: Int8 | null;
+  inserted: Timestamp | null;
+}
+
 export interface Cargo {
   piece: string | null;
   aggregate: string | null;
@@ -100,6 +106,7 @@ export interface Piece {
 
 export interface Database {
   aggregate: Aggregate;
+  aggregate_queue: AggregateQueue;
   cargo: Cargo;
   content: Content;
   content_queue: ContentQueue;

@@ -53,6 +53,10 @@ export interface ContentQueueView {
   select: (options?: SelectOptions) => Promise<Result<ContentOutput[], Failure>>
 }
 
+export interface AggregateQueueView {
+  select: (options?: SelectOptions) => Promise<Result<AggregateOutput[], Failure>>
+}
+
 export interface DealView {
   selectPending: (options?: SelectOptions) => Promise<Result<DealPendingOutput[], Failure>>
   selectSigned: (options?: SelectOptions) => Promise<Result<DealSignedOutput[], Failure>>
@@ -79,6 +83,10 @@ export interface PieceInsertInput {
 export interface AggregateInsertInput {
   link: Link
   size: number
+}
+
+export interface AggregateOutput extends AggregateInsertInput {
+  inserted: string
 }
 
 export interface InclusionInsertInput {
