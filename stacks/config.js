@@ -1,9 +1,8 @@
 import git from 'git-rev-sync'
 import * as pack from '../package.json'
-import { Duration } from 'aws-cdk-lib'
 
-const DEFAULT_FERRY_CARGO_MAX_SIZE = 127*(1<<28)
-const DEFAULT_FERRY_CARGO_MIN_SIZE = 1+127*(1<<27)
+export const DEFAULT_FERRY_CARGO_MAX_SIZE = 127*(1<<28)
+export const DEFAULT_FERRY_CARGO_MIN_SIZE = 1+127*(1<<27)
 
 /**
  * Get nicer resources name
@@ -61,27 +60,6 @@ export function setupSentry (app, stack) {
   stack.addDefaultFunctionEnv({
     SENTRY_DSN,
   })
-}
-
-
-/**
- * @param {import('sst/constructs').Stack} stack
- */
-export function getFerryConfig (stack) {
-  if (stack.stage !== 'production') {
-    const { FERRY_CARGO_MAX_SIZE, FERRY_CARGO_MIN_SIZE } = process.env
-    return {
-      ferryCargoMaxSize: FERRY_CARGO_MAX_SIZE || `${DEFAULT_FERRY_CARGO_MAX_SIZE}`,
-      ferryCargoMinSize: FERRY_CARGO_MIN_SIZE || `${20_000}`,
-      maxBatchingWindow: Duration.seconds(15)
-    }
-  }
-
-  return {
-    ferryCargoMaxSize: `${DEFAULT_FERRY_CARGO_MAX_SIZE}`,
-    ferryCargoMinSize: `${DEFAULT_FERRY_CARGO_MIN_SIZE}`,
-    maxBatchingWindow: Duration.minutes(5)
-  }
 }
 
 /**

@@ -1,7 +1,7 @@
 import { RDS } from 'sst/constructs'
 
 import {
-  setupSentry,
+  setupSentry
 } from './config.js'
 
 /**
@@ -11,13 +11,25 @@ export function DbStack({ stack, app }) {
   // Setup app monitoring with Sentry
   setupSentry(app, stack)
 
-  // TODO: Should small one for test/pr
   const dbName = 'w3filecoinrds'
   const db = new RDS(stack, dbName, {
     engine: 'postgresql11.13',
     defaultDatabaseName: dbName,
     migrations: 'packages/core/migrations',
-    types: 'packages/core/src/sql.generated.ts'
+    types: 'packages/core/src/sql.generated.ts',
+    // https://docs.sst.dev/constructs/RDS#auto-scaling
+    scaling: stack.stage !== 'production' ?
+      {
+        autoPause: true,
+        minCapacity: 'ACU_2',
+        maxCapacity: 'ACU_2',
+      }
+      :
+      {
+        autoPause: false,
+        minCapacity: 'ACU_4',
+        maxCapacity: 'ACU_64',
+      }
   })
 
   return {
