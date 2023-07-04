@@ -16,9 +16,16 @@ export async function getCargo (length) {
     const commP = await CommP.build(car.bytes)
 
     return {
-      link: commP.link(),
-      size: commP.pieceSize,
-      carLink: car.cid.link()
+      piece: {
+        link: commP.link(),
+        size: commP.pieceSize,
+      },
+      content: {
+        link: car.cid.link(),
+        size: car.size,
+        bucketName: 'name',
+        bucketEndpoint: 'endpoint'
+      }
     }
   }))
 }

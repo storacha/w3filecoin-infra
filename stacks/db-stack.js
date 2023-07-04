@@ -11,6 +11,7 @@ export function DbStack({ stack, app }) {
   // Setup app monitoring with Sentry
   setupSentry(app, stack)
 
+  // TODO: Should small one for test/pr
   const dbName = 'w3filecoinrds'
   const db = new RDS(stack, dbName, {
     engine: 'postgresql11.13',

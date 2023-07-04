@@ -25,5 +25,10 @@
   },
   "engines": {
     "node": ">=18.16"
+  },
+  "eslintConfig": {
+    "rules": {
+      "unicorn/no-null": "off"
+    }
   }
 }

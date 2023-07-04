@@ -1,14 +1,7 @@
 import { Link } from '@ucanto/interface'
 import {
-  Transaction,
   UpdateResult
 } from 'kysely'
-
-import {
-  Database,
-  CargoState,
-  FerryState
-} from './sql.generated'
 
 export interface DialectProps {
   database: string
@@ -16,93 +9,106 @@ export interface DialectProps {
   resourceArn: string
 }
 
-export interface CargoTable {
+export interface ContentTable {
   /**
-   * Inserts cargo to the table, with status queued to be offered in an aggregate.
+   * Inserts content data to the table, so that it gets processed and into a deal.
    */
-  insert: (cargoItem: CargoInsertInput) => Promise<Result<{}, Failure>>
-  /**
-   * Select cargo from the table in a given Cargo State.
-   */
-  selectByState: (state: CargoState, options?: GetOptions) => Promise<Result<CargoOut[], Failure>>
-  /**
-   * Loads cargo into an offering transaction.
-   */
-  updateCargoOffering: (cargoItems: Link[], ferryLink: Link) => Promise<Result<UpdateResult[], Failure>>
-  /**
-   * Updates state of cargo items to successfully landed in SP.
-   */
-  updateCargoSuccess: (ferryLink: Link) => Promise<Result<UpdateResult[], Failure>>
-  /**
-   * Updates state of cargo items to failed landed in SP if there was a reason, otherwise queue them again.
-   * Cargo state will mutate to succeed if entire transaction succeeds.
-   */
-  updateCargoFailedOrQueuedOnTrx: (ferryLink: Link, failedCargoItems: FailedCargo[], trx: Transaction<Database>) => Promise<Result<{}, Failure>>
+  insert: (item: ContentInsertInput) => Promise<Result<{}, Failure>>
 }
 
-export interface FerryTable {
+export interface PieceTable {
   /**
-   * Inserts ferry to the table, with status queued to be arranged by a broker.
+   * Inserts piece data to the table, so that it gets aggregated and into a deal.
    */
-  insert: (ferryItem: FerryInsertInput, cargoItems: Link[]) => Promise<Result<{}, Failure>>
-  /**
-   * Select ferry from the table in a given Ferry State.
-   */
-  selectByState: (state: FerryState, options?: GetOptions) => Promise<Result<FerryOut[], Failure>>
-  /**
-   * Set given ferry as being arranged by a broker.
-   */
-  updateFerryToArranging: (ferryItem: Link) => Promise<Result<{}, Failure>>
-  /**
-   * Set given ferry as successfully arranged by a broker.
-   */
-  updateFerryToSucceed: (ferryItem: Link) => Promise<Result<{}, Failure>>
-  /**
-   * Set given ferry as failed to be arranged by a broker.
-   */
-  updateFerryToFailed: (ferryItem: Link, failedCargoItems: FailedCargo[]) => Promise<Result<{}, Failure>>
+  insert: (item: PieceInsertInput, contentLink: Link) => Promise<Result<{}, Failure>>
 }
 
-export interface CargoInsertInput {
+export interface AggregateTable {
+  /**
+   * Inserts aggregate data to the table, so that it gets into a deal.
+   */
+  insert: (aggregate: AggregateInsertInput, pieces: Link[]) => Promise<Result<{}, Failure>>
+}
+
+export interface InclusionTable {
+  /**
+   * Inserts inclusion data to the table, so that inserted piece is aggregated.
+   */
+  insert: (item: InclusionInsertInput) => Promise<Result<{}, Failure>>
+  aggregate: (items: Link[], aggregateLink: Link) => Promise<Result<UpdateResult[], Failure>>
+}
+
+export interface DealTable {
+  /**
+   * Inserts deal data to the table, so that deal flow can be tracked.
+   */
+  insert: (item: DealInsertInput) => Promise<Result<{}, Failure>>
+}
+
+export interface CargoView {
+  select: (options?: SelectOptions) => Promise<Result<CargoOutput[], Failure>>
+}
+
+export interface ContentQueueView {
+  select: (options?: SelectOptions) => Promise<Result<ContentOutput[], Failure>>
+}
+
+export interface DealView {
+  selectPending: (options?: SelectOptions) => Promise<Result<DealPendingOutput[], Failure>>
+  selectSigned: (options?: SelectOptions) => Promise<Result<DealSignedOutput[], Failure>>
+  selectApproved: (options?: SelectOptions) => Promise<Result<DealProcessedOutput[], Failure>>
+  selectRejected: (options?: SelectOptions) => Promise<Result<DealProcessedOutput[], Failure>>
+}
+
+export interface ContentInsertInput {
   link: Link
   size: number
-  carLink: Link
+  bucketName: string
+  bucketEndpoint: string
+}
+
+export interface ContentOutput extends ContentInsertInput {
+  inserted: string
+}
+
+export interface PieceInsertInput {
+  link: Link
+  size: number
+}
+
+export interface AggregateInsertInput {
+  link: Link
+  size: number
+}
+
+export interface InclusionInsertInput {
+  piece: Link
   priority?: string
 }
 
-export interface CargoOut {
-  link: Link
-  size: number
-  carLink: Link
-  state: CargoState
-  priority: string
-  inserted?: Date
-  ferryLink?: Link
-  ferryFailedCode?: string
+export interface CargoOutput extends InclusionInsertInput {
+  inserted: string
 }
 
-export interface FerryInsertInput {
-  link: Link
-  size: number
-  priority?: string
+export interface DealInsertInput {
+  aggregate: Link
 }
 
-export interface FerryOut {
-  link: Link
-  size: number
-  state: FerryState
-  priority: string
-  inserted?: Date
+export interface DealPendingOutput extends DealInsertInput {
+  inserted: string
 }
 
-export interface FailedCargo {
-  link: Link
-  code: string
+export interface DealSignedOutput extends DealInsertInput {
+  signed: string
 }
 
-export interface GetOptions {
+export interface DealProcessedOutput extends DealInsertInput {
+  processed: string
+}
+
+export interface SelectOptions {
   limit?: number
-  orderBy?: 'priority' | 'inserted' | 'size'
+  orderBy?: 'priority' | 'inserted' | 'size' // TODO: remove?
 }
 
 export type Result<T = unknown, X extends {} = {}> = Variant<{
