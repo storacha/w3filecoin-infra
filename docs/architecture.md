@@ -64,10 +64,8 @@ CREATE TABLE content
   link TEXT PRIMARY KEY,
   -- CAR Size
   size number NOT NULL,
-  -- Bucket name where the CAR is
-	bucket_name TEXT NOT NULL,
-  -- Endpoint of the bucket
-  bucket_endpoint TEXT NOT NULL,
+  -- Source where the content can be fetched from
+  source JSONB NOT NULL,
   -- Timestamp
   inserted TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
