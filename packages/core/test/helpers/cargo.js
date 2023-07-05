@@ -23,8 +23,19 @@ export async function getCargo (length) {
       content: {
         link: car.cid.link(),
         size: car.size,
-        bucketName: 'name',
-        bucketEndpoint: 'endpoint'
+        source: [
+          {
+            bucketName: 'carpark-prod-0',
+            bucketRegion: 'auto',
+            key: `${car.cid.link()}/${car.cid.link()}.car`,
+            bucketEndpoint: 'https://pub-92584e4edae340ac9a75ebb3a34b47c2.r2.dev',
+          },
+          {
+            bucketName: 'carpark-prod-0',
+            bucketRegion: 'us-est-2',
+            key: `${car.cid.link()}/${car.cid.link()}.car`,
+          }
+        ]
       }
     }
   }))

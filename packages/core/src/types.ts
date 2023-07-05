@@ -67,12 +67,18 @@ export interface DealView {
 export interface ContentInsertInput {
   link: Link
   size: number
-  bucketName: string
-  bucketEndpoint: string
+  source: ContentSource[]
 }
 
 export interface ContentOutput extends ContentInsertInput {
   inserted: string
+}
+
+export type ContentSource = {
+  bucketName: string
+  bucketRegion: string
+  key: string
+  bucketUrl?: string
 }
 
 export interface PieceInsertInput {

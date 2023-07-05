@@ -8,6 +8,18 @@ export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>
 
 export type Int8 = ColumnType<string, string | number | bigint, string | number | bigint>;
 
+export type Json = ColumnType<JsonValue, string, string>;
+
+export type JsonArray = JsonValue[];
+
+export type JsonObject = {
+  [K in string]?: JsonValue;
+};
+
+export type JsonPrimitive = boolean | null | number | string;
+
+export type JsonValue = JsonArray | JsonObject | JsonPrimitive;
+
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
 export interface Aggregate {
@@ -32,16 +44,14 @@ export interface Cargo {
 export interface Content {
   link: string;
   size: Int8;
-  bucket_name: string;
-  bucket_endpoint: string;
+  source: Json;
   inserted: Generated<Timestamp | null>;
 }
 
 export interface ContentQueue {
   link: string | null;
   size: Int8 | null;
-  bucket_name: string | null;
-  bucket_endpoint: string | null;
+  source: Json | null;
   inserted: Timestamp | null;
 }
 

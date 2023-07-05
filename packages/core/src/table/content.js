@@ -36,8 +36,7 @@ export function useContentTable (dbClient) {
       const item = {
         link: `${contentItem.link}`,
         size: contentItem.size,
-        bucket_name: contentItem.bucketName,
-        bucket_endpoint: contentItem.bucketEndpoint,
+        source: JSON.stringify(contentItem.source),
         inserted,
       }
 

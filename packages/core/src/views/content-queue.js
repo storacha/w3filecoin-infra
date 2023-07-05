@@ -53,8 +53,7 @@ export function useContentQueueView (dbClient) {
       const contentQueue = res.map(content => ({
         link: content.link !== null && parseLink(content.link),
         size: content.size != null && Number.parseInt(content.size),
-        bucketName: content.bucket_name,
-        bucketEndpoint: content.bucket_endpoint,
+        source: content.source,
         inserted: content.inserted,
       }))
 

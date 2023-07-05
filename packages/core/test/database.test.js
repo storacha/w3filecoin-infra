@@ -46,8 +46,7 @@ test('can insert to content table and get content queued', async t => {
     }
     t.truthy(cargoItem)
     t.is(item.size, cargoItem.content.size)
-    t.is(item.bucketName, cargoItem.content.bucketName)
-    t.is(item.bucketEndpoint, cargoItem.content.bucketEndpoint)
+    t.deepEqual(item.source, cargoItem.content.source)
     t.truthy(item.inserted)
   }
 })

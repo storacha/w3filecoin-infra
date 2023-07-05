@@ -18,8 +18,7 @@ export async function up(db) {
     .createTable('content')
     .addColumn('link', 'text', (col) => col.primaryKey())
     .addColumn('size', 'bigint', (col) => col.notNull())
-    .addColumn('bucket_name', 'text', (col) => col.notNull())
-    .addColumn('bucket_endpoint', 'text', (col) => col.notNull())
+    .addColumn('source', 'jsonb', (col) => col.notNull())
     .addColumn('inserted', 'timestamp', (col) => col.defaultTo('now()'))
     .execute()
   
@@ -60,8 +59,7 @@ export async function up(db) {
         .select([
           'content.link',
           'content.size',
-          'content.bucket_name',
-          'content.bucket_endpoint',
+          'content.source',
           'content.inserted',
         ])
         .orderBy('piece.inserted')
