@@ -29,12 +29,12 @@ export function createDealView (dialectOpts) {
 
 /**
  * 
- * @param {import('kysely').Kysely<import('../sql.generated').Database>} dbClient
+ * @param {import('kysely').Kysely<import('../schema').Database>} dbClient
  * @returns {import('../types').DealView}
  */
 export function useDealView (dbClient) {
   return {
-    selectPending: async (options = {}) => {
+    selectAllPending: async (options = {}) => {
       const limit = options.limit || DEFAULT_LIMIT
 
       let res
@@ -51,18 +51,17 @@ export function useDealView (dbClient) {
       }
 
       /** @type {import('../types').DealPendingOutput[]} */
-      // @ts-expect-error sql created types for view get optional
-      // while in practise they will always have a value
       const deals = res.map(d => ({
-        aggregate: d.aggregate !== null && parseLink(d.aggregate),
-        inserted: d.inserted,
+        // @ts-expect-error sql created types for view get optional
+        aggregate: parseLink(/** @type {string} */ d.aggregate),
+        inserted: /** @type {Date} */(d.inserted).toISOString(),
       }))
 
       return {
         ok: deals
       }
     },
-    selectSigned: async (options = {}) => {
+    selectAllSigned: async (options = {}) => {
       const limit = options.limit || DEFAULT_LIMIT
 
       let res
@@ -90,7 +89,7 @@ export function useDealView (dbClient) {
         ok: deals
       }
     },
-    selectApproved: async (options = {}) => {
+    selectAllApproved: async (options = {}) => {
       const limit = options.limit || DEFAULT_LIMIT
 
       let res
@@ -118,7 +117,7 @@ export function useDealView (dbClient) {
         ok: deals
       }
     },
-    selectRejected: async (options = {}) => {
+    selectAllRejected: async (options = {}) => {
       const limit = options.limit || DEFAULT_LIMIT
 
       let res

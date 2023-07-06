@@ -26,12 +26,12 @@ export function createCargoView (dialectOpts) {
 
 /**
  * 
- * @param {import('kysely').Kysely<import('../sql.generated').Database>} dbClient
+ * @param {import('kysely').Kysely<import('../schema').Database>} dbClient
  * @returns {import('../types').CargoView}
  */
 export function useCargoView (dbClient) {
   return {
-    select: async (options = {}) => {
+    selectAll: async (options = {}) => {
       const limit = options.limit || DEFAULT_LIMIT
 
       let res
@@ -48,12 +48,11 @@ export function useCargoView (dbClient) {
       }
 
       /** @type {import('../types').CargoOutput[]} */
-      // @ts-expect-error sql created types for view get optional
-      // while in practise they will always have a value
       const cargo = res.map(content => ({
-        piece: content.piece !== null && parseLink(content.piece),
-        priority: content.priority,
-        inserted: content.inserted,
+        // @ts-expect-error sql created types for view get optional
+        piece: parseLink(/** @type {string} */ content.piece),
+        priority: /** @type {number} */(content.priority),
+        inserted: /** @type {Date} */(content.inserted).toISOString(),
       }))
 
       return {

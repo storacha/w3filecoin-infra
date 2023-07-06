@@ -32,7 +32,7 @@ test('can insert to content table and get content queued', async t => {
     t.truthy(op.ok)
   }
 
-  const queuedItems = await contentQueueView.select()
+  const queuedItems = await contentQueueView.selectAll()
   if (!queuedItems.ok) {
     throw new Error('no queued items after insert')
   }
@@ -64,11 +64,11 @@ test('can set content to the queue and set their piece', async t => {
     cargoItems.map(cargo => contentTable.insert(cargo.content))
   )
   // Async piece computation can happen by reading from the queue
-  const queuedItemsBeforePieceCompute = await contentQueueView.select()
+  const queuedItemsBeforePieceCompute = await contentQueueView.selectAll()
   t.is(queuedItemsBeforePieceCompute.ok?.length, cargoItems.length)
 
   // No cargo is ready for being aggregated
-  const queuedCargoToAggregationBeforePieceCompute = await cargoView.select()
+  const queuedCargoToAggregationBeforePieceCompute = await cargoView.selectAll()
   t.is(queuedCargoToAggregationBeforePieceCompute.ok?.length, 0)
 
   // Fill in pieces for content entries
@@ -80,11 +80,11 @@ test('can set content to the queue and set their piece', async t => {
   }
 
   // Content queue is handled
-  const queuedItemsAfterPieceCompute = await contentQueueView.select()
+  const queuedItemsAfterPieceCompute = await contentQueueView.selectAll()
   t.is(queuedItemsAfterPieceCompute.ok?.length, 0)
 
   // Cargo queue has entries to be aggregated
-  const queuedCargoToAggregationAfterPieceCompute = await cargoView.select()
+  const queuedCargoToAggregationAfterPieceCompute = await cargoView.selectAll()
   t.is(queuedCargoToAggregationAfterPieceCompute.ok?.length, cargoItems.length)
 })
 
@@ -109,7 +109,7 @@ test('can create aggregate with queued cargo and add it to pending deals', async
   )
 
   // Cargo queue has entries to be aggregated
-  const queuedCargoToAggregationBeforeAggregate = await cargoView.select()
+  const queuedCargoToAggregationBeforeAggregate = await cargoView.selectAll()
   if (!queuedCargoToAggregationBeforeAggregate.ok) {
     throw new Error('no queued cargo to aggregate')
   }
@@ -124,11 +124,11 @@ test('can create aggregate with queued cargo and add it to pending deals', async
   await aggregateTable.insert(aggregatePiece, pieces)
 
   // Cargo queue entries not available to aggregate anymore
-  const queuedCargoToAggregationAfterAggregate = await cargoView.select()
+  const queuedCargoToAggregationAfterAggregate = await cargoView.selectAll()
   t.is(queuedCargoToAggregationAfterAggregate.ok?.length, 0)
 
   // A queued aggregate was created
-  const queuedAggregateBeforeDeal = await aggregateQueueView.select()
+  const queuedAggregateBeforeDeal = await aggregateQueueView.selectAll()
   if (!queuedAggregateBeforeDeal.ok) {
     throw new Error('no queued aggregate created')
   }
@@ -140,11 +140,11 @@ test('can create aggregate with queued cargo and add it to pending deals', async
   })
 
   // Queued aggregates sent
-  const queuedAggregateAfterDeal = await aggregateQueueView.select()
+  const queuedAggregateAfterDeal = await aggregateQueueView.selectAll()
   t.is(queuedAggregateAfterDeal.ok?.length, 0)
 
   // A deal as pending should have been created
-  const pendingDeals = await dealView.selectPending()
+  const pendingDeals = await dealView.selectAllPending()
   if (!pendingDeals.ok) {
     throw new Error('no pending deals were created')
   }
@@ -192,7 +192,7 @@ test('concurrent same aggregate insertion fail to be added a second time', async
   )
 
   // Cargo queue has entries to be aggregated
-  const queuedCargoToAggregationBeforeAggregate = await cargoView.select()
+  const queuedCargoToAggregationBeforeAggregate = await cargoView.selectAll()
   if (!queuedCargoToAggregationBeforeAggregate.ok) {
     throw new Error('no queued cargo to aggregate')
   }
@@ -235,7 +235,7 @@ test('concurrent aggregate insertion fail to be added if partially same cargo', 
   )
 
   // Cargo queue has entries to be aggregated
-  const queuedCargoToAggregationBeforeAggregate = await cargoView.select()
+  const queuedCargoToAggregationBeforeAggregate = await cargoView.selectAll()
   if (!queuedCargoToAggregationBeforeAggregate.ok) {
     throw new Error('no queued cargo to aggregate')
   }
@@ -262,7 +262,7 @@ test('concurrent aggregate insertion fail to be added if partially same cargo', 
   t.is(errorResponses.length, 1)
   t.is(errorResponses[0].error?.name, DatabaseUniqueValueConstraintErrorName)
 
-  const queuedCargoToAggregationAfterAggregate = await cargoView.select()
+  const queuedCargoToAggregationAfterAggregate = await cargoView.selectAll()
   if (!queuedCargoToAggregationAfterAggregate.ok) {
     throw new Error('no queued cargo after aggregate')
   }

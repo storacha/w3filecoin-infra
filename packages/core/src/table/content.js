@@ -2,7 +2,7 @@ import { Kysely } from 'kysely'
 
 import { getDialect } from './utils.js'
 import {
-  SQLSTATE_UNIQUE_VALUE_CONSTRAINT
+  SQLSTATE_UNIQUE_VALUE_CONSTRAINT_ERROR_CODE
 } from './constants.js'
 import {
   DatabaseOperationError,
@@ -26,18 +26,16 @@ export function createContentTable (dialectOpts) {
 
 /**
  * 
- * @param {import('kysely').Kysely<import('../sql.generated').Database>} dbClient
+ * @param {import('kysely').Kysely<import('../schema').Database>} dbClient
  * @returns {import('../types').ContentTable}
  */
 export function useContentTable (dbClient) {
   return {
     insert: async (contentItem) => {
-      const inserted = (new Date()).toISOString()
       const item = {
         link: `${contentItem.link}`,
         size: contentItem.size,
         source: JSON.stringify(contentItem.source),
-        inserted,
       }
 
       try {
@@ -47,7 +45,7 @@ export function useContentTable (dbClient) {
           .execute()
       } catch (/** @type {any} */ error) {
         return {
-          error: Number.parseInt(error.code) === SQLSTATE_UNIQUE_VALUE_CONSTRAINT ?
+          error: Number.parseInt(error.code) === SQLSTATE_UNIQUE_VALUE_CONSTRAINT_ERROR_CODE ?
             new DatabaseUniqueValueConstraintError(error.message) :
             new DatabaseOperationError(error.message)
         }

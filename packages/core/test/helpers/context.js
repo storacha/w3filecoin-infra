@@ -1,7 +1,7 @@
 import anyTest from 'ava'
 
 /**
- * @typedef {import('../../src/sql.generated').Database} Database
+ * @typedef {import('../../src/schema').Database} Database
  *
  * @typedef {object} DbContext
  * @property {import('kysely').Kysely<Database>} dbClient

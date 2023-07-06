@@ -3,7 +3,7 @@ import { Kysely } from 'kysely'
 import { useInclusionTable } from './inclusion.js'
 import { getDialect } from './utils.js'
 import {
-  SQLSTATE_UNIQUE_VALUE_CONSTRAINT
+  SQLSTATE_UNIQUE_VALUE_CONSTRAINT_ERROR_CODE
 } from './constants.js'
 import {
   DatabaseOperationError,
@@ -27,17 +27,15 @@ export function createPieceTable (dialectOpts) {
 
 /**
  * 
- * @param {import('kysely').Kysely<import('../sql.generated').Database>} dbClient
+ * @param {import('kysely').Kysely<import('../schema').Database>} dbClient
  * @returns {import('../types').PieceTable}
  */
 export function usePieceTable (dbClient) {
   return {
     insert: async (pieceItem, contentLink) => {
-      const inserted = (new Date()).toISOString()
       const item = {
         link: `${pieceItem.link}`,
         size: pieceItem.size,
-        inserted,
         content: `${contentLink}`,
       }
 
@@ -62,7 +60,7 @@ export function usePieceTable (dbClient) {
         })
       } catch (/** @type {any} */ error) {
         return {
-          error: Number.parseInt(error.code) === SQLSTATE_UNIQUE_VALUE_CONSTRAINT ?
+          error: Number.parseInt(error.code) === SQLSTATE_UNIQUE_VALUE_CONSTRAINT_ERROR_CODE ?
             new DatabaseUniqueValueConstraintError(error.message) :
             new DatabaseOperationError(error.message)
         }

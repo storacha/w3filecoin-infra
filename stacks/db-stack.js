@@ -16,7 +16,7 @@ export function DbStack({ stack, app }) {
     engine: 'postgresql11.13',
     defaultDatabaseName: dbName,
     migrations: 'packages/core/migrations',
-    types: 'packages/core/src/sql.generated.ts',
+    types: 'packages/core/src/schema.ts',
     // https://docs.sst.dev/constructs/RDS#auto-scaling
     scaling: stack.stage !== 'production' ?
       {

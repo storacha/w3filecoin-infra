@@ -26,12 +26,12 @@ export function createAggregateQueueView (dialectOpts) {
 
 /**
  * 
- * @param {import('kysely').Kysely<import('../sql.generated').Database>} dbClient
+ * @param {import('kysely').Kysely<import('../schema').Database>} dbClient
  * @returns {import('../types').AggregateQueueView}
  */
 export function useAggregateQueueView (dbClient) {
   return {
-    select: async (options = {}) => {
+    selectAll: async (options = {}) => {
       const limit = options.limit || DEFAULT_LIMIT
 
       let res
@@ -48,16 +48,16 @@ export function useAggregateQueueView (dbClient) {
       }
 
       /** @type {import('../types').AggregateOutput[]} */
-      // @ts-expect-error sql created types for view get optional
-      // while in practise they will always have a value
-      const aggregagteQueue = res.map(aggregate => ({
-        link: aggregate.link !== null && parseLink(aggregate.link),
-        size: aggregate.size != null && Number.parseInt(aggregate.size),
-        inserted: aggregate.inserted,
+      const aggregateQueue = res.map(aggregate => ({
+        // @ts-expect-error sql created types for view get optional
+        link: parseLink(/** @type {string} */ aggregate.link),
+        // @ts-expect-error sql created types for view get optional
+        size: /** @type {number} */(Number.parseInt(aggregate.size)) || 0,
+        inserted: /** @type {Date} */(aggregate.inserted).toISOString(),
       }))
 
       return {
-        ok: aggregagteQueue
+        ok: aggregateQueue
       }
     }
   }

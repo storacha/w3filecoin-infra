@@ -46,22 +46,22 @@ export interface DealTable {
 }
 
 export interface CargoView {
-  select: (options?: SelectOptions) => Promise<Result<CargoOutput[], Failure>>
+  selectAll: (options?: SelectOptions) => Promise<Result<CargoOutput[], Failure>>
 }
 
 export interface ContentQueueView {
-  select: (options?: SelectOptions) => Promise<Result<ContentOutput[], Failure>>
+  selectAll: (options?: SelectOptions) => Promise<Result<ContentOutput[], Failure>>
 }
 
 export interface AggregateQueueView {
-  select: (options?: SelectOptions) => Promise<Result<AggregateOutput[], Failure>>
+  selectAll: (options?: SelectOptions) => Promise<Result<AggregateOutput[], Failure>>
 }
 
 export interface DealView {
-  selectPending: (options?: SelectOptions) => Promise<Result<DealPendingOutput[], Failure>>
-  selectSigned: (options?: SelectOptions) => Promise<Result<DealSignedOutput[], Failure>>
-  selectApproved: (options?: SelectOptions) => Promise<Result<DealProcessedOutput[], Failure>>
-  selectRejected: (options?: SelectOptions) => Promise<Result<DealProcessedOutput[], Failure>>
+  selectAllPending: (options?: SelectOptions) => Promise<Result<DealPendingOutput[], Failure>>
+  selectAllSigned: (options?: SelectOptions) => Promise<Result<DealSignedOutput[], Failure>>
+  selectAllApproved: (options?: SelectOptions) => Promise<Result<DealProcessedOutput[], Failure>>
+  selectAllRejected: (options?: SelectOptions) => Promise<Result<DealProcessedOutput[], Failure>>
 }
 
 export interface ContentInsertInput {
@@ -97,7 +97,7 @@ export interface AggregateOutput extends AggregateInsertInput {
 
 export interface InclusionInsertInput {
   piece: Link
-  priority?: string
+  priority?: number
 }
 
 export interface CargoOutput extends InclusionInsertInput {

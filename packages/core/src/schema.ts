@@ -37,7 +37,7 @@ export interface AggregateQueue {
 export interface Cargo {
   piece: string | null;
   aggregate: string | null;
-  priority: string | null;
+  priority: number | null;
   inserted: Timestamp | null;
 }
 
@@ -58,7 +58,7 @@ export interface ContentQueue {
 export interface Deal {
   aggregate: string;
   status: DealStatus;
-  detail: string | null;
+  detail: Json | null;
   inserted: Generated<Timestamp | null>;
   signed: Timestamp | null;
   processed: Timestamp | null;
@@ -67,7 +67,7 @@ export interface Deal {
 export interface DealApproved {
   aggregate: string | null;
   status: DealStatus | null;
-  detail: string | null;
+  detail: Json | null;
   inserted: Timestamp | null;
   signed: Timestamp | null;
   processed: Timestamp | null;
@@ -76,7 +76,7 @@ export interface DealApproved {
 export interface DealPending {
   aggregate: string | null;
   status: DealStatus | null;
-  detail: string | null;
+  detail: Json | null;
   inserted: Timestamp | null;
   signed: Timestamp | null;
   processed: Timestamp | null;
@@ -85,7 +85,7 @@ export interface DealPending {
 export interface DealRejected {
   aggregate: string | null;
   status: DealStatus | null;
-  detail: string | null;
+  detail: Json | null;
   inserted: Timestamp | null;
   signed: Timestamp | null;
   processed: Timestamp | null;
@@ -94,7 +94,7 @@ export interface DealRejected {
 export interface DealSigned {
   aggregate: string | null;
   status: DealStatus | null;
-  detail: string | null;
+  detail: Json | null;
   inserted: Timestamp | null;
   signed: Timestamp | null;
   processed: Timestamp | null;
@@ -103,7 +103,7 @@ export interface DealSigned {
 export interface Inclusion {
   piece: string;
   aggregate: string | null;
-  priority: string;
+  priority: number;
   inserted: Generated<Timestamp | null>;
 }
 

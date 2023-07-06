@@ -19,7 +19,7 @@ export async function up(db) {
     .addColumn('link', 'text', (col) => col.primaryKey())
     .addColumn('size', 'bigint', (col) => col.notNull())
     .addColumn('source', 'jsonb', (col) => col.notNull())
-    .addColumn('inserted', 'timestamp', (col) => col.defaultTo('now()'))
+    .addColumn('inserted', 'timestamp', (col) => col.defaultTo(sql`timezone('utc', now())`))
     .execute()
   
   /**
@@ -32,7 +32,7 @@ export async function up(db) {
     .addColumn('link', 'text', (col) => col.primaryKey())
     .addColumn('size', 'bigint', (col) => col.notNull())
     .addColumn('content', 'text', (col) => col.references('content.link'))
-    .addColumn('inserted', 'timestamp', (col) => col.defaultTo('now()'))
+    .addColumn('inserted', 'timestamp', (col) => col.defaultTo(sql`timezone('utc', now())`))
     .execute()
   
   await db.schema
@@ -73,7 +73,7 @@ export async function up(db) {
     .createTable('aggregate')
     .addColumn('link', 'text', (col) => col.primaryKey())
     .addColumn('size', 'bigint', (col) => col.notNull())
-    .addColumn('inserted', 'timestamp', (col) => col.defaultTo('now()'))
+    .addColumn('inserted', 'timestamp', (col) => col.defaultTo(sql`timezone('utc', now())`))
     .execute()
 
   /**
@@ -84,8 +84,8 @@ export async function up(db) {
     .createTable('inclusion')
     .addColumn('piece', 'text', (col) => col.references('piece.link').notNull())
     .addColumn('aggregate', 'text', (col) => col.defaultTo(null))
-    .addColumn('priority', 'text', (col) => col.notNull())
-    .addColumn('inserted', 'timestamp', (col) => col.defaultTo('now()'))
+    .addColumn('priority', 'integer', (col) => col.notNull())
+    .addColumn('inserted', 'timestamp', (col) => col.defaultTo(sql`timezone('utc', now())`))
     .addUniqueConstraint('piece_aggregate_unique', ['aggregate', 'piece'])
     .addForeignKeyConstraint(
       'aggregate_id_foreign',
@@ -96,9 +96,9 @@ export async function up(db) {
     .execute()
 
   await db.schema
-    .createIndex('inclusion_inserted_idx')
+    .createIndex('inclusion_priority_idx')
     .on('inclusion')
-    .column('inserted')
+    .expression(sql`priority DESC, inserted`)
     .execute()
 
   await db.schema
@@ -116,6 +116,7 @@ export async function up(db) {
       db.selectFrom('inclusion')
         .selectAll()
         .where('aggregate', 'is', null)
+        .orderBy('priority', 'desc')
         .orderBy('inserted')
     )
     .execute()
@@ -130,8 +131,8 @@ export async function up(db) {
     .createTable('deal')
     .addColumn('aggregate', 'text', (col) => col.references('aggregate.link').primaryKey())
     .addColumn('status', sql`deal_status`, (col) => col.notNull())
-    .addColumn('detail', 'text')
-    .addColumn('inserted', 'timestamp', (col) => col.defaultTo('now()'))
+    .addColumn('detail', 'jsonb')
+    .addColumn('inserted', 'timestamp', (col) => col.defaultTo(sql`timezone('utc', now())`))
     .addColumn('signed', 'timestamp')
     .addColumn('processed', 'timestamp')
     .execute()

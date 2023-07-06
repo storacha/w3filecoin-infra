@@ -2,7 +2,7 @@ import { Kysely } from 'kysely'
 
 import { getDialect } from './utils.js'
 import {
-  SQLSTATE_UNIQUE_VALUE_CONSTRAINT
+  SQLSTATE_UNIQUE_VALUE_CONSTRAINT_ERROR_CODE
 } from './constants.js'
 import {
   DatabaseOperationError,
@@ -10,7 +10,7 @@ import {
 } from './errors.js'
 
 /**
- * @type {Record<string, import('../sql.generated').DealStatus>}
+ * @type {Record<string, import('../schema').DealStatus>}
  */
 export const STATE = {
   APPROVED: 'APPROVED',
@@ -35,17 +35,15 @@ export function createDealTable (dialectOpts) {
 
 /**
  * 
- * @param {import('kysely').Kysely<import('../sql.generated').Database>} dbClient
+ * @param {import('kysely').Kysely<import('../schema').Database>} dbClient
  * @returns {import('../types').DealTable}
  */
 export function useDealTable (dbClient) {
   return {
     insert: async (dealItem) => {
-      const inserted = (new Date()).toISOString()
       const item = {
         aggregate: `${dealItem.aggregate}`,
         status: STATE.PENDING,
-        inserted
       }
 
       try {
@@ -55,7 +53,7 @@ export function useDealTable (dbClient) {
           .execute()
       } catch (/** @type {any} */ error) {
         return {
-          error: Number.parseInt(error.code) === SQLSTATE_UNIQUE_VALUE_CONSTRAINT ?
+          error: Number.parseInt(error.code) === SQLSTATE_UNIQUE_VALUE_CONSTRAINT_ERROR_CODE ?
             new DatabaseUniqueValueConstraintError(error.message) :
             new DatabaseOperationError(error.message)
         }

@@ -26,12 +26,12 @@ export function createContentQueueView (dialectOpts) {
 
 /**
  * 
- * @param {import('kysely').Kysely<import('../sql.generated').Database>} dbClient
+ * @param {import('kysely').Kysely<import('../schema').Database>} dbClient
  * @returns {import('../types').ContentQueueView}
  */
 export function useContentQueueView (dbClient) {
   return {
-    select: async (options = {}) => {
+    selectAll: async (options = {}) => {
       const limit = options.limit || DEFAULT_LIMIT
 
       let res
@@ -48,13 +48,14 @@ export function useContentQueueView (dbClient) {
       }
 
       /** @type {import('../types').ContentOutput[]} */
-      // @ts-expect-error sql created types for view get optional
-      // while in practise they will always have a value
       const contentQueue = res.map(content => ({
-        link: content.link !== null && parseLink(content.link),
-        size: content.size != null && Number.parseInt(content.size),
-        source: content.source,
-        inserted: content.inserted,
+        // @ts-expect-error sql created types for view get optional
+        link: parseLink(/** @type {string} */ content.link),
+        // @ts-expect-error sql created types for view get optional
+        size: /** @type {number} */(Number.parseInt(content.size)) || 0,
+        // @ts-expect-error sql created types for view get optional
+        source: /** @type {ContentSource[]} */ (content.source),
+        inserted: /** @type {Date} */(content.inserted).toISOString(),
       }))
 
       return {
