@@ -1,9 +1,20 @@
-import { createRequire } from 'module'
 import git from 'git-rev-sync'
-import { Duration } from 'aws-cdk-lib'
+import * as pack from '../package.json'
 
-const DEFAULT_FERRY_CARGO_MAX_SIZE = 127*(1<<28)
-const DEFAULT_FERRY_CARGO_MIN_SIZE = 1+127*(1<<27)
+export const DEFAULT_FERRY_CARGO_MAX_SIZE = 127*(1<<28)
+export const DEFAULT_FERRY_CARGO_MIN_SIZE = 1+127*(1<<27)
+
+/**
+ * Get nicer resources name
+ *
+ * @param {string} name
+ * @param {string} stage
+ * @param {number} version
+ */
+export function getResourceName (name, stage, version = 0) {
+  // e.g `prod-w3filecoin-cargo-database-0`
+  return `${stage}-w3filecoin-${name}-${version}`
+}
 
 /**
  * Return the custom domain config for http api
@@ -24,11 +35,7 @@ export function getCustomDomain (stage, hostedZone) {
 }
 
 export function getApiPackageJson () {
-  // @ts-expect-error ts thinks this is unused becuase of the ignore
-  const require = createRequire(import.meta.url)
-  // @ts-ignore ts dont see *.json and dont like it
-  const pkg = require('../../api/package.json')
-  return pkg
+  return pack
 }
 
 export function getGitInfo () {
@@ -39,8 +46,8 @@ export function getGitInfo () {
 }
 
 /**
- * @param {import('@serverless-stack/resources').App} app
- * @param {import('@serverless-stack/resources').Stack} stack
+ * @param {import('sst/constructs').App} app
+ * @param {import('sst/constructs').Stack} stack
  */
 export function setupSentry (app, stack) {
   // Skip when locally
@@ -53,27 +60,6 @@ export function setupSentry (app, stack) {
   stack.addDefaultFunctionEnv({
     SENTRY_DSN,
   })
-}
-
-
-/**
- * @param {import('@serverless-stack/resources').Stack} stack
- */
-export function getFerryConfig (stack) {
-  if (stack.stage !== 'production') {
-    const { FERRY_CARGO_MAX_SIZE, FERRY_CARGO_MIN_SIZE } = process.env
-    return {
-      ferryCargoMaxSize: FERRY_CARGO_MAX_SIZE || `${DEFAULT_FERRY_CARGO_MAX_SIZE}`,
-      ferryCargoMinSize: FERRY_CARGO_MIN_SIZE || `${20_000}`,
-      maxBatchingWindow: Duration.seconds(15)
-    }
-  }
-
-  return {
-    ferryCargoMaxSize: `${DEFAULT_FERRY_CARGO_MAX_SIZE}`,
-    ferryCargoMinSize: `${DEFAULT_FERRY_CARGO_MIN_SIZE}`,
-    maxBatchingWindow: Duration.minutes(5)
-  }
 }
 
 /**

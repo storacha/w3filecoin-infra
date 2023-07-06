@@ -1,5 +1,7 @@
 import * as Sentry from '@sentry/serverless'
 
+import { mustGetEnv } from '../utils.js'
+
 Sentry.AWSLambda.init({
   environment: process.env.SST_STAGE,
   dsn: process.env.SENTRY_DSN,
@@ -10,17 +12,15 @@ const repo = 'https://github.com/web3-storage/w3filecoin'
 
 /**
  * AWS HTTP Gateway handler for GET /version
- *
- * @param {import('aws-lambda').APIGatewayProxyEventV2} request 
  */
-export async function versionGet (request) {
-  const { NAME: name , VERSION: version, COMMIT: commit, STAGE: env } = process.env
+export async function versionGet () {
+  const { name , version, commit, stage } = getLambdaEnv()
   return {
     statusCode: 200,
     headers: {
       'Content-Type': `application/json`
     },
-    body: JSON.stringify({ name, version, repo, commit, env })
+    body: JSON.stringify({ name, version, repo, commit, env: stage })
   }
 }
 
@@ -28,11 +28,9 @@ export const version = Sentry.AWSLambda.wrapHandler(versionGet)
 
 /**
  * AWS HTTP Gateway handler for GET /
- *
- * @param {import('aws-lambda').APIGatewayProxyEventV2} request 
  */
-export async function homeGet (request) {
-  const { VERSION: version, STAGE: stage } = process.env
+export async function homeGet () {
+  const { version, stage } = getLambdaEnv()
   const env = stage === 'prod' ? '' : `(${stage})`
   return {
     statusCode: 200,
@@ -53,3 +51,12 @@ export const home = Sentry.AWSLambda.wrapHandler(homeGet)
 }
 
 export const error = Sentry.AWSLambda.wrapHandler(errorGet)
+
+function getLambdaEnv () {
+  return {
+    name: mustGetEnv('NAME'),
+    version: mustGetEnv('VERSION'),
+    commit: mustGetEnv('COMMIT'),
+    stage: mustGetEnv('STAGE'),
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "@w3filecoin/functions",
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --build"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@sentry/serverless": "7.52.1",
+    "sst": "^2.8.3",
+    "typescript": "^5.0.4"
+  }
+}
