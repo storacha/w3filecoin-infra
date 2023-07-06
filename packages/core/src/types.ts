@@ -15,19 +15,35 @@ export interface Producer<Item> {
    */
   put(items: Item[]): Promise<Result<{}, Failure>>
 }
+export interface PriorityProducer<Item> {
+  /**
+   * Puts content data to the queue, so that it gets processed.
+   */
+  put(items: Item[], options?: ProducerOtions): Promise<Result<{}, Failure>>
+}
 
 export interface Consumer<Item> {
+  /**
+   * Peek items of the queue without removing them.
+   */
+  peek(options?: ConsumerOptions): Promise<Result<Item[], Failure>>
+
   /**
    * Attempts to consumer up to a `limit` number of items. Calls provided `consumer` with items
    * in from this queue. If it succeeds only returned `items` will be removed from the queue. If fails
    * no items will be dequeued.
    */
-  consume (consumer: (items: Item[]) => Promise<Result<Item[], Failure>>, options?: ConsumeOptions): Promise<Result<{}, Failure>>
+  consume (consumer: (items: Item[]) => Promise<Result<Item[], Failure>>, options?: ConsumerOptions): Promise<Result<{}, Failure>>
 }
 
 export interface Queue<In, Out = Inserted<In>> extends Producer<In>, Consumer<Out> {}
+export interface PriorityQueue<In, Out = Inserted<In>> extends PriorityProducer<In>, Consumer<Out> {}
 
 export type Inserted<In> = In & { inserted: string }
+
+export interface ProducerOtions {
+  priority?: number
+}
 
 export interface Content {
   link: Link
@@ -45,8 +61,7 @@ export interface Inclusion {
   piece: Link
   priority: number
 }
-export type PieceQueue = Queue<Piece, Inserted<Inclusion>>
-// TODO: PriorityQueue
+export type PieceQueue = PriorityQueue<Piece, Inserted<Inclusion>>
 
 export interface Aggregate {
   link: Link
@@ -97,22 +112,22 @@ export interface DealTable {
 }
 
 export interface CargoView {
-  selectAll: (options?: ConsumeOptions) => Promise<Result<CargoOutput[], Failure>>
+  selectAll: (options?: ConsumerOptions) => Promise<Result<CargoOutput[], Failure>>
 }
 
 export interface ContentQueueView {
-  selectAll: (options?: ConsumeOptions) => Promise<Result<ContentOutput[], Failure>>
+  selectAll: (options?: ConsumerOptions) => Promise<Result<ContentOutput[], Failure>>
 }
 
 export interface AggregateQueueView {
-  selectAll: (options?: ConsumeOptions) => Promise<Result<AggregateOutput[], Failure>>
+  selectAll: (options?: ConsumerOptions) => Promise<Result<AggregateOutput[], Failure>>
 }
 
 export interface DealView {
-  selectAllPending: (options?: ConsumeOptions) => Promise<Result<DealPendingOutput[], Failure>>
-  selectAllSigned: (options?: ConsumeOptions) => Promise<Result<DealSignedOutput[], Failure>>
-  selectAllApproved: (options?: ConsumeOptions) => Promise<Result<DealProcessedOutput[], Failure>>
-  selectAllRejected: (options?: ConsumeOptions) => Promise<Result<DealProcessedOutput[], Failure>>
+  selectAllPending: (options?: ConsumerOptions) => Promise<Result<DealPendingOutput[], Failure>>
+  selectAllSigned: (options?: ConsumerOptions) => Promise<Result<DealSignedOutput[], Failure>>
+  selectAllApproved: (options?: ConsumerOptions) => Promise<Result<DealProcessedOutput[], Failure>>
+  selectAllRejected: (options?: ConsumerOptions) => Promise<Result<DealProcessedOutput[], Failure>>
 }
 
 export interface ContentInsertInput {
@@ -171,7 +186,7 @@ export interface DealProcessedOutput extends DealInsertInput {
   processed: string
 }
 
-export interface ConsumeOptions {
+export interface ConsumerOptions {
   limit?: number
 }
 

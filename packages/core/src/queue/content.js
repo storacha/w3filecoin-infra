@@ -84,6 +84,37 @@ export function useContentQueue (dbClient) {
       }))
 
       return await consumer(contentQueue)
+    },
+    peek: async (options = {}) => {
+      const limit = options.limit || DEFAULT_LIMIT
+
+      let queuePeakResponse
+      try {
+        queuePeakResponse = await dbClient
+          .selectFrom(VIEW_NAME)
+          .selectAll()
+          .limit(limit)
+          .execute()
+      } catch (/** @type {any} */ error) {
+        return {
+          error: new DatabaseOperationError(error.message)
+        }
+      }
+
+      /** @type {import('../types.js').Inserted<import('../types').Content>[]} */
+      const contentQueue = queuePeakResponse.map(content => ({
+        // @ts-expect-error sql created types for view get optional
+        link: parseLink(/** @type {string} */ content.link),
+        // @ts-expect-error sql created types for view get optional
+        size: /** @type {number} */(Number.parseInt(content.size)) || 0,
+        // @ts-expect-error sql created types for view get optional
+        source: /** @type {ContentSource[]} */ (content.source),
+        inserted: /** @type {Date} */(content.inserted).toISOString(),
+      }))
+
+      return {
+        ok: contentQueue
+      }
     }
   }
 }

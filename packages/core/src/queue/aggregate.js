@@ -98,6 +98,35 @@ export function useAggregateQueue (dbClient) {
       }))
 
       return await consumer(aggregateQueue)
+    },
+    peek: async (options = {}) => {
+      const limit = options.limit || DEFAULT_LIMIT
+
+      let queuePeakResponse
+      try {
+        queuePeakResponse = await dbClient
+          .selectFrom(VIEW_NAME)
+          .selectAll()
+          .limit(limit)
+          .execute()
+      } catch (/** @type {any} */ error) {
+        return {
+          error: new DatabaseOperationError(error.message)
+        }
+      }
+
+      /** @type {import('../types.js').Inserted<import('../types').Aggregate>[]} */
+      const aggregateQueue = queuePeakResponse.map(aggregate => ({
+        // @ts-expect-error sql created types for view get optional
+        link: parseLink(/** @type {string} */ aggregate.link),
+        // @ts-expect-error sql created types for view get optional
+        size: /** @type {number} */(Number.parseInt(aggregate.size)) || 0,
+        inserted: /** @type {Date} */(aggregate.inserted).toISOString(),
+      }))
+
+      return {
+        ok: aggregateQueue
+      }
     }
   }
 }

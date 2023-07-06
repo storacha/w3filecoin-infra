@@ -33,7 +33,8 @@ export function createPieceQueue (dialectOpts) {
  */
 export function usePieceQueue (dbClient) {
   return {
-    put: async (pieceItems) => {
+    put: async (pieceItems, options = {}) => {
+      const priority = options.priority || 0
       const items = pieceItems.map(pieceItem => ({
         link: `${pieceItem.link}`,
         size: pieceItem.size,
@@ -54,7 +55,7 @@ export function usePieceQueue (dbClient) {
             .insertInto(INCLUSION_TABLE_NAME)
             .values(items.map(item => ({
               piece: item.link,
-              priority: 0
+              priority
             })))
             .execute()
         })
@@ -95,6 +96,34 @@ export function usePieceQueue (dbClient) {
       }))
 
       return await consumer(cargo)
+    },
+    peek: async (options = {}) => {
+      const limit = options.limit || DEFAULT_LIMIT
+
+      let queuePeakResponse
+      try {
+        queuePeakResponse = await dbClient
+          .selectFrom(VIEW_NAME)
+          .selectAll()
+          .limit(limit)
+          .execute()
+      } catch (/** @type {any} */ error) {
+        return {
+          error: new DatabaseOperationError(error.message)
+        }
+      }
+
+      /** @type {import('../types.js').Inserted<import('../types').Inclusion>[]} */
+      const cargo = queuePeakResponse.map(piece => ({
+        // @ts-expect-error sql created types for view get optional
+        piece: parseLink(/** @type {string} */ piece.piece),
+        priority: /** @type {number} */(piece.priority),
+        inserted: /** @type {Date} */(piece.inserted).toISOString(),
+      }))
+
+      return {
+        ok: cargo
+      }
     }
   }
 }
