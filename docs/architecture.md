@@ -22,7 +22,7 @@ The high level flow for the w3filecoin Pipeline is:
 - **Submission process** reads from the `aggregate_queue`, submits aggregates to the agency (spade proxy) and writes deal record with status "PENDING".
 - TBD deal flow
 
-![Pipeline processes](./processes.png)
+![Pipeline processes](./processes.svg)
 
 The w3filecoin pipeline is modeled into 4 different SST Stacks that will have their infrastructure provisioned in AWS via AWS CloudFormation. These are:
 
@@ -43,9 +43,9 @@ API Gateway to expose:
 
 ## Consumer Stack
 
-w3filecoin relies on events from Buckets once CAR files are written into them. It is designed to enable multiple sources of CAR files to be easily integrated into the pipeline via its consumer stack.
+w3filecoin is designed to enable multiple sources of CAR files to be easily integrated into the pipeline via its consumer stack.
 
-As an example, w3filecoin is wired up with `w3infra` as a source of CAR files to get into Filecoin deals. `w3infra` will emit events once CAR files are written into desired buckets. This events should include necessary information of the location of the CAR file to enable w3filecoin to let Storage Providers know where they can fetch the CAR files from.
+TODO
 
 Further down the line, consumer stack can be wired with the UCAN Log Stream and use receipts as the trigger.
 
@@ -64,7 +64,8 @@ CREATE TABLE content
   link TEXT PRIMARY KEY,
   -- CAR Size
   size number NOT NULL,
-  -- Source where the content can be fetched from
+  -- Source where the content can be fetched from.
+  -- It includes an array of { bucketName: string, bucketRegion: string, key: string, bucketUrl?: string }
   source JSONB NOT NULL,
   -- Timestamp
   inserted TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
