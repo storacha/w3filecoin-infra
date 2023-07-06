@@ -110,11 +110,10 @@ CREATE TABLE inclusion
   -- Aggregate CID, if NULL the the piece is queued for the aggregation
   aggregate TEXT REFERENCES aggregate(link) NULL,
 
-  -- Priority in the queue. I think it could be a counter on initial inserts hence
-  --  providing FIFO order. When piece is retried (after aggregate is rejected)
-  -- we could keep original priority hence prioritizing it over new items yet
-  -- keeping original FIFO order among rejects.
-  priority TEXT NOT NULL,
+  -- Priority in the queue. A counter on initial inserts hence providing FIFO order.
+  -- When piece is retried (after aggregate is rejected), it can keep original priority
+  -- hence prioritizing it over new items yet keeping original FIFO order among rejects.
+  priority NUMBER NOT NULL,
 
   -- Time when the piece was added to the queue.
   inserted TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
@@ -125,7 +124,7 @@ CREATE TABLE inclusion
    -- We may also want to write inclusion proof here
 );
 
-CREATE INDEX inclusion_inserted_idx ON inclusion (inserted);
+CREATE INDEX inclusion_priority_idx ON inclusion (priority DESC, inserted);
 
 -- Table for created aggregates. 
 CREATE TABLE aggregate
@@ -143,7 +142,7 @@ CREATE VIEW cargo AS
   SELECT *
   FROM inclusion
   WHERE aggregate IS NULL
-  ORDER BY inserted;
+  ORDER BY priority DESC, inserted;
 
 -- State of aggregate deals. When aggregate is sent to spade-proxy status is 'PENDING'.
 -- When spade-proxy requests a wallet signature, status will be updated to 'SIGNED'. Once
@@ -154,12 +153,12 @@ CREATE TABLE deal (
   status DEAL_STATUS DEFAULT 'PENDING',
   -- if status is an error this may contain details about the error e.g. json containing
   -- piece CIDs that were invalid.
-  detail TEXT,
+  detail JSONB,
   -- Time when aggregate was send to spade-proxy
   inserted TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
   -- Time when aggregate was signed
   signed TIMESTAMP WITH TIME ZONE,
-  -- Time when aggregate was processed
+  -- Time when aggregate was processed (became APPROVED or REJECTED)
   processed TIMESTAMP WITH TIME ZONE
 );
 
@@ -211,13 +210,11 @@ https://dbdiagram.io/d/649af07402bd1c4a5e249feb
 
 ## Processor Stack
 
-The w3infra processor stack manages the deployed schedulers that invoke lambda functions to consume the DB stack queues and attempt to make progress in their items to the following stages of the pipeline.
+The w3infra processor stack manages several concurrent workflows, deployed as lambda functions, that move items from one stage of the pipeline into another. Each workflow operates independently and on its own schedule, pulling items from one DB stack queue, and pushing into another after some processing.
 
-Each of the schedulers might have their own schedules and can act independently of each other.
+The workflows running in these pipeline are:
 
-The processes running in these pipeline are:
-
-1. **Content Validator process** validates CARs and writes references to `content` table.
-2. **Piece maker process** pulls queued content from `content_queue`, derive piece info for them and write records to the `piece` & `inclusion` tables.
-3. **Aggregator process** reads from the `cargo` view, attempts to create an aggregate and, if successful, writes to aggregate table.
-4. **Submission process** reads from the `aggregate_queue`, submits aggregates to the agency (spade proxy) and writes pending deal record.
+1. **Content Validator workflow** validates CARs and writes references to `content` table.
+2. **Piece maker workflow** pulls queued content from `content_queue`, derive piece info for them and write records to the `piece` & `inclusion` tables.
+3. **Aggregator workflow** reads from the `cargo` view, attempts to create an aggregate and, if successful, writes to aggregate table.
+4. **Submission workflow** reads from the `aggregate_queue`, submits aggregates to the agency (spade proxy) and writes pending deal record.
