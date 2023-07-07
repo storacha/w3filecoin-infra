@@ -14,8 +14,8 @@ When a CAR file is written into a given web3.storage's bucket, its metadata gets
 
 The high level flow for the w3filecoin Pipeline is:
 
-- **Event** is triggered once a CAR file is written into a bucket with its metadata {`link`, `size`, `bucketName`, `bucketEndpoint`}. This event is added to a `content_validator_queue`.
-- **Content Validator process** validates CARs and writes references to a `content` table.
+- **Consume request** is received once a CAR file is written into a bucket with its metadata {`link`, `size`, `bucketName`, `bucketEndpoint`}. This event is added to a `content_validator_queue`.
+- **Content Validator process** validates CARs and writes their references to a `content` table.
 - On its own schedule, **Piece maker process** can pull queued content from a `content_queue`, derive piece info for them and write records to a `piece` & `inclusion` tables.
   - a `inclusion` table enables same piece to be included in another aggregate if a deal fails.
 - **Agregagtor process** reads from a `cargo_queue` (backed by `inclusion` table), attempts to create an aggregate and if successful it writes to an `aggregate` table.
@@ -24,10 +24,9 @@ The high level flow for the w3filecoin Pipeline is:
 
 ![Pipeline processes](./processes.svg)
 
-The w3filecoin pipeline is modeled into 4 different SST Stacks that will have their infrastructure provisioned in AWS via AWS CloudFormation. These are:
+The w3filecoin pipeline is modeled into 3 different SST Stacks that will have their infrastructure provisioned in AWS via AWS CloudFormation. These are:
 
 - API Stack
-- Consumer Stack
 - DB Stack
 - Processor Stack
 
@@ -39,15 +38,9 @@ TBC
 API Gateway to expose:
 - Report API for failed aggregates to land into Storage Providers
 - Get to know state of deals
+- Receive signature requests
+- Receive requests to consume content - w3filecoin is designed to enable multiple sources of CAR files to be easily integrated into the pipeline
 - ...
-
-## Consumer Stack
-
-w3filecoin is designed to enable multiple sources of CAR files to be easily integrated into the pipeline via its consumer stack.
-
-TODO
-
-Further down the line, consumer stack can be wired with the UCAN Log Stream and use receipts as the trigger.
 
 ## DB Stack
 
@@ -218,3 +211,4 @@ The workflows running in these pipeline are:
 2. **Piece maker workflow** pulls queued content from `content_queue`, derive piece info for them and write records to the `piece` & `inclusion` tables.
 3. **Aggregator workflow** reads from the `cargo` view, attempts to create an aggregate and, if successful, writes to aggregate table.
 4. **Submission workflow** reads from the `aggregate_queue`, submits aggregates to the agency (spade proxy) and writes pending deal record.
+5. **Deal workflow** ... TBD
