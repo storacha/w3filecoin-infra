@@ -13,7 +13,7 @@ export function DbStack({ stack, app }) {
 
   const dbName = 'w3filecoinrds'
   const db = new RDS(stack, dbName, {
-    engine: 'postgresql11.13',
+    engine: 'postgresql13.9',
     defaultDatabaseName: dbName,
     migrations: 'packages/core/migrations',
     types: 'packages/core/src/schema.ts',

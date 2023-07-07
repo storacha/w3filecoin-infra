@@ -1,7 +1,9 @@
 import { Link } from '@ucanto/interface'
 import {
-  UpdateResult
+  UpdateResult,
+  Kysely
 } from 'kysely'
+import { Database } from './schema'
 
 export interface DialectProps {
   database: string
@@ -9,42 +11,32 @@ export interface DialectProps {
   resourceArn: string
 }
 
+export type DatabaseConnect = Kysely<Database> | DialectProps
+
 export interface Producer<Item> {
   /**
    * Puts content data to the queue, so that it gets processed.
    */
   put(items: Item[]): Promise<Result<{}, Failure>>
 }
-export interface PriorityProducer<Item> {
-  /**
-   * Puts content data to the queue, so that it gets processed.
-   */
-  put(items: Item[], options?: ProducerOtions): Promise<Result<{}, Failure>>
-}
-
 export interface Consumer<Item> {
   /**
    * Peek items of the queue without removing them.
    */
   peek(options?: ConsumerOptions): Promise<Result<Item[], Failure>>
-
-  /**
-   * Attempts to consumer up to a `limit` number of items. Calls provided `consumer` with items
-   * in from this queue. If it succeeds only returned `items` will be removed from the queue. If fails
-   * no items will be dequeued.
-   */
-  consume (consumer: (items: Item[]) => Promise<Result<Item[], Failure>>, options?: ConsumerOptions): Promise<Result<{}, Failure>>
 }
 
-export interface Queue<In, Out = Inserted<In>> extends Producer<In>, Consumer<Out> {}
-export interface PriorityQueue<In, Out = Inserted<In>> extends PriorityProducer<In>, Consumer<Out> {}
-
-export type Inserted<In> = In & { inserted: string }
-
-export interface ProducerOtions {
+export interface PriorityProducer<Item extends ItemWithPriority> extends Producer<Item>{}
+export interface ItemWithPriority {
   priority?: number
 }
+export interface Queue<In, Out = Inserted<In>> extends Producer<In>, Consumer<Out> {}
+export interface PriorityQueue<In extends ItemWithPriority, Out = Inserted<In>> extends PriorityProducer<In>, Consumer<Out> {}
+export type Inserted<In> = In & { inserted: string }
 
+/**
+ * Content Queue
+ */
 export interface Content {
   link: Link
   size: number
@@ -52,10 +44,14 @@ export interface Content {
 }
 export type ContentQueue = Queue<Content>
 
+/**
+ * Piece Queue
+ */
 export interface Piece {
   link: Link
   content: Link
   size: number
+  priority?: number
 }
 export interface Inclusion {
   piece: Link
@@ -63,6 +59,9 @@ export interface Inclusion {
 }
 export type PieceQueue = PriorityQueue<Piece, Inserted<Inclusion>>
 
+/**
+ * Aggregate Queue
+ */
 export interface Aggregate {
   link: Link
   size: number
@@ -72,6 +71,14 @@ export interface AggregateWithInclusionPieces extends Aggregate {
 }
 
 export type AggregateQueue = Queue<AggregateWithInclusionPieces, Inserted<Aggregate>>
+
+/**
+ * Deal Queue
+ */
+export interface Deal {
+  aggregate: Link
+}
+export type DealQueue = Queue<Deal>
 
 // ------
 

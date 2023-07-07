@@ -1,44 +1,35 @@
-import { Kysely } from 'kysely'
+import { parse as parseLink } from 'multiformats/link'
+import { sql } from 'kysely'
 
-import { getDialect } from '../table/utils.js'
+import { connect } from '../database/index.js'
 import {
-  SQLSTATE_UNIQUE_VALUE_CONSTRAINT_ERROR_CODE,
+  SQLSTATE_FOREIGN_KEY_CONSTRAINT_ERROR_CODE,
   DEFAULT_LIMIT
-} from '../table/constants.js'
+} from '../database/constants.js'
 import {
   DatabaseOperationError,
-  DatabaseUniqueValueConstraintError
-} from '../table/errors.js'
+  DatabaseForeignKeyConstraintError
+} from '../database/errors.js'
 
 export const TABLE_NAME = 'piece'
 export const INCLUSION_TABLE_NAME = 'inclusion'
 export const VIEW_NAME = 'cargo'
 
 /**
- * @param {import('../types.js').DialectProps} dialectOpts
- */
-export function createPieceQueue (dialectOpts) {
-  const dialect = getDialect(dialectOpts)
-  const dbClient = new Kysely({
-    dialect
-  })
-
-  return usePieceQueue(dbClient)
-}
-
-/**
  * 
- * @param {import('kysely').Kysely<import('../schema.js').Database>} dbClient
+ * @param {import('../types.js').DatabaseConnect} conf
  * @returns {import('../types.js').PieceQueue}
  */
-export function usePieceQueue (dbClient) {
+export function createPieceQueue (conf) {
+  const dbClient = connect(conf)
+
   return {
-    put: async (pieceItems, options = {}) => {
-      const priority = options.priority || 0
+    put: async (pieceItems) => {
       const items = pieceItems.map(pieceItem => ({
         link: `${pieceItem.link}`,
         size: pieceItem.size,
         content: `${pieceItem.content}`,
+        priority: pieceItem.priority || 0
       }))
 
       try {
@@ -47,7 +38,16 @@ export function usePieceQueue (dbClient) {
           // Insert to piece table
           await trx
             .insertInto(TABLE_NAME)
-            .values(items)
+            .values(items.map(item => ({
+              link: item.link,
+              size: item.size,
+              content: item.content
+            })))
+            // NOOP if item is already in table
+            .onConflict(oc => oc
+              .column('link')
+              .doNothing()
+            )
             .execute()
 
           // Insert to inclusion table all pieces
@@ -55,14 +55,20 @@ export function usePieceQueue (dbClient) {
             .insertInto(INCLUSION_TABLE_NAME)
             .values(items.map(item => ({
               piece: item.link,
-              priority
+              priority: item.priority,
+              aggregate: null
             })))
+            // NOOP if item is already in table
+            .onConflict(oc => oc
+              .expression(sql`piece, COALESCE(aggregate, '0')`)
+              .doNothing()
+            )
             .execute()
         })
       } catch (/** @type {any} */ error) {
         return {
-          error: Number.parseInt(error.code) === SQLSTATE_UNIQUE_VALUE_CONSTRAINT_ERROR_CODE ?
-            new DatabaseUniqueValueConstraintError(error.message) :
+          error: Number.parseInt(error.code) === SQLSTATE_FOREIGN_KEY_CONSTRAINT_ERROR_CODE ?
+            new DatabaseForeignKeyConstraintError(error.message) :
             new DatabaseOperationError(error.message)
         }
       }
@@ -70,32 +76,6 @@ export function usePieceQueue (dbClient) {
       return {
         ok: {}
       }
-    },
-    consume: async (consumer, options = {}) => {
-      const limit = options.limit || DEFAULT_LIMIT
-
-      let queuePeakResponse
-      try {
-        queuePeakResponse = await dbClient
-          .selectFrom(VIEW_NAME)
-          .selectAll()
-          .limit(limit)
-          .execute()
-      } catch (/** @type {any} */ error) {
-        return {
-          error: new DatabaseOperationError(error.message)
-        }
-      }
-
-      /** @type {import('../types.js').Inserted<import('../types').Inclusion>[]} */
-      const cargo = queuePeakResponse.map(piece => ({
-        // @ts-expect-error sql created types for view get optional
-        piece: parseLink(/** @type {string} */ piece.piece),
-        priority: /** @type {number} */(piece.priority),
-        inserted: /** @type {Date} */(piece.inserted).toISOString(),
-      }))
-
-      return await consumer(cargo)
     },
     peek: async (options = {}) => {
       const limit = options.limit || DEFAULT_LIMIT
@@ -119,6 +99,7 @@ export function usePieceQueue (dbClient) {
         piece: parseLink(/** @type {string} */ piece.piece),
         priority: /** @type {number} */(piece.priority),
         inserted: /** @type {Date} */(piece.inserted).toISOString(),
+        aggregate: piece.aggregate && parseLink(/** @type {string} */ piece.aggregate),
       }))
 
       return {
