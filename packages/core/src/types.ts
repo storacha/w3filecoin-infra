@@ -1,8 +1,5 @@
 import { Link } from '@ucanto/interface'
-import {
-  UpdateResult,
-  Kysely
-} from 'kysely'
+import { Kysely } from 'kysely'
 import { Database } from './schema'
 
 export interface DialectProps {
@@ -29,6 +26,9 @@ export interface Consumer<Item> {
 export interface PriorityProducer<Item extends ItemWithPriority> extends Producer<Item>{}
 export interface ItemWithPriority {
   priority?: number
+}
+export interface ConsumerOptions {
+  limit?: number
 }
 export interface Queue<In, Out = Inserted<In>> extends Producer<In>, Consumer<Out> {}
 export interface PriorityQueue<In extends ItemWithPriority, Out = Inserted<In>> extends PriorityProducer<In>, Consumer<Out> {}
@@ -80,121 +80,11 @@ export interface Deal {
 }
 export type DealQueue = Queue<Deal>
 
-// ------
-
-export interface ContentTable {
-  /**
-   * Inserts content data to the table, so that it gets processed and into a deal.
-   */
-  insert: (item: ContentInsertInput) => Promise<Result<{}, Failure>>
-}
-
-export interface PieceTable {
-  /**
-   * Inserts piece data to the table, so that it gets aggregated and into a deal.
-   */
-  insert: (item: PieceInsertInput, contentLink: Link) => Promise<Result<{}, Failure>>
-}
-
-export interface AggregateTable {
-  /**
-   * Inserts aggregate data to the table, so that it gets into a deal.
-   */
-  insert: (aggregate: AggregateInsertInput, pieces: Link[]) => Promise<Result<{}, Failure>>
-}
-
-export interface InclusionTable {
-  /**
-   * Inserts inclusion data to the table, so that inserted piece is aggregated.
-   */
-  insert: (item: InclusionInsertInput) => Promise<Result<{}, Failure>>
-  aggregate: (items: Link[], aggregateLink: Link) => Promise<Result<UpdateResult[], Failure>>
-}
-
-export interface DealTable {
-  /**
-   * Inserts deal data to the table, so that deal flow can be tracked.
-   */
-  insert: (item: DealInsertInput) => Promise<Result<{}, Failure>>
-}
-
-export interface CargoView {
-  selectAll: (options?: ConsumerOptions) => Promise<Result<CargoOutput[], Failure>>
-}
-
-export interface ContentQueueView {
-  selectAll: (options?: ConsumerOptions) => Promise<Result<ContentOutput[], Failure>>
-}
-
-export interface AggregateQueueView {
-  selectAll: (options?: ConsumerOptions) => Promise<Result<AggregateOutput[], Failure>>
-}
-
-export interface DealView {
-  selectAllPending: (options?: ConsumerOptions) => Promise<Result<DealPendingOutput[], Failure>>
-  selectAllSigned: (options?: ConsumerOptions) => Promise<Result<DealSignedOutput[], Failure>>
-  selectAllApproved: (options?: ConsumerOptions) => Promise<Result<DealProcessedOutput[], Failure>>
-  selectAllRejected: (options?: ConsumerOptions) => Promise<Result<DealProcessedOutput[], Failure>>
-}
-
-export interface ContentInsertInput {
-  link: Link
-  size: number
-  source: ContentSource[]
-}
-
-export interface ContentOutput extends ContentInsertInput {
-  inserted: string
-}
-
 export type ContentSource = {
   bucketName: string
   bucketRegion: string
   key: string
   bucketUrl?: string
-}
-
-export interface PieceInsertInput {
-  link: Link
-  size: number
-}
-
-export interface AggregateInsertInput {
-  link: Link
-  size: number
-}
-
-export interface AggregateOutput extends AggregateInsertInput {
-  inserted: string
-}
-
-export interface InclusionInsertInput {
-  piece: Link
-  priority?: number
-}
-
-export interface CargoOutput extends InclusionInsertInput {
-  inserted: string
-}
-
-export interface DealInsertInput {
-  aggregate: Link
-}
-
-export interface DealPendingOutput extends DealInsertInput {
-  inserted: string
-}
-
-export interface DealSignedOutput extends DealInsertInput {
-  signed: string
-}
-
-export interface DealProcessedOutput extends DealInsertInput {
-  processed: string
-}
-
-export interface ConsumerOptions {
-  limit?: number
 }
 
 export type Result<T = unknown, X extends {} = {}> = Variant<{
