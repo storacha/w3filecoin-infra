@@ -1,13 +1,86 @@
 import { Link } from '@ucanto/interface'
 import {
-  UpdateResult
+  UpdateResult,
+  Kysely
 } from 'kysely'
+import { Database } from './schema'
 
 export interface DialectProps {
   database: string
   secretArn: string
   resourceArn: string
 }
+
+export type DatabaseConnect = Kysely<Database> | DialectProps
+
+export interface Producer<Item> {
+  /**
+   * Puts content data to the queue, so that it gets processed.
+   */
+  put(items: Item[]): Promise<Result<{}, Failure>>
+}
+export interface Consumer<Item> {
+  /**
+   * Peek items of the queue without removing them.
+   */
+  peek(options?: ConsumerOptions): Promise<Result<Item[], Failure>>
+}
+
+export interface PriorityProducer<Item extends ItemWithPriority> extends Producer<Item>{}
+export interface ItemWithPriority {
+  priority?: number
+}
+export interface Queue<In, Out = Inserted<In>> extends Producer<In>, Consumer<Out> {}
+export interface PriorityQueue<In extends ItemWithPriority, Out = Inserted<In>> extends PriorityProducer<In>, Consumer<Out> {}
+export type Inserted<In> = In & { inserted: string }
+
+/**
+ * Content Queue
+ */
+export interface Content {
+  link: Link
+  size: number
+  source: ContentSource[]
+}
+export type ContentQueue = Queue<Content>
+
+/**
+ * Piece Queue
+ */
+export interface Piece {
+  link: Link
+  content: Link
+  size: number
+  priority?: number
+}
+export interface Inclusion {
+  piece: Link
+  priority: number
+}
+export type PieceQueue = PriorityQueue<Piece, Inserted<Inclusion>>
+
+/**
+ * Aggregate Queue
+ */
+export interface Aggregate {
+  link: Link
+  size: number
+}
+export interface AggregateWithInclusionPieces extends Aggregate {
+  pieces: Link[]
+}
+
+export type AggregateQueue = Queue<AggregateWithInclusionPieces, Inserted<Aggregate>>
+
+/**
+ * Deal Queue
+ */
+export interface Deal {
+  aggregate: Link
+}
+export type DealQueue = Queue<Deal>
+
+// ------
 
 export interface ContentTable {
   /**
@@ -46,22 +119,22 @@ export interface DealTable {
 }
 
 export interface CargoView {
-  selectAll: (options?: SelectOptions) => Promise<Result<CargoOutput[], Failure>>
+  selectAll: (options?: ConsumerOptions) => Promise<Result<CargoOutput[], Failure>>
 }
 
 export interface ContentQueueView {
-  selectAll: (options?: SelectOptions) => Promise<Result<ContentOutput[], Failure>>
+  selectAll: (options?: ConsumerOptions) => Promise<Result<ContentOutput[], Failure>>
 }
 
 export interface AggregateQueueView {
-  selectAll: (options?: SelectOptions) => Promise<Result<AggregateOutput[], Failure>>
+  selectAll: (options?: ConsumerOptions) => Promise<Result<AggregateOutput[], Failure>>
 }
 
 export interface DealView {
-  selectAllPending: (options?: SelectOptions) => Promise<Result<DealPendingOutput[], Failure>>
-  selectAllSigned: (options?: SelectOptions) => Promise<Result<DealSignedOutput[], Failure>>
-  selectAllApproved: (options?: SelectOptions) => Promise<Result<DealProcessedOutput[], Failure>>
-  selectAllRejected: (options?: SelectOptions) => Promise<Result<DealProcessedOutput[], Failure>>
+  selectAllPending: (options?: ConsumerOptions) => Promise<Result<DealPendingOutput[], Failure>>
+  selectAllSigned: (options?: ConsumerOptions) => Promise<Result<DealSignedOutput[], Failure>>
+  selectAllApproved: (options?: ConsumerOptions) => Promise<Result<DealProcessedOutput[], Failure>>
+  selectAllRejected: (options?: ConsumerOptions) => Promise<Result<DealProcessedOutput[], Failure>>
 }
 
 export interface ContentInsertInput {
@@ -120,9 +193,8 @@ export interface DealProcessedOutput extends DealInsertInput {
   processed: string
 }
 
-export interface SelectOptions {
+export interface ConsumerOptions {
   limit?: number
-  orderBy?: 'priority' | 'inserted' | 'size' // TODO: remove?
 }
 
 export type Result<T = unknown, X extends {} = {}> = Variant<{

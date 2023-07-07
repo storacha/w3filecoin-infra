@@ -28,6 +28,7 @@
   },
   "eslintConfig": {
     "rules": {
+      "unicorn/no-for-loop": "off",
       "unicorn/no-null": "off"
     }
   }

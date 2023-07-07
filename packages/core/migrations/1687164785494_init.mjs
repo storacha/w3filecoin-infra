@@ -1,6 +1,5 @@
 import { sql } from 'kysely'
 
-
 /**
  * @param {import('kysely').Kysely<any>} db
  */
@@ -86,7 +85,6 @@ export async function up(db) {
     .addColumn('aggregate', 'text', (col) => col.defaultTo(null))
     .addColumn('priority', 'integer', (col) => col.notNull())
     .addColumn('inserted', 'timestamp', (col) => col.defaultTo(sql`timezone('utc', now())`))
-    .addUniqueConstraint('piece_aggregate_unique', ['aggregate', 'piece'])
     .addForeignKeyConstraint(
       'aggregate_id_foreign',
       ['aggregate'],
@@ -101,11 +99,13 @@ export async function up(db) {
     .expression(sql`priority DESC, inserted`)
     .execute()
 
-  await db.schema
-    .createIndex('piece_aggregate_unique_idx')
-    .on('inclusion')
-    .columns(['aggregate', 'piece'])
-    .execute()
+    await db.schema
+      .createIndex('piece_aggregate_unique_idx')
+      .on('inclusion')
+      .unique()
+      // coalesce is used to guarantee uniqueness with null
+      .expression(sql`piece, COALESCE(aggregate, '0')`)
+      .execute()
 
   /**
    * View for inclusion records that do not have an aggregate.
