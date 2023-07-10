@@ -1,4 +1,4 @@
-import { Link } from '@ucanto/interface'
+import { UnknownLink as Link } from 'multiformats/link'
 import { Kysely } from 'kysely'
 import { Database } from './schema'
 

@@ -16,6 +16,29 @@ export const INCLUSION = 'inclusion'
 export const CARGO = 'cargo'
 
 /**
+ * @param {import('../types').Piece} pieceItem 
+ */
+const encode = (pieceItem) => ({
+  link: `${pieceItem.link}`,
+  size: pieceItem.size,
+  content: `${pieceItem.content}`,
+  priority: pieceItem.priority || 0
+})
+
+/**
+ * @param {any[]} rows 
+ * @returns {import('../types.js').Inserted<import('../types').Inclusion>[]}
+ */
+const decode = (rows) => {
+  return rows.map(piece => ({
+    piece: parseLink(/** @type {string} */ (piece.piece)),
+    priority: /** @type {number} */(piece.priority),
+    inserted: /** @type {Date} */(piece.inserted).toISOString(),
+    aggregate: piece.aggregate && parseLink(/** @type {string} */ piece.aggregate),
+  }))
+}
+
+/**
  * 
  * @param {import('../types.js').DatabaseConnect} conf
  * @returns {import('../types.js').PieceQueue}
@@ -25,12 +48,7 @@ export function createPieceQueue (conf) {
 
   return {
     put: async (pieceItem) => {
-      const item = {
-        link: `${pieceItem.link}`,
-        size: pieceItem.size,
-        content: `${pieceItem.content}`,
-        priority: pieceItem.priority || 0
-      }
+      const item = encode(pieceItem)
 
       try {
         // Transaction
@@ -91,16 +109,8 @@ export function createPieceQueue (conf) {
         }
       }
 
-      /** @type {import('../types.js').Inserted<import('../types').Inclusion>[]} */
-      const cargo = queuePeakResponse.map(piece => ({
-        piece: parseLink(/** @type {string} */ (piece.piece)),
-        priority: /** @type {number} */(piece.priority),
-        inserted: /** @type {Date} */(piece.inserted).toISOString(),
-        aggregate: piece.aggregate && parseLink(/** @type {string} */ piece.aggregate),
-      }))
-
       return {
-        ok: cargo
+        ok: decode(queuePeakResponse)
       }
     }
   }

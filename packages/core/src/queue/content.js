@@ -12,6 +12,28 @@ export const CONTENT_QUEUE = 'content_queue'
  */
 
 /**
+ * @param {import('../types').Content} contentItem 
+ */
+const encode = (contentItem) => ({
+  link: `${contentItem.link}`,
+  size: contentItem.size,
+  source: JSON.stringify(contentItem.source),
+})
+
+/**
+ * @param {any[]} rows 
+ * @returns {import('../types.js').Inserted<import('../types').Content>[]}
+ */
+const decode = (rows) => {
+  return rows.map(content => ({
+    link: parseLink(/** @type {string} */ (content.link)),
+    size: /** @type {number} */(Number.parseInt(/** @type {string} */ (content.size))) | 0,
+    source: /** @type {ContentSource[]} */ (content.source),
+    inserted: /** @type {Date} */(content.inserted).toISOString(),
+  }))
+}
+
+/**
  * @param {import('../types.js').DatabaseConnect} conf
  * @returns {import('../types.js').ContentQueue}
  */
@@ -20,16 +42,10 @@ export function createContentQueue (conf) {
 
   return {
     put: async (contentItem) => {
-      const item = {
-        link: `${contentItem.link}`,
-        size: contentItem.size,
-        source: JSON.stringify(contentItem.source),
-      }
-
       try {
         await dbClient
           .insertInto(CONTENT)
-          .values(item)
+          .values(encode(contentItem))
           // NOOP if item is already in queue
           .onConflict(oc => oc
             .column('link')
@@ -60,16 +76,8 @@ export function createContentQueue (conf) {
         }
       }
 
-      /** @type {import('../types.js').Inserted<import('../types').Content>[]} */
-      const contentQueue = queuePeakResponse.map(content => ({
-        link: parseLink(/** @type {string} */ (content.link)),
-        size: /** @type {number} */(Number.parseInt(/** @type {string} */ (content.size))) | 0,
-        source: /** @type {ContentSource[]} */ (content.source),
-        inserted: /** @type {Date} */(content.inserted).toISOString(),
-      }))
-
       return {
-        ok: contentQueue
+        ok: decode(queuePeakResponse)
       }
     }
   }

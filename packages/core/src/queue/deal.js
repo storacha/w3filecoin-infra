@@ -21,6 +21,25 @@ export const STATUS = {
 }
 
 /**
+ * @param {import('../types').Deal} dealItem 
+ */
+const encode = (dealItem) => ({
+  aggregate: `${dealItem.aggregate}`,
+  status: STATUS.PENDING,
+})
+
+/**
+ * @param {any[]} rows 
+ * @returns {import('../types.js').Inserted<import('../types').Deal>[]}
+ */
+const decode = (rows) => {
+  return rows.map(d => ({
+    aggregate: parseLink(/** @type {string} */ (d.aggregate)),
+    inserted: /** @type {Date} */(d.inserted).toISOString(),
+  }))
+}
+
+/**
  * 
  * @param {import('../types.js').DatabaseConnect} conf
  * @returns {import('../types.js').DealQueue}
@@ -30,15 +49,10 @@ export function createDealQueue (conf) {
 
   return {
     put: async (dealItem) => {
-      const items = {
-        aggregate: `${dealItem.aggregate}`,
-        status: STATUS.PENDING,
-      }
-
       try {
         await dbClient
           .insertInto(DEAL)
-          .values(items)
+          .values(encode(dealItem))
           // NOOP if item is already in table
           .onConflict(oc => oc
             .column('aggregate')
@@ -69,14 +83,8 @@ export function createDealQueue (conf) {
         }
       }
 
-      /** @type {import('../types.js').Inserted<import('../types').Deal>[]} */
-      const deals = queuePeakResponse.map(d => ({
-        aggregate: parseLink(/** @type {string} */ (d.aggregate)),
-        inserted: /** @type {Date} */(d.inserted).toISOString(),
-      }))
-
       return {
-        ok: deals
+        ok: decode(queuePeakResponse)
       }
     }
   }

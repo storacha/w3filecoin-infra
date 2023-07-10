@@ -16,6 +16,27 @@ export const INCLUSION = 'inclusion'
 export const AGGREGATE_QUEUE = 'aggregate_queue'
 
 /**
+ * @param {import('../types').AggregateWithInclusionPieces} aggregateItem 
+ */
+const encode = (aggregateItem) => ({
+  link: `${aggregateItem.link}`,
+  size: aggregateItem.size,
+  pieces: aggregateItem.pieces
+})
+
+/**
+ * @param {any[]} rows 
+ * @returns {import('../types.js').Inserted<import('../types').Aggregate>[]}
+ */
+const decode = (rows) => {
+  return rows.map(aggregate => ({
+    link: parseLink(/** @type {string} */ (aggregate.link)),
+    size: /** @type {number} */(Number.parseInt(/** @type {string} */ (aggregate.size))) | 0,
+    inserted: /** @type {Date} */(aggregate.inserted).toISOString(),
+  }))
+}
+
+/**
  * 
  * @param {import('../types.js').DatabaseConnect} conf
  * @returns {import('../types.js').AggregateQueue}
@@ -25,11 +46,7 @@ export function createAggregateQueue (conf) {
 
   return {
     put: async (aggregateItem) => {
-      const item = {
-        link: `${aggregateItem.link}`,
-        size: aggregateItem.size,
-        pieces: aggregateItem.pieces
-      }
+      const item = encode(aggregateItem)
 
       try {
         // Transaction
@@ -105,15 +122,8 @@ export function createAggregateQueue (conf) {
         }
       }
 
-      /** @type {import('../types.js').Inserted<import('../types').Aggregate>[]} */
-      const aggregateQueue = queuePeakResponse.map(aggregate => ({
-        link: parseLink(/** @type {string} */ (aggregate.link)),
-        size: /** @type {number} */(Number.parseInt(/** @type {string} */ (aggregate.size))) | 0,
-        inserted: /** @type {Date} */(aggregate.inserted).toISOString(),
-      }))
-
       return {
-        ok: aggregateQueue
+        ok: decode(queuePeakResponse)
       }
     }
   }
