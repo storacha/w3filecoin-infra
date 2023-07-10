@@ -23,16 +23,18 @@ test('can insert to deal queue and peek queued deals', async t => {
   const cargoItems = await getCargo(10)
 
   // Put content
-  const contentQueuePutResp = await contentQueue.put(cargoItems.map(item => item.content))
-  t.truthy(contentQueuePutResp.ok)
+  const contentQueuePutResp = await Promise.all(
+    cargoItems.map(item => contentQueue.put(item.content))
+  )
+  t.falsy(contentQueuePutResp.find(resp => resp.error))
 
   // Put piece
-  const pieceQueuePutResp = await pieceQueue.put(cargoItems.map(item => ({
+  const pieceQueuePutResp = await Promise.all(cargoItems.map(item => pieceQueue.put({
     link: item.piece.link,
     size: item.piece.size,
     content: item.content.link
   })))
-  t.truthy(pieceQueuePutResp.ok)
+  t.falsy(pieceQueuePutResp.find(resp => resp.error))
 
   // Put Aggregate
   const aggregateItem = {
@@ -42,14 +44,14 @@ test('can insert to deal queue and peek queued deals', async t => {
     pieces: cargoItems.map(item => item.piece.link)
   }
 
-  const aggregateQueuePutResp = await aggregateQueue.put([aggregateItem])
+  const aggregateQueuePutResp = await aggregateQueue.put(aggregateItem)
   t.truthy(aggregateQueuePutResp.ok)
 
   // Put deal
   const dealItem = {
     aggregate: aggregateItem.link
   }
-  const queuePutResp = await dealQueue.put([dealItem])
+  const queuePutResp = await dealQueue.put(dealItem)
   t.truthy(queuePutResp.ok)
 
    // Peek deal should still be empty until signed
@@ -85,16 +87,18 @@ test('when insert to deal queue peek from aggregate queue not return same aggreg
   const cargoItems = await getCargo(10)
 
   // Put content
-  const contentQueuePutResp = await contentQueue.put(cargoItems.map(item => item.content))
-  t.truthy(contentQueuePutResp.ok)
+  const contentQueuePutResp = await Promise.all(
+    cargoItems.map(item => contentQueue.put(item.content))
+  )
+  t.falsy(contentQueuePutResp.find(resp => resp.error))
 
   // Put piece
-  const pieceQueuePutResp = await pieceQueue.put(cargoItems.map(item => ({
+  const pieceQueuePutResp = await Promise.all(cargoItems.map(item => pieceQueue.put({
     link: item.piece.link,
     size: item.piece.size,
     content: item.content.link
   })))
-  t.truthy(pieceQueuePutResp.ok)
+  t.falsy(pieceQueuePutResp.find(resp => resp.error))
 
   // Put Aggregate
   const aggregateItem = {
@@ -104,7 +108,7 @@ test('when insert to deal queue peek from aggregate queue not return same aggreg
     pieces: cargoItems.map(item => item.piece.link)
   }
 
-  const aggregateQueuePutResp = await aggregateQueue.put([aggregateItem])
+  const aggregateQueuePutResp = await aggregateQueue.put(aggregateItem)
   t.truthy(aggregateQueuePutResp.ok)
 
   // Peek aggregate before deal
@@ -118,7 +122,7 @@ test('when insert to deal queue peek from aggregate queue not return same aggreg
   const dealItem = {
     aggregate: aggregateItem.link
   }
-  const queuePutResp = await dealQueue.put([dealItem])
+  const queuePutResp = await dealQueue.put(dealItem)
   t.truthy(queuePutResp.ok)
 
   // Peek aggregate after deal
@@ -138,16 +142,18 @@ test('can insert same batch to the deal queue and only peek once', async t => {
   const cargoItems = await getCargo(10)
 
   // Put content
-  const contentQueuePutResp = await contentQueue.put(cargoItems.map(item => item.content))
-  t.truthy(contentQueuePutResp.ok)
+  const contentQueuePutResp = await Promise.all(
+    cargoItems.map(item => contentQueue.put(item.content))
+  )
+  t.falsy(contentQueuePutResp.find(resp => resp.error))
 
   // Put piece
-  const pieceQueuePutResp = await pieceQueue.put(cargoItems.map(item => ({
+  const pieceQueuePutResp = await Promise.all(cargoItems.map(item => pieceQueue.put({
     link: item.piece.link,
     size: item.piece.size,
     content: item.content.link
   })))
-  t.truthy(pieceQueuePutResp.ok)
+  t.falsy(pieceQueuePutResp.find(resp => resp.error))
 
   // Put Aggregate
   const aggregateItem = {
@@ -157,18 +163,18 @@ test('can insert same batch to the deal queue and only peek once', async t => {
     pieces: cargoItems.map(item => item.piece.link)
   }
 
-  const aggregateQueuePutResp = await aggregateQueue.put([aggregateItem])
+  const aggregateQueuePutResp = await aggregateQueue.put(aggregateItem)
   t.truthy(aggregateQueuePutResp.ok)
 
   // Put deal
   const dealItem = {
     aggregate: aggregateItem.link
   }
-  const queuePutResp0 = await dealQueue.put([dealItem])
+  const queuePutResp0 = await dealQueue.put(dealItem)
   t.truthy(queuePutResp0.ok)
 
   // Put same deal
-  const queuePutResp1 = await dealQueue.put([dealItem])
+  const queuePutResp1 = await dealQueue.put(dealItem)
   t.truthy(queuePutResp1.ok)
 
    // Peek deal should still be empty until signed

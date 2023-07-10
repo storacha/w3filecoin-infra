@@ -24,13 +24,13 @@ export function createPieceQueue (conf) {
   const dbClient = connect(conf)
 
   return {
-    put: async (pieceItems) => {
-      const items = pieceItems.map(pieceItem => ({
+    put: async (pieceItem) => {
+      const item = {
         link: `${pieceItem.link}`,
         size: pieceItem.size,
         content: `${pieceItem.content}`,
         priority: pieceItem.priority || 0
-      }))
+      }
 
       try {
         // Transaction
@@ -38,11 +38,11 @@ export function createPieceQueue (conf) {
           // Insert to piece table
           await trx
             .insertInto(PIECE)
-            .values(items.map(item => ({
+            .values({
               link: item.link,
               size: item.size,
               content: item.content
-            })))
+            })
             // NOOP if item is already in table
             .onConflict(oc => oc
               .column('link')
@@ -53,11 +53,11 @@ export function createPieceQueue (conf) {
           // Insert to inclusion table all pieces
           await trx
             .insertInto(INCLUSION)
-            .values(items.map(item => ({
+            .values({
               piece: item.link,
               priority: item.priority,
               aggregate: null
-            })))
+            })
             // NOOP if item is already in table
             .onConflict(oc => oc
               .expression(sql`piece, COALESCE(aggregate, '')`)

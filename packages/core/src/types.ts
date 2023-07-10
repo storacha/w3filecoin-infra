@@ -14,13 +14,13 @@ export interface Producer<Item> {
   /**
    * Puts content data to the queue, so that it gets processed.
    */
-  put(items: Item[]): Promise<Result<{}, Failure>>
+  put(item: Item): Promise<Result<{}, PutError>>
 }
 export interface Consumer<Item> {
   /**
    * Peek items of the queue without removing them.
    */
-  peek(options?: ConsumerOptions): Promise<Result<Item[], Failure>>
+  peek(options?: ConsumerOptions): Promise<Result<Item[], PeerError>>
 }
 
 export interface PriorityProducer<Item extends ItemWithPriority> extends Producer<Item>{}
@@ -33,6 +33,16 @@ export interface ConsumerOptions {
 export interface Queue<In, Out = Inserted<In>> extends Producer<In>, Consumer<Out> {}
 export interface PriorityQueue<In extends ItemWithPriority, Out = Inserted<In>> extends PriorityProducer<In>, Consumer<Out> {}
 export type Inserted<In> = In & { inserted: string }
+
+/**
+ * Errors
+ */
+export type PutError =
+  | DatabaseOperationError
+  | DatabaseForeignKeyConstraintError
+  | DatabaseValueToUpdateAlreadyTakenError
+
+export type PeerError = DatabaseOperationError
 
 /**
  * Content Queue
@@ -91,6 +101,17 @@ export type Result<T = unknown, X extends {} = {}> = Variant<{
   ok: T
   error: X
 }>
+
+export interface DatabaseOperationError extends Error {
+  name: 'DatabaseOperationFailed'
+}
+export interface DatabaseForeignKeyConstraintError extends Error {
+  name: 'DatabaseForeignKeyConstraint'
+}
+
+export interface DatabaseValueToUpdateAlreadyTakenError extends Error {
+  name: 'DatabaseValueToUpdateAlreadyTaken'
+}
 
 /**
  * Utility type for defining a [keyed union] type as in IPLD Schema. In practice

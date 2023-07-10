@@ -19,17 +19,17 @@ export function createContentQueue (conf) {
   const dbClient = connect(conf)
 
   return {
-    put: async (contentItems) => {
-      const items = contentItems.map(contentItem => ({
+    put: async (contentItem) => {
+      const item = {
         link: `${contentItem.link}`,
         size: contentItem.size,
         source: JSON.stringify(contentItem.source),
-      }))
+      }
 
       try {
         await dbClient
           .insertInto(CONTENT)
-          .values(items)
+          .values(item)
           // NOOP if item is already in queue
           .onConflict(oc => oc
             .column('link')

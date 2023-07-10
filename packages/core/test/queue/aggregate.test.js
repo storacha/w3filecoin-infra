@@ -22,16 +22,18 @@ test('can insert to aggregate queue and peek queued content', async t => {
   const cargoItems = await getCargo(10)
 
   // Put content
-  const contentQueuePutResp = await contentQueue.put(cargoItems.map(item => item.content))
-  t.truthy(contentQueuePutResp.ok)
+  const contentQueuePutResp = await Promise.all(
+    cargoItems.map(item => contentQueue.put(item.content))
+  )
+  t.falsy(contentQueuePutResp.find(resp => resp.error))
 
   // Put piece
-  const pieceQueuePutResp = await pieceQueue.put(cargoItems.map(item => ({
+  const pieceQueuePutResp = await Promise.all(cargoItems.map(item => pieceQueue.put({
     link: item.piece.link,
     size: item.piece.size,
     content: item.content.link
   })))
-  t.truthy(pieceQueuePutResp.ok)
+  t.falsy(pieceQueuePutResp.find(resp => resp.error))
 
   // Put Aggregate
   const aggregateItem = {
@@ -42,7 +44,7 @@ test('can insert to aggregate queue and peek queued content', async t => {
   }
 
   // Put aggregate
-  const queuePutResp = await aggregateQueue.put([aggregateItem])
+  const queuePutResp = await aggregateQueue.put(aggregateItem)
   t.truthy(queuePutResp.ok)
 
   // Peek aggregate
@@ -65,16 +67,18 @@ test('when insert to aggregate queue peek from piece queue not return same piece
   const cargoItems = await getCargo(10)
 
   // Put content
-  const contentQueuePutResp = await contentQueue.put(cargoItems.map(item => item.content))
-  t.truthy(contentQueuePutResp.ok)
+  const contentQueuePutResp = await Promise.all(
+    cargoItems.map(item => contentQueue.put(item.content))
+  )
+  t.falsy(contentQueuePutResp.find(resp => resp.error))
 
   // Put piece
-  const pieceQueuePutResp = await pieceQueue.put(cargoItems.map(item => ({
+  const pieceQueuePutResp = await Promise.all(cargoItems.map(item => pieceQueue.put({
     link: item.piece.link,
     size: item.piece.size,
     content: item.content.link
   })))
-  t.truthy(pieceQueuePutResp.ok)
+  t.falsy(pieceQueuePutResp.find(resp => resp.error))
 
   // Peek piece before aggregate
   const queuePeekRespBeforePutAggregate = await pieceQueue.peek()
@@ -93,7 +97,7 @@ test('when insert to aggregate queue peek from piece queue not return same piece
   }
 
   // Put aggregate
-  const queuePutResp = await aggregateQueue.put([aggregateItem])
+  const queuePutResp = await aggregateQueue.put(aggregateItem)
   t.truthy(queuePutResp.ok)
 
   // Peek piece after aggregate
@@ -113,16 +117,18 @@ test('can insert same batch to the aggregate queue and only peek once', async t 
   const cargoItems = await getCargo(10)
 
   // Put content
-  const contentQueuePutResp = await contentQueue.put(cargoItems.map(item => item.content))
-  t.truthy(contentQueuePutResp.ok)
+  const contentQueuePutResp = await Promise.all(
+    cargoItems.map(item => contentQueue.put(item.content))
+  )
+  t.falsy(contentQueuePutResp.find(resp => resp.error))
 
   // Put piece
-  const pieceQueuePutResp = await pieceQueue.put(cargoItems.map(item => ({
+  const pieceQueuePutResp = await Promise.all(cargoItems.map(item => pieceQueue.put({
     link: item.piece.link,
     size: item.piece.size,
     content: item.content.link
   })))
-  t.truthy(pieceQueuePutResp.ok)
+  t.falsy(pieceQueuePutResp.find(resp => resp.error))
 
   // Put Aggregate
   const aggregateItem = {
@@ -133,11 +139,11 @@ test('can insert same batch to the aggregate queue and only peek once', async t 
   }
 
   // Put aggregate
-  const queuePutResp0 = await aggregateQueue.put([aggregateItem])
+  const queuePutResp0 = await aggregateQueue.put(aggregateItem)
   t.truthy(queuePutResp0.ok)
 
   // Put same aggregate
-  const queuePutResp1 = await aggregateQueue.put([aggregateItem])
+  const queuePutResp1 = await aggregateQueue.put(aggregateItem)
   t.truthy(queuePutResp1.ok)
 
   // Peek aggregate
@@ -154,28 +160,32 @@ test('fails to put partially same cargo in different aggregate entries', async t
   const pieceQueue = createPieceQueue(dbClient)
   const aggregateQueue = createAggregateQueue(dbClient)
   const cargoItems = await getCargo(20)
+  const aggregatePieces0 = cargoItems.slice(0, 15).map(item => item.piece.link)
+  const aggregatePieces1 = cargoItems.slice(4).map(item => item.piece.link)
 
   // Put content
-  const contentQueuePutResp = await contentQueue.put(cargoItems.map(item => item.content))
-  t.truthy(contentQueuePutResp.ok)
+  const contentQueuePutResp = await Promise.all(
+    cargoItems.map(item => contentQueue.put(item.content))
+  )
+  t.falsy(contentQueuePutResp.find(resp => resp.error))
 
   // Put piece
-  const pieceQueuePutResp = await pieceQueue.put(cargoItems.map(item => ({
+  const pieceQueuePutResp = await Promise.all(cargoItems.map(item => pieceQueue.put({
     link: item.piece.link,
     size: item.piece.size,
     content: item.content.link
   })))
-  t.truthy(pieceQueuePutResp.ok)
+  t.falsy(pieceQueuePutResp.find(resp => resp.error))
 
   // Put aggregate with a set of pieces
   const aggregateItem0 = {
     // TODO: compute commP of commP
     link: cargoItems[0].piece.link,
     size: cargoItems[0].piece.size,
-    pieces: cargoItems.slice(0, 15).map(item => item.piece.link)
+    pieces: aggregatePieces0
   }
 
-  const queuePutResp0 = await aggregateQueue.put([aggregateItem0])
+  const queuePutResp0 = await aggregateQueue.put(aggregateItem0)
   t.truthy(queuePutResp0.ok)
 
   // Fails to put a second aggregate with partially same pieces
@@ -183,10 +193,10 @@ test('fails to put partially same cargo in different aggregate entries', async t
     // TODO: compute commP of commP
     link: cargoItems[1].piece.link,
     size: cargoItems[1].piece.size,
-    pieces: cargoItems.slice(4).map(item => item.piece.link)
+    pieces: aggregatePieces1
   }
 
-  const queuePutResp1 = await aggregateQueue.put([aggregateItem1])
+  const queuePutResp1 = await aggregateQueue.put(aggregateItem1)
   t.truthy(queuePutResp1.error)
   t.is(queuePutResp1.error?.name, DatabaseValueToUpdateAlreadyTakenErrorName)
 
@@ -204,4 +214,14 @@ test('fails to put partially same cargo in different aggregate entries', async t
   }
 
   t.is(pieceQueuePeekResp.ok.length, 5)
+  // Validate pieces
+  for(const item of pieceQueuePeekResp.ok) {
+    const cargoItem = aggregatePieces1.find(ca => ca.equals(item.piece))
+    if (!cargoItem) {
+      throw new Error('inserted cargo item should be queued')
+    }
+    t.truthy(cargoItem)
+    t.is(item.priority, 0)
+    t.truthy(item.inserted)
+  }
 })

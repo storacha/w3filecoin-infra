@@ -29,11 +29,11 @@ export function createDealQueue (conf) {
   const dbClient = connect(conf)
 
   return {
-    put: async (dealItems) => {
-      const items = dealItems.map(item => ({
-        aggregate: `${item.aggregate}`,
+    put: async (dealItem) => {
+      const items = {
+        aggregate: `${dealItem.aggregate}`,
         status: STATUS.PENDING,
-      }))
+      }
 
       try {
         await dbClient

@@ -20,16 +20,18 @@ test('can insert to piece queue and peek queued pieces', async t => {
   const cargoItems = await getCargo(10)
 
   // Put content
-  const contentQueuePutResp = await contentQueue.put(cargoItems.map(item => item.content))
-  t.truthy(contentQueuePutResp.ok)
+  const contentQueuePutResp = await Promise.all(
+    cargoItems.map(item => contentQueue.put(item.content))
+  )
+  t.falsy(contentQueuePutResp.find(resp => resp.error))
 
   // Put piece
-  const queuePutResp = await pieceQueue.put(cargoItems.map(item => ({
+  const queuePutResp = await Promise.all(cargoItems.map(item => pieceQueue.put({
     link: item.piece.link,
     size: item.piece.size,
     content: item.content.link
   })))
-  t.truthy(queuePutResp.ok)
+  t.falsy(queuePutResp.find(resp => resp.error))
 
   // Peek piece
   const queuePeekResp = await pieceQueue.peek()
@@ -56,8 +58,10 @@ test('when insert to piece queue peek from content queue not return same content
   const cargoItems = await getCargo(10)
 
   // Put content
-  const contentQueuePutResp = await contentQueue.put(cargoItems.map(item => item.content))
-  t.truthy(contentQueuePutResp.ok)
+  const contentQueuePutResp = await Promise.all(
+    cargoItems.map(item => contentQueue.put(item.content))
+  )
+  t.falsy(contentQueuePutResp.find(resp => resp.error))
 
   // Peek content before put piece
   const queuePeekRespBeforePutPiece = await contentQueue.peek()
@@ -68,12 +72,12 @@ test('when insert to piece queue peek from content queue not return same content
   t.is(queuePeekRespBeforePutPiece.ok.length, cargoItems.length)
 
   // Put piece
-  const queuePutResp = await pieceQueue.put(cargoItems.map(item => ({
+  const queuePutResp = await Promise.all(cargoItems.map(item => pieceQueue.put({
     link: item.piece.link,
     size: item.piece.size,
     content: item.content.link
   })))
-  t.truthy(queuePutResp.ok)
+  t.falsy(queuePutResp.find(resp => resp.error))
 
   // Peek content after put piece
   const queuePeekRespAfterPutPiece = await contentQueue.peek()
@@ -91,8 +95,10 @@ test('can insert same batch to the piece queue and only peek once', async t => {
   const cargoItems = await getCargo(10)
 
   // Put content
-  const contentQueuePutResp = await contentQueue.put(cargoItems.map(item => item.content))
-  t.truthy(contentQueuePutResp.ok)
+  const contentQueuePutResp = await Promise.all(
+    cargoItems.map(item => contentQueue.put(item.content))
+  )
+  t.falsy(contentQueuePutResp.find(resp => resp.error))
 
   const pieceItems = cargoItems.map(item => ({
     link: item.piece.link,
@@ -100,12 +106,12 @@ test('can insert same batch to the piece queue and only peek once', async t => {
     content: item.content.link
   }))
   // Put piece
-  const queuePutResp0 = await pieceQueue.put(pieceItems)
-  t.truthy(queuePutResp0.ok)
+  const queuePutResp0 = await Promise.all(pieceItems.map(item => pieceQueue.put(item)))
+  t.falsy(queuePutResp0.find(resp => resp.error))
 
   // Put same piece
-  const queuePutResp1 = await pieceQueue.put(pieceItems)
-  t.truthy(queuePutResp1.ok)
+  const queuePutResp1 = await Promise.all(pieceItems.map(item => pieceQueue.put(item)))
+  t.falsy(queuePutResp1.find(resp => resp.error))
 
   // Peek piece
   const queuePeekResp = await pieceQueue.peek()
@@ -123,8 +129,10 @@ test('can insert partially same batch to the piece queue and only peek once same
   const cargoItems = await getCargo(20)
 
   // Put content
-  const contentQueuePutResp = await contentQueue.put(cargoItems.map(item => item.content))
-  t.truthy(contentQueuePutResp.ok)
+  const contentQueuePutResp = await Promise.all(
+    cargoItems.map(item => contentQueue.put(item.content))
+  )
+  t.falsy(contentQueuePutResp.find(resp => resp.error))
 
   const pieceItems = cargoItems.map(item => ({
     link: item.piece.link,
@@ -135,12 +143,12 @@ test('can insert partially same batch to the piece queue and only peek once same
   const pieceItems1 = pieceItems.slice(4)
 
   // Put piece
-  const queuePutResp0 = await pieceQueue.put(pieceItems0)
-  t.truthy(queuePutResp0.ok)
+  const queuePutResp0 = await Promise.all(pieceItems0.map(item => pieceQueue.put(item)))
+  t.falsy(queuePutResp0.find(resp => resp.error))
 
   // Put partially same piece
-  const queuePutResp1 = await pieceQueue.put(pieceItems1)
-  t.truthy(queuePutResp1.ok)
+  const queuePutResp1 = await Promise.all(pieceItems1.map(item => pieceQueue.put(item)))
+  t.falsy(queuePutResp1.find(resp => resp.error))
 
   // Peek piece
   const queuePeekResp = await pieceQueue.peek()
@@ -157,11 +165,11 @@ test('fails to insert piece if no content exists for given piece', async t => {
   const cargoItems = await getCargo(10)
 
   // Put piece without content already there
-  const queuePutResp = await pieceQueue.put(cargoItems.map(item => ({
+  const queuePutResp = await Promise.all(cargoItems.map(item => pieceQueue.put({
     link: item.piece.link,
     size: item.piece.size,
     content: item.content.link
   })))
-  t.truthy(queuePutResp.error)
-  t.is(queuePutResp.error?.name, DatabaseForeignKeyConstraintErrorName)
+  t.falsy(queuePutResp.find(resp => resp.ok))
+  t.is(queuePutResp[0].error?.name, DatabaseForeignKeyConstraintErrorName)
 })

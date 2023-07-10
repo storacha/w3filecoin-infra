@@ -17,8 +17,10 @@ test('can insert to content queue and peek queued content', async t => {
   const cargoItems = await getCargo(10)
 
   // Put content
-  const queuePutResp = await contentQueue.put(cargoItems.map(item => item.content))
-  t.truthy(queuePutResp.ok)
+  const queuePutResp = await Promise.all(
+    cargoItems.map(item => contentQueue.put(item.content))
+  )
+  t.falsy(queuePutResp.find(resp => resp.error))
 
   // Peek content
   const queuePeekResp = await contentQueue.peek()
@@ -45,12 +47,16 @@ test('can insert same batch to the content queue and only peek once', async t =>
   const cargoItems = await getCargo(10)
 
   // Put content
-  const queuePutResp0 = await contentQueue.put(cargoItems.map(item => item.content))
-  t.truthy(queuePutResp0.ok)
+  const queuePutResp0 = await Promise.all(
+    cargoItems.map(item => contentQueue.put(item.content))
+  )
+  t.falsy(queuePutResp0.find(resp => resp.error))
 
   // Put same content
-  const queuePutResp1 = await contentQueue.put(cargoItems.map(item => item.content))
-  t.truthy(queuePutResp1.ok)
+  const queuePutResp1 = await Promise.all(
+    cargoItems.map(item => contentQueue.put(item.content))
+  )
+  t.falsy(queuePutResp1.find(resp => resp.error))
 
   // Peek content
   const queuePeekResp = await contentQueue.peek()
@@ -69,11 +75,15 @@ test('can insert partially same batch to the content queue and only peek once sa
   const cargoItems1 = cargoItems.slice(4)
 
   // Put content
-  const queuePutResp0 = await contentQueue.put(cargoItems0.map(item => item.content))
-  t.truthy(queuePutResp0.ok)
+  const queuePutResp0 = await Promise.all(
+    cargoItems0.map(item => contentQueue.put(item.content))
+  )
+  t.falsy(queuePutResp0.find(resp => resp.error))
   // Put partially same content
-  const queuePutResp1 = await contentQueue.put(cargoItems1.map(item => item.content))
-  t.truthy(queuePutResp1.ok)
+  const queuePutResp1 = await Promise.all(
+    cargoItems1.map(item => contentQueue.put(item.content))
+  )
+  t.falsy(queuePutResp1.find(resp => resp.error))
 
   // Peek content
   const queuePeekResp = await contentQueue.peek()

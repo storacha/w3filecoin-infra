@@ -24,12 +24,12 @@ export function createAggregateQueue (conf) {
   const dbClient = connect(conf)
 
   return {
-    put: async (aggregateItems) => {
-      const items = aggregateItems.map(aggregateItem => ({
+    put: async (aggregateItem) => {
+      const item = {
         link: `${aggregateItem.link}`,
         size: aggregateItem.size,
         pieces: aggregateItem.pieces
-      }))
+      }
 
       try {
         // Transaction
@@ -37,10 +37,10 @@ export function createAggregateQueue (conf) {
           // Insert to aggregate table
           const insertOps = await trx
             .insertInto(AGGREGATE)
-            .values(items.map(item => ({
+            .values({
               link: item.link,
               size: item.size
-            })))
+            })
             // NOOP if item is already in table
             .onConflict(oc => oc
               .column('link')
@@ -49,7 +49,7 @@ export function createAggregateQueue (conf) {
             .execute()
 
           // Update inclusion table to point to aggregates
-          const updateOpsPerAggregate = await Promise.all(items.map(item => trx
+          const updatedOps = await trx
             .updateTable(INCLUSION)
             .set({
               aggregate: item.link.toString()
@@ -57,27 +57,18 @@ export function createAggregateQueue (conf) {
             .where('aggregate', 'is', null)
             .where('piece', 'in', item.pieces.map(i => i.toString()))
             .execute()
-          ))
 
-          // Verify if all cargo items for each aggregates were updated.
-          // This enables the producer to receive a batch of aggregates to add to the
-          // queue where one aggregate is already there, while making sure
-          // the inserted ones had their pieces fully included.
-          for (let i = 0; i < updateOpsPerAggregate.length; i++) {
-            // Get number of inclusion rows updated per received aggregate
-            const updatedItemsCount = updateOpsPerAggregate[i].reduce((acc, b) => {
-              return acc + Number(b.numUpdatedRows)
-            }, 0)
-
-            // If aggregate was inserted, but items in its inclusion table were
-            // not fully updated, than we need to rollback.
-            // Where clause guarantees that only changes when aggregate is null
-            if (
-              Number(insertOps[i].numInsertedOrUpdatedRows) === 1
-              && updatedItemsCount !== items[i].pieces.length
+          // Verify if all cargo items for the aggregate were updated.
+          // If aggregate was inserted, but items in its inclusion table were
+          // not fully updated, than we need to rollback.
+          // Where clause guarantees that only changes when aggregate is null
+          const updatedItems = updatedOps.reduce((acc, b) => {
+            return acc + Number(b.numUpdatedRows)
+          }, 0)
+          if (Number(insertOps[0].numInsertedOrUpdatedRows) === 1
+            && updatedItems !== item.pieces.length
             ) {
-              throw new DatabaseValueToUpdateAlreadyTakenError()
-            }
+            throw new DatabaseValueToUpdateAlreadyTakenError()
           }
         })
       } catch (/** @type {any} */ error) {
