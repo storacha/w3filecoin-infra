@@ -4,8 +4,12 @@ import { connect } from '../database/index.js'
 import { DEFAULT_LIMIT } from '../database/constants.js'
 import { DatabaseOperationError } from '../database/errors.js'
 
-export const TABLE_NAME = 'content'
-export const VIEW_NAME = 'content_queue'
+export const CONTENT = 'content'
+export const CONTENT_QUEUE = 'content_queue'
+
+/**
+ * @typedef {import('../types').ContentSource} ContentSource
+ */
 
 /**
  * @param {import('../types.js').DatabaseConnect} conf
@@ -24,7 +28,7 @@ export function createContentQueue (conf) {
 
       try {
         await dbClient
-          .insertInto(TABLE_NAME)
+          .insertInto(CONTENT)
           .values(items)
           // NOOP if item is already in queue
           .onConflict(oc => oc
@@ -42,13 +46,11 @@ export function createContentQueue (conf) {
         ok: {}
       }
     },
-    peek: async (options = {}) => {
-      const limit = options.limit || DEFAULT_LIMIT
-
+    peek: async ({ limit = DEFAULT_LIMIT } = {}) => {
       let queuePeakResponse
       try {
         queuePeakResponse = await dbClient
-          .selectFrom(VIEW_NAME)
+          .selectFrom(CONTENT_QUEUE)
           .selectAll()
           .limit(limit)
           .execute()
@@ -60,11 +62,8 @@ export function createContentQueue (conf) {
 
       /** @type {import('../types.js').Inserted<import('../types').Content>[]} */
       const contentQueue = queuePeakResponse.map(content => ({
-        // @ts-expect-error sql created types for view get optional
-        link: parseLink(/** @type {string} */ content.link),
-        // @ts-expect-error sql created types for view get optional
-        size: /** @type {number} */(Number.parseInt(content.size)) || 0,
-        // @ts-expect-error sql created types for view get optional
+        link: parseLink(/** @type {string} */ (content.link)),
+        size: /** @type {number} */(Number.parseInt(/** @type {string} */ (content.size))) | 0,
         source: /** @type {ContentSource[]} */ (content.source),
         inserted: /** @type {Date} */(content.inserted).toISOString(),
       }))

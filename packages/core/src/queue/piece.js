@@ -11,9 +11,9 @@ import {
   DatabaseForeignKeyConstraintError
 } from '../database/errors.js'
 
-export const TABLE_NAME = 'piece'
-export const INCLUSION_TABLE_NAME = 'inclusion'
-export const VIEW_NAME = 'cargo'
+export const PIECE = 'piece'
+export const INCLUSION = 'inclusion'
+export const CARGO = 'cargo'
 
 /**
  * 
@@ -37,7 +37,7 @@ export function createPieceQueue (conf) {
         await dbClient.transaction().execute(async trx => {
           // Insert to piece table
           await trx
-            .insertInto(TABLE_NAME)
+            .insertInto(PIECE)
             .values(items.map(item => ({
               link: item.link,
               size: item.size,
@@ -52,7 +52,7 @@ export function createPieceQueue (conf) {
 
           // Insert to inclusion table all pieces
           await trx
-            .insertInto(INCLUSION_TABLE_NAME)
+            .insertInto(INCLUSION)
             .values(items.map(item => ({
               piece: item.link,
               priority: item.priority,
@@ -77,13 +77,11 @@ export function createPieceQueue (conf) {
         ok: {}
       }
     },
-    peek: async (options = {}) => {
-      const limit = options.limit || DEFAULT_LIMIT
-
+    peek: async ({ limit = DEFAULT_LIMIT } = {}) => {
       let queuePeakResponse
       try {
         queuePeakResponse = await dbClient
-          .selectFrom(VIEW_NAME)
+          .selectFrom(CARGO)
           .selectAll()
           .limit(limit)
           .execute()
@@ -95,8 +93,7 @@ export function createPieceQueue (conf) {
 
       /** @type {import('../types.js').Inserted<import('../types').Inclusion>[]} */
       const cargo = queuePeakResponse.map(piece => ({
-        // @ts-expect-error sql created types for view get optional
-        piece: parseLink(/** @type {string} */ piece.piece),
+        piece: parseLink(/** @type {string} */ (piece.piece)),
         priority: /** @type {number} */(piece.priority),
         inserted: /** @type {Date} */(piece.inserted).toISOString(),
         aggregate: piece.aggregate && parseLink(/** @type {string} */ piece.aggregate),

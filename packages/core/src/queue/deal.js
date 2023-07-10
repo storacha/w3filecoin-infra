@@ -8,8 +8,8 @@ import {
   DatabaseOperationError,
 } from '../database/errors.js'
 
-export const TABLE_NAME = 'deal'
-export const VIEW_NAME = 'deal_signed'
+export const DEAL = 'deal'
+export const DEAL_SIGNED = 'deal_signed'
 /**
  * @type {Record<string, import('../schema').DealStatus>}
  */
@@ -37,7 +37,7 @@ export function createDealQueue (conf) {
 
       try {
         await dbClient
-          .insertInto(TABLE_NAME)
+          .insertInto(DEAL)
           .values(items)
           // NOOP if item is already in table
           .onConflict(oc => oc
@@ -55,13 +55,11 @@ export function createDealQueue (conf) {
         ok: {}
       }
     },
-    peek: async (options = {}) => {
-      const limit = options.limit || DEFAULT_LIMIT
-
+    peek: async ({ limit = DEFAULT_LIMIT } = {}) => {
       let queuePeakResponse
       try {
         queuePeakResponse = await dbClient
-          .selectFrom(VIEW_NAME)
+          .selectFrom(DEAL_SIGNED)
           .selectAll()
           .limit(limit)
           .execute()
@@ -73,8 +71,7 @@ export function createDealQueue (conf) {
 
       /** @type {import('../types.js').Inserted<import('../types').Deal>[]} */
       const deals = queuePeakResponse.map(d => ({
-        // @ts-expect-error sql created types for view get optional
-        aggregate: parseLink(/** @type {string} */ d.aggregate),
+        aggregate: parseLink(/** @type {string} */ (d.aggregate)),
         inserted: /** @type {Date} */(d.inserted).toISOString(),
       }))
 

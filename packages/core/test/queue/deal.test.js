@@ -3,7 +3,7 @@ import { test } from '../helpers/context.js'
 import { createContentQueue } from '../../src/queue/content.js'
 import { createPieceQueue } from '../../src/queue/piece.js'
 import { createAggregateQueue } from '../../src/queue/aggregate.js'
-import { createDealQueue, TABLE_NAME as DEAL_TABLE_NAME, STATUS as DEAL_STATUS } from '../../src/queue/deal.js'
+import { createDealQueue, DEAL, STATUS as DEAL_STATUS } from '../../src/queue/deal.js'
 
 import { createDatabase } from '../helpers/resources.js'
 import { getCargo } from '../helpers/cargo.js'
@@ -61,7 +61,7 @@ test('can insert to deal queue and peek queued deals', async t => {
 
    // Set deal as signed
    await dbClient
-    .updateTable(DEAL_TABLE_NAME)
+    .updateTable(DEAL)
     .set({
       status: DEAL_STATUS.SIGNED
     })

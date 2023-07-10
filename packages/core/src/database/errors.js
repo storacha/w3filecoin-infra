@@ -5,28 +5,28 @@ export class DatabaseOperationError extends Error {
  }
 }
 
-export const DatabaseUniqueValueConstraintErrorName = 'DatabaseUniqueValueConstraint'
+export const DatabaseUniqueValueConstraintErrorName = /** @type {const} */('DatabaseUniqueValueConstraint')
 export class DatabaseUniqueValueConstraintError extends Error {
   get name() {
     return DatabaseUniqueValueConstraintErrorName
   }
 }
 
-export const DatabaseForeignKeyConstraintErrorName = 'DatabaseForeignKeyConstraint'
+export const DatabaseForeignKeyConstraintErrorName = /** @type {const} */('DatabaseForeignKeyConstraint')
 export class DatabaseForeignKeyConstraintError extends Error {
   get name() {
     return DatabaseForeignKeyConstraintErrorName
   }
 }
 
-export const DatabaseValueToUpdateNotFoundErrorName = 'DatabaseValueToUpdateNotFound'
+export const DatabaseValueToUpdateNotFoundErrorName = /** @type {const} */('DatabaseValueToUpdateNotFound')
 export class DatabaseValueToUpdateNotFoundError extends Error {
   get name() {
     return DatabaseValueToUpdateNotFoundErrorName
   }
 }
 
-export const DatabaseValueToUpdateAlreadyTakenErrorName = 'DatabaseValueToUpdateAlreadyTaken'
+export const DatabaseValueToUpdateAlreadyTakenErrorName = /** @type {const} */('DatabaseValueToUpdateAlreadyTaken')
 export class DatabaseValueToUpdateAlreadyTakenError extends Error {
   get name() {
     return DatabaseValueToUpdateAlreadyTakenErrorName

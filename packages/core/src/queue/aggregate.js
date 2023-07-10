@@ -11,9 +11,9 @@ import {
   DatabaseValueToUpdateAlreadyTakenErrorName
 } from '../database/errors.js'
 
-export const TABLE_NAME = 'aggregate'
-export const INCLUSION_TABLE_NAME = 'inclusion'
-export const VIEW_NAME = 'aggregate_queue'
+export const AGGREGATE = 'aggregate'
+export const INCLUSION = 'inclusion'
+export const AGGREGATE_QUEUE = 'aggregate_queue'
 
 /**
  * 
@@ -36,7 +36,7 @@ export function createAggregateQueue (conf) {
         await dbClient.transaction().execute(async trx => {
           // Insert to aggregate table
           const insertOps = await trx
-            .insertInto(TABLE_NAME)
+            .insertInto(AGGREGATE)
             .values(items.map(item => ({
               link: item.link,
               size: item.size
@@ -50,7 +50,7 @@ export function createAggregateQueue (conf) {
 
           // Update inclusion table to point to aggregates
           const updateOpsPerAggregate = await Promise.all(items.map(item => trx
-            .updateTable(INCLUSION_TABLE_NAME)
+            .updateTable(INCLUSION)
             .set({
               aggregate: item.link.toString()
             })
@@ -100,13 +100,11 @@ export function createAggregateQueue (conf) {
         ok: {}
       }
     },
-    peek: async (options = {}) => {
-      const limit = options.limit || DEFAULT_LIMIT
-
+    peek: async ({ limit = DEFAULT_LIMIT } = {}) => {
       let queuePeakResponse
       try {
         queuePeakResponse = await dbClient
-          .selectFrom(VIEW_NAME)
+          .selectFrom(AGGREGATE_QUEUE)
           .selectAll()
           .limit(limit)
           .execute()
@@ -118,10 +116,8 @@ export function createAggregateQueue (conf) {
 
       /** @type {import('../types.js').Inserted<import('../types').Aggregate>[]} */
       const aggregateQueue = queuePeakResponse.map(aggregate => ({
-        // @ts-expect-error sql created types for view get optional
-        link: parseLink(/** @type {string} */ aggregate.link),
-        // @ts-expect-error sql created types for view get optional
-        size: /** @type {number} */(Number.parseInt(aggregate.size)) || 0,
+        link: parseLink(/** @type {string} */ (aggregate.link)),
+        size: /** @type {number} */(Number.parseInt(/** @type {string} */ (aggregate.size))) | 0,
         inserted: /** @type {Date} */(aggregate.inserted).toISOString(),
       }))
 
