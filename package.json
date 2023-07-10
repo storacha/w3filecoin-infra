@@ -13,7 +13,7 @@
     "console": "sst console",
     "lint": "tsc && eslint '**/*.js'",
     "clean": "rm -rf dist node_modules package-lock.json ./*/{.cache,dist,node_modules}",
-    "test": "echo \"Error: no test specified\" && exit 0",
+    "test": "npm test -w packages/core",
     "test-integration": "ava --verbose --serial --timeout=300s test/*.test.js"
   },
   "devDependencies": {
