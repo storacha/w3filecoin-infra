@@ -1,8 +1,8 @@
-export const DatabaseOperationErrorName = 'DatabaseOperationFailed'
+export const DatabaseOperationErrorName = /** @type {const} */('DatabaseOperationFailed')
 export class DatabaseOperationError extends Error {
-  get name() {
-    return DatabaseOperationErrorName
-  }
+ get name() {
+   return DatabaseOperationErrorName
+ }
 }
 
 export const DatabaseUniqueValueConstraintErrorName = 'DatabaseUniqueValueConstraint'

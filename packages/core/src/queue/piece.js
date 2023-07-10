@@ -60,7 +60,7 @@ export function createPieceQueue (conf) {
             })))
             // NOOP if item is already in table
             .onConflict(oc => oc
-              .expression(sql`piece, COALESCE(aggregate, '0')`)
+              .expression(sql`piece, COALESCE(aggregate, '')`)
               .doNothing()
             )
             .execute()

@@ -103,8 +103,9 @@ export async function up(db) {
       .createIndex('piece_aggregate_unique_idx')
       .on('inclusion')
       .unique()
-      // coalesce is used to guarantee uniqueness with null
-      .expression(sql`piece, COALESCE(aggregate, '0')`)
+      // coalesce is used to create unique constraint with null aggregate column
+      // @see https://dba.stackexchange.com/questions/299098/why-doesnt-my-unique-constraint-trigger/299107#299107
+      .expression(sql`piece, COALESCE(aggregate, '')`)
       .execute()
 
   /**
@@ -130,7 +131,7 @@ export async function up(db) {
   await db.schema
     .createTable('deal')
     .addColumn('aggregate', 'text', (col) => col.references('aggregate.link').primaryKey())
-    .addColumn('status', sql`deal_status`, (col) => col.notNull())
+    .addColumn('status', sql`deal_status`, (col) => col.defaultTo('PENDING'))
     .addColumn('detail', 'jsonb')
     .addColumn('inserted', 'timestamp', (col) => col.defaultTo(sql`timezone('utc', now())`))
     .addColumn('signed', 'timestamp')
