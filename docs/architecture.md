@@ -14,8 +14,13 @@ When a CAR file is written into a given web3.storage's bucket, its metadata gets
 
 The high level flow for the w3filecoin Pipeline is:
 
+<<<<<<< Updated upstream
 - **Consume request** is received once a CAR file is written into a bucket with its metadata {`link`, `size`, `bucketName`, `bucketEndpoint`}. This event is added to a `content_validator_queue`.
 - **Content Validator process** validates CARs and writes their references to a `content` table.
+=======
+- **Event** is triggered once a CAR file is written into a bucket with its metadata {`link`, `size`, `bucketName`, `bucketUrl`, `bucketRegion`, `key`}. This event is added to a `content_validator_queue`.
+- **Content Validator process** validates CARs and writes references to a `content` table.
+>>>>>>> Stashed changes
 - On its own schedule, **Piece maker process** can pull queued content from a `content_queue`, derive piece info for them and write records to a `piece` & `inclusion` tables.
   - a `inclusion` table enables same piece to be included in another aggregate if a deal fails.
 - **Agregagtor process** reads from a `cargo_queue` (backed by `inclusion` table), attempts to create an aggregate and if successful it writes to an `aggregate` table.
@@ -111,13 +116,15 @@ CREATE TABLE inclusion
   -- Time when the piece was added to the queue.
   inserted TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
 
-  -- Piece may end up in multiple aggregates e.g. if aggregate was rejected
-  PRIMARY KEY (aggregate, piece)
-
    -- We may also want to write inclusion proof here
 );
 
 CREATE INDEX inclusion_priority_idx ON inclusion (priority DESC, inserted);
+
+-- Piece may end up in multiple aggregates e.g. if aggregate was rejected
+-- coalesce is used to create unique constraint with null aggregate column
+-- @see https://dba.stackexchange.com/questions/299098/why-doesnt-my-unique-constraint-trigger/299107#299107
+CREATE INDEX piece_aggregate_unique_idx ON inclusion (piece, COALESCE(aggregate, ''));
 
 -- Table for created aggregates. 
 CREATE TABLE aggregate
