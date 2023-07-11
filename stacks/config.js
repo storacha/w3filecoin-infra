@@ -65,11 +65,10 @@ export function setupSentry (app, stack) {
 /**
  * Get Env validating it is set.
  */
-function getEnv() {
+export function getEnv() {
   return {
-    FERRY_CARGO_MAX_SIZE: process.env.FERRY_CARGO_MAX_SIZE,
-    FERRY_CARGO_MIN_SIZE: process.env.FERRY_CARGO_MIN_SIZE,
     SENTRY_DSN: mustGetEnv('SENTRY_DSN'),
+    CONTENT_FETCHER_URL_R2: mustGetEnv('CONTENT_FETCHER_URL_R2')
   }
 }
 
@@ -79,10 +78,7 @@ function getEnv() {
  * @returns {string}
  */
 function mustGetEnv (name) {
-  if (!process.env[name]) {
-    throw new Error(`Missing env var: ${name}`)
-  }
-
-  // @ts-expect-error there will always be a string there, but typescript does not believe
-  return process.env[name]
+  const value = process.env[name]
+  if (!value) throw new Error(`Missing env var: ${name}`)
+  return value
 }

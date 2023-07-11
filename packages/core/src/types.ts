@@ -97,10 +97,39 @@ export type ContentSource = {
   bucketUrl?: string
 }
 
+export interface ContentFetcher {
+  fetch: (item: Content) => Promise<Result<Uint8Array, ContentFetcherError>>
+}
+
 export type Result<T = unknown, X extends {} = {}> = Variant<{
   ok: T
   error: X
 }>
+
+/**
+ * Workflows
+ */
+
+export type ConsumerWorkflowResponse = Promise<Result<ConsumerWorkflowOkResponse, ConsumerWorkflowErrorResponse>>
+export type ProducerWorkflowResponse = Promise<Result<{}, ProducerWorkflowErrorResponse>>
+
+export interface ConsumerWorkflowOkResponse {
+  count: number
+}
+
+export type ConsumerWorkflowErrorResponse =
+  | DatabaseOperationError
+  | SqsSendMessageError
+
+export type ProducerWorkflowErrorResponse =
+  | DatabaseOperationError
+  | ContentFetcherError
+  | DatabaseForeignKeyConstraintError
+  | DatabaseValueToUpdateAlreadyTakenError
+
+/**
+ * Errors
+ */
 
 export interface DatabaseOperationError extends Error {
   name: 'DatabaseOperationFailed'
@@ -111,6 +140,14 @@ export interface DatabaseForeignKeyConstraintError extends Error {
 
 export interface DatabaseValueToUpdateAlreadyTakenError extends Error {
   name: 'DatabaseValueToUpdateAlreadyTaken'
+}
+
+export interface SqsSendMessageError extends Error {
+  name: 'SqsSendMessageFailed'
+}
+
+export interface ContentFetcherError extends Error {
+  name: 'ContentFetcherFailed'
 }
 
 /**

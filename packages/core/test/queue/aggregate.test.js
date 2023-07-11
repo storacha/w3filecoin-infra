@@ -1,4 +1,4 @@
-import { test } from '../helpers/context.js'
+import { testQueue as test } from '../helpers/context.js'
 
 import { createContentQueue } from '../../src/queue/content.js'
 import { createPieceQueue } from '../../src/queue/piece.js'
