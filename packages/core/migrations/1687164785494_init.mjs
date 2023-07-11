@@ -17,6 +17,7 @@ export async function up(db) {
     .createTable('content')
     .addColumn('link', 'text', (col) => col.primaryKey())
     .addColumn('size', 'bigint', (col) => col.notNull())
+    // [{ bucketName: string, bucketRegion: string, key: string, bucketUrl: string }]
     .addColumn('source', 'jsonb', (col) => col.notNull())
     .addColumn('inserted', 'timestamp', (col) => col.defaultTo(sql`timezone('utc', now())`))
     .execute()
@@ -99,14 +100,14 @@ export async function up(db) {
     .expression(sql`priority DESC, inserted`)
     .execute()
 
-    await db.schema
-      .createIndex('piece_aggregate_unique_idx')
-      .on('inclusion')
-      .unique()
-      // coalesce is used to create unique constraint with null aggregate column
-      // @see https://dba.stackexchange.com/questions/299098/why-doesnt-my-unique-constraint-trigger/299107#299107
-      .expression(sql`piece, COALESCE(aggregate, '')`)
-      .execute()
+  await db.schema
+    .createIndex('piece_aggregate_unique_idx')
+    .on('inclusion')
+    .unique()
+    // coalesce is used to create unique constraint with null aggregate column
+    // @see https://dba.stackexchange.com/questions/299098/why-doesnt-my-unique-constraint-trigger/299107#299107
+    .expression(sql`piece, COALESCE(aggregate, '')`)
+    .execute()
 
   /**
    * View for inclusion records that do not have an aggregate.
