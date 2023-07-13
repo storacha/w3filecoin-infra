@@ -1,7 +1,37 @@
 import { SendMessageCommand } from '@aws-sdk/client-sqs'
 import { CommP } from '@web3-storage/data-segment'
+import { encode as JSONencode, decode as JSONdecode } from '@ipld/dag-json'
+import { fromString } from 'uint8arrays/from-string'
+import { toString } from 'uint8arrays/to-string'
 
 import { SqsSendMessageError } from './errors.js'
+
+/**
+ * @param {import('../types').Content} pieceMakerItem 
+ * @returns {string}
+ */
+export const encode = (pieceMakerItem) => {
+  const encodedBytes = JSONencode({
+    ...pieceMakerItem,
+    // dag-json does not support URL encoding, so manually encode as string
+    source: pieceMakerItem.source.map(u => u.toString())
+  })
+
+  return toString(encodedBytes)
+}
+
+/**
+ * @param {string} pieceMakerItem
+ * @returns {import('../types').Content}
+ */
+export const decode = (pieceMakerItem) => {
+  const decodedBytes = fromString(pieceMakerItem)
+  const decoded = JSONdecode(decodedBytes)
+  return {
+    ...decoded,
+    source: decoded.source.map((/** @type {string} */ u) => new URL(u))
+  }
+}
 
 /**
  * Reads queued content from the given `contentQueue` and sends each to
@@ -33,10 +63,7 @@ export async function consumer ({ contentQueue, sqsClient, queueUrl }) {
       // after the message deduplication id timesout is also acceptable.
       const msgCommand = new SendMessageCommand({
         QueueUrl: queueUrl,
-        MessageBody: JSON.stringify({
-          ...content,
-          link: content.link.toString()
-        }),
+        MessageBody: encode(content),
       })
   
       await sqsClient.send(msgCommand)
@@ -52,16 +79,18 @@ export async function consumer ({ contentQueue, sqsClient, queueUrl }) {
 
 /**
  * @param {object} props
- * @param {import('../types.js').Content} props.item
+ * @param {string} props.item
  * @param {import('../types.js').PieceQueue} props.pieceQueue
  * @param {import('../types.js').ContentResolver} props.contentResolver
  * @returns {import('../types.js').ProducerWorkflowResponse}
  */
 export async function producer ({ item, pieceQueue, contentResolver }) {
+  const content = decode(item)
+
   // TODO: we can consider checking if already in the destination queue
   // before doing the precessing
 
-  const { ok: bytes, error: contentResolverError } = await contentResolver.resolve(item)
+  const { ok: bytes, error: contentResolverError } = await contentResolver.resolve(content)
   if (contentResolverError) {
     return { error: contentResolverError }
   }
@@ -70,7 +99,7 @@ export async function producer ({ item, pieceQueue, contentResolver }) {
   const { error } = await pieceQueue.put({
     link: commP.link(),
     size: commP.pieceSize,
-    content: item.link
+    content: content.link
   })
 
   if (error) {

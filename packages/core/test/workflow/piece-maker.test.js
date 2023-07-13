@@ -2,7 +2,6 @@ import { testWorkflow as test } from '../helpers/context.js'
 
 import { Consumer } from 'sqs-consumer'
 import pWaitFor from 'p-wait-for'
-import { parse as parseLink } from 'multiformats/link'
 
 import { createContentQueue } from '../../src/queue/content.js'
 import { createPieceQueue } from '../../src/queue/piece.js'
@@ -93,14 +92,7 @@ test('can consume content queue with valid content', async t => {
   )
 
   // Validate messages
-  const contentItemsToProcess = queueMessages.map(qm => {
-    const decoded = JSON.parse(qm.Body || '')
-    return /** @type {import('../../src/types.js').Content} */ ({
-      ...decoded,
-      link: parseLink(decoded.link)
-    })
-  })
-
+  const contentItemsToProcess = queueMessages.map(qm => pieceMakerWorkflow.decode(qm.Body || ''))
   for (const item of contentItemsToProcess) {
     t.truthy(queuedItems.ok?.find(qi => qi.link.equals(item.link)))
   }
@@ -212,7 +204,7 @@ test('producer fails to put in piece queue when content not set', async t => {
   const contentResolver = createContentResolver(cargoItems)
 
   const { error } = await pieceMakerWorkflow.producer({
-    item: cargoItems[0].content,
+    item: pieceMakerWorkflow.encode(cargoItems[0].content),
     pieceQueue,
     contentResolver
   })
@@ -265,11 +257,13 @@ test('producer fails to put in piece queue when content fetcher cannot fetch con
  */
 function normalizeContentItemsFromQueueMessages (queueMessages) {
   return queueMessages.map(qm => {
-    const decoded = JSON.parse(qm.Body || '')
-    return /** @type {import('../../src/types.js').Content} */ ({
-      ...decoded,
-      link: parseLink(decoded.link)
-    })
+    const item = qm.Body
+
+    if (!item) {
+      throw new Error('message does not have body')
+    }
+
+    return item
   })
 }
 

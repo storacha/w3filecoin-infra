@@ -8,7 +8,7 @@ import { createContentQueue } from '@w3filecoin/core/src/queue/content'
 import { createPieceQueue } from '@w3filecoin/core/src/queue/piece'
 import * as pieceMakerWorkflow from '@w3filecoin/core/src/workflow/piece-maker'
 
-import { mustGetEnv, parseContentQueueEvent } from '../utils.js'
+import { mustGetEnv } from '../utils.js'
 
 Sentry.AWSLambda.init({
   environment: process.env.SST_STAGE,
@@ -43,9 +43,16 @@ async function consumerHandler() {
 /**
  * Get EventRecord from the SQS Event triggering the handler and 
  *
- * @param {import('aws-lambda').SQSEvent} event
+ * @param {import('aws-lambda').SQSEvent} sqsEvent
  */
-async function producerHandler(event) {
+async function producerHandler(sqsEvent) {
+  if (sqsEvent.Records.length !== 1) {
+    return {
+      statusCode: 400,
+      body: `Expected 1 sqsEvent per invocation but received ${sqsEvent.Records.length}`
+    }
+  }
+
   const { db, contentResolverUrlR2 } = getProducerEnv()
   const pieceQueue = createPieceQueue(db)
   const contentResolver = createContentResolver(
@@ -53,10 +60,7 @@ async function producerHandler(event) {
     { httpEndpoint: contentResolverUrlR2 }
   )
 
-  const item = parseContentQueueEvent(event)
-  if (!item) {
-    throw new Error('Invalid content format')
-  }
+  const item = sqsEvent.Records[0].body
 
   const { error } = await pieceMakerWorkflow.producer({ item, pieceQueue, contentResolver })
   if (error) {

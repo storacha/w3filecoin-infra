@@ -10,11 +10,13 @@
     "@aws-sdk/client-rds-data": "^3.363.0",
     "@aws-sdk/client-sqs": "^3.363.0",
     "@aws-sdk/client-s3": "^3.363.0",
+    "@ipld/dag-json": "^10.1.2",
     "@ucanto/interface": "^8.0.0",
     "@web3-storage/data-segment": "^2.0.0-dev-1",
     "kysely": "^0.23.5",
     "kysely-data-api": "^0.2.1",
-    "multiformats": "12.0.1"
+    "multiformats": "12.0.1",
+    "uint8arrays": "^4.0.4"
   },
   "devDependencies": {
     "@ipld/car": "5.1.1",
