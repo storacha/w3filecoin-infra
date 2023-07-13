@@ -8,7 +8,8 @@ import {
 import { DbStack } from './db-stack.js'
 import {
   setupSentry,
-  getEnv
+  getEnv,
+  getResourceName
 } from './config.js'
 
 /**
@@ -36,15 +37,17 @@ export function ProcessorStack({ stack, app }) {
       }
     }
   )
+  const queueName = getResourceName('piece-maker-producer-queue', stack.stage)
   const pieceMakerItems = new Queue(
     stack,
-    'piece-maker-producer-queue',
+    queueName,
     {
       cdk: {
         queue: {
           // During the deduplication interval (5 minutes), Amazon SQS treats
           // messages that are sent with identical body content
-          contentBasedDeduplication: true
+          contentBasedDeduplication: true,
+          queueName: `${queueName}.fifo`
         }
       },
       consumer: {
