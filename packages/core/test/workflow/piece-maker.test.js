@@ -53,7 +53,7 @@ test('can consume empty content queue', async t => {
   const { dbClient, sqsClient, queueUrl, queueMessages } = t.context
   const contentQueue = createContentQueue(dbClient)
 
-  const { error, ok } = await pieceMakerWorkflow.consumer({
+  const { error, ok } = await pieceMakerWorkflow.consume({
     contentQueue,
     sqsClient,
     queueUrl
@@ -79,7 +79,7 @@ test('can consume content queue with valid content', async t => {
   t.falsy(queuedItems.error)
 
   // Process queued items
-  const { error, ok } = await pieceMakerWorkflow.consumer({
+  const { error, ok } = await pieceMakerWorkflow.consume({
     contentQueue,
     sqsClient,
     queueUrl
@@ -111,7 +111,7 @@ test('can consume content queue and write to producer queue', async t => {
   t.falsy(contentQueuePutResp.find(resp => resp.error))
 
   // Process queued items
-  const { error, ok } = await pieceMakerWorkflow.consumer({
+  const { error, ok } = await pieceMakerWorkflow.consume({
     contentQueue,
     sqsClient,
     queueUrl
@@ -129,7 +129,7 @@ test('can consume content queue and write to producer queue', async t => {
 
   // Process each content item
   for (const item of contentItemsToProcess) {
-    const { error } = await pieceMakerWorkflow.producer({
+    const { error } = await pieceMakerWorkflow.buildPiece({
       item,
       pieceQueue,
       contentResolver
@@ -163,7 +163,7 @@ test('can produce items gracefully when concurrently handling messages', async t
   t.falsy(contentQueuePutResp.find(resp => resp.error))
 
   // Process queued items
-  const { error, ok } = await pieceMakerWorkflow.consumer({
+  const { error, ok } = await pieceMakerWorkflow.consume({
     contentQueue,
     sqsClient,
     queueUrl
@@ -181,12 +181,12 @@ test('can produce items gracefully when concurrently handling messages', async t
 
   // Process each content item
   const res = await Promise.all([
-    pieceMakerWorkflow.producer({
+    pieceMakerWorkflow.buildPiece({
       item: contentItemsToProcess[0],
       pieceQueue,
       contentResolver
     }),
-    pieceMakerWorkflow.producer({
+    pieceMakerWorkflow.buildPiece({
       item: contentItemsToProcess[0],
       pieceQueue,
       contentResolver
@@ -203,7 +203,7 @@ test('producer fails to put in piece queue when content not set', async t => {
   // create content fetcher from memory fixtures
   const contentResolver = createContentResolver(cargoItems)
 
-  const { error } = await pieceMakerWorkflow.producer({
+  const { error } = await pieceMakerWorkflow.buildPiece({
     item: pieceMakerWorkflow.encode(cargoItems[0].content),
     pieceQueue,
     contentResolver
@@ -225,7 +225,7 @@ test('producer fails to put in piece queue when content fetcher cannot fetch con
   t.falsy(contentQueuePutResp.find(resp => resp.error))
 
   // Process queued items
-  const { error, ok } = await pieceMakerWorkflow.consumer({
+  const { error, ok } = await pieceMakerWorkflow.consume({
     contentQueue,
     sqsClient,
     queueUrl
@@ -242,7 +242,7 @@ test('producer fails to put in piece queue when content fetcher cannot fetch con
   const contentResolver = createContentResolver([])
 
   // Process each content item
-  const { error: producerError } = await pieceMakerWorkflow.producer({
+  const { error: producerError } = await pieceMakerWorkflow.buildPiece({
     item: contentItemsToProcess[0],
     pieceQueue,
     contentResolver

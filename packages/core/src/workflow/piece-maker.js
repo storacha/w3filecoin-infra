@@ -47,7 +47,7 @@ export const decode = (pieceMakerItem) => {
  * @param {string} props.queueUrl
  * @returns {import('../types.js').ConsumerWorkflowResponse}
  */
-export async function consumer ({ contentQueue, sqsClient, queueUrl }) {
+export async function consume ({ contentQueue, sqsClient, queueUrl }) {
   const contentListResponse = await contentQueue.peek({
     limit: 100
   })
@@ -84,7 +84,7 @@ export async function consumer ({ contentQueue, sqsClient, queueUrl }) {
  * @param {import('../types.js').ContentResolver} props.contentResolver
  * @returns {import('../types.js').ProducerWorkflowResponse}
  */
-export async function producer ({ item, pieceQueue, contentResolver }) {
+export async function buildPiece ({ item, pieceQueue, contentResolver }) {
   const content = decode(item)
 
   // TODO: we can consider checking if already in the destination queue

@@ -26,18 +26,18 @@ export function ProcessorStack({ stack, app }) {
   // - CRON resource calling `piece-maker` lambda
   // - lambda for consuming `piece-maker` DB view and queue its processing
   // - QUEUE triggers lambda functions to derive piece CIDs from received content
-  const pieceMakerProducerHandler = new Function(
+  const pieceMakerHandler = new Function(
     stack,
-    'piece-maker-producer-handler',
+    'piece-maker-handler',
     {
-      handler: 'packages/functions/src/workflow/piece-maker.producer',
+      handler: 'packages/functions/src/workflow/piece-maker.build',
       bind: [db],
       environment: {
         CONTENT_RESOLVER_URL_R2
       }
     }
   )
-  const queueName = getResourceName('piece-maker-producer-queue', stack.stage)
+  const queueName = getResourceName('piece-maker-queue', stack.stage)
   const pieceMakerItems = new Queue(
     stack,
     queueName,
@@ -51,7 +51,7 @@ export function ProcessorStack({ stack, app }) {
         }
       },
       consumer: {
-        function: pieceMakerProducerHandler,
+        function: pieceMakerHandler,
         cdk: {
           eventSource: {
             batchSize: 1,
@@ -69,7 +69,7 @@ export function ProcessorStack({ stack, app }) {
       schedule: 'rate(15 minutes)',
       job: {
         function: {
-          handler: 'packages/functions/src/workflow/piece-maker.consumer',
+          handler: 'packages/functions/src/workflow/piece-maker.consume',
           environment: {
             QUEUE_URL: pieceMakerItems.queueUrl,
             QUEUE_REGION: stack.region

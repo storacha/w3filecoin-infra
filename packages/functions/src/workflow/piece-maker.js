@@ -19,14 +19,14 @@ Sentry.AWSLambda.init({
 /**
  * Reads queued content and adds it to a queue
  */
-async function consumerHandler() {
+async function consumeHandler() {
   const { db, queueUrl, queueRegion } = getConsumerEnv()
   const contentQueue = createContentQueue(db)
   const sqsClient = new SQSClient({
     region: queueRegion,
   })
 
-  const { ok, error } = await pieceMakerWorkflow.consumer({ contentQueue, sqsClient, queueUrl })
+  const { ok, error } = await pieceMakerWorkflow.consume({ contentQueue, sqsClient, queueUrl })
   if (error) {
     return {
       statusCode: 500,
@@ -41,11 +41,12 @@ async function consumerHandler() {
 }
 
 /**
- * Get EventRecord from the SQS Event triggering the handler and 
+ * Get EventRecord from the SQS Event triggering the handler, builds piece and
+ * puts result into piece queue.
  *
  * @param {import('aws-lambda').SQSEvent} sqsEvent
  */
-async function producerHandler(sqsEvent) {
+async function buildPieceHandler(sqsEvent) {
   if (sqsEvent.Records.length !== 1) {
     return {
       statusCode: 400,
@@ -62,9 +63,8 @@ async function producerHandler(sqsEvent) {
 
   const item = sqsEvent.Records[0].body
 
-  const { error } = await pieceMakerWorkflow.producer({ item, pieceQueue, contentResolver })
+  const { error } = await pieceMakerWorkflow.buildPiece({ item, pieceQueue, contentResolver })
   if (error) {
-    // TODO: Should we handle content fetcher error differently?
     return {
       statusCode: 500,
       body: error.name
@@ -108,5 +108,5 @@ function getDbEnv () {
   }
 }
 
-export const consumer = Sentry.AWSLambda.wrapHandler(consumerHandler)
-export const producer = Sentry.AWSLambda.wrapHandler(producerHandler)
+export const consume = Sentry.AWSLambda.wrapHandler(consumeHandler)
+export const build = Sentry.AWSLambda.wrapHandler(buildPieceHandler)
