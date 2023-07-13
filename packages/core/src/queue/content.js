@@ -3,6 +3,7 @@ import { parse as parseLink } from 'multiformats/link'
 import { connect } from '../database/index.js'
 import { DEFAULT_LIMIT } from '../database/constants.js'
 import { DatabaseOperationError } from '../database/errors.js'
+import { ContentEncodeError } from './errors.js'
 
 export const CONTENT = 'content'
 export const CONTENT_QUEUE = 'content_queue'
@@ -38,10 +39,23 @@ export function createContentQueue (conf) {
 
   return {
     put: async (contentItem) => {
+      let value
+      try {
+        // Validate received sources are URLs
+        for (const s of contentItem.source) {
+          new URL(s)
+        }
+
+        value = encode(contentItem)
+      } catch {
+        return {
+          error: new ContentEncodeError()
+        }
+      }
       try {
         await dbClient
           .insertInto(CONTENT)
-          .values(encode(contentItem))
+          .values(value)
           // NOOP if item is already in queue
           .onConflict(oc => oc
             .column('link')

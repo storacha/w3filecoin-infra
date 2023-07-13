@@ -1,6 +1,7 @@
 import { testQueue as test } from '../helpers/context.js'
 
 import { createContentQueue } from '../../src/queue/content.js'
+import { ContentEncodeErrorName } from '../../src/queue/errors.js'
 
 import { createDatabase } from '../helpers/resources.js'
 import { getCargo } from '../helpers/cargo.js'
@@ -92,4 +93,19 @@ test('can insert partially same batch to the content queue and only peek once sa
   }
 
   t.is(queuePeekResp.ok.length, cargoItems.length)
+})
+
+test('fails to insert to content queue if invalid URL is provided in source', async t => {
+  const { dbClient } = t.context
+  const contentQueue = createContentQueue(dbClient)
+  const [cargo] = await getCargo(1)
+
+  const { error } = await contentQueue.put({
+    ...cargo.content,
+    // @ts-expect-error this is purposely not URL
+    source: ['not-a-url']
+  })
+
+  t.truthy(error)
+  t.is(error?.name, ContentEncodeErrorName)
 })

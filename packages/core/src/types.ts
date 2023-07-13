@@ -41,6 +41,7 @@ export type PutError =
   | DatabaseOperationError
   | DatabaseForeignKeyConstraintError
   | DatabaseValueToUpdateAlreadyTakenError
+  | ContentEncodeError
 
 export type PeerError = DatabaseOperationError
 
@@ -124,6 +125,7 @@ export type ConsumerWorkflowErrorResponse =
 export type ProducerWorkflowErrorResponse =
   | DatabaseOperationError
   | ContentResolverError
+  | ContentEncodeError
   | DatabaseForeignKeyConstraintError
   | DatabaseValueToUpdateAlreadyTakenError
 
@@ -148,6 +150,10 @@ export interface SqsSendMessageError extends Error {
 
 export interface ContentResolverError extends Error {
   name: 'ContentResolverFailed'
+}
+
+export interface ContentEncodeError extends Error {
+  name: 'ContentEncodeFailed'
 }
 
 /**
