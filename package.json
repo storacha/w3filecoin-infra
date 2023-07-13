@@ -12,7 +12,7 @@
     "remove": "sst remove",
     "console": "sst console",
     "lint": "tsc && eslint '**/*.js'",
-    "clean": "rm -rf dist node_modules package-lock.json ./*/{.cache,dist,node_modules}",
+    "clean": "rm -rf dist node_modules ./*/{.cache,dist,node_modules}",
     "test": "npm test -w packages/core",
     "test-integration": "ava --verbose --serial --timeout=300s test/*.test.js"
   },

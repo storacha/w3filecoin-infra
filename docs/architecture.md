@@ -14,7 +14,7 @@ When a CAR file is written into a given web3.storage's bucket, its metadata gets
 
 The high level flow for the w3filecoin Pipeline is:
 
-- **Consume request** is received once a CAR file is written into a bucket with its metadata {`link`, `size`, `bucketName`, `bucketUrl`, `bucketRegion`, `key`}}. This event is added to a `content_validator_queue`.
+- **Consume request** is received once a CAR file is written into a bucket with its metadata {`link`, `size`, `bucketName`, `bucketUrl`, `bucketRegion`, `key`}. This event is added to a `content_validator_queue`.
 - **Content Validator process** validates CARs and writes their references to a `content` table.
 - On its own schedule, **Piece maker process** can pull queued content from a `content_queue`, derive piece info for them and write records to a `piece` & `inclusion` tables.
   - a `inclusion` table enables same piece to be included in another aggregate if a deal fails.

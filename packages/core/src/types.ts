@@ -41,6 +41,7 @@ export type PutError =
   | DatabaseOperationError
   | DatabaseForeignKeyConstraintError
   | DatabaseValueToUpdateAlreadyTakenError
+  | ContentEncodeError
 
 export type PeerError = DatabaseOperationError
 
@@ -50,7 +51,7 @@ export type PeerError = DatabaseOperationError
 export interface Content {
   link: Link
   size: number
-  source: ContentSource[]
+  source: URL[]
 }
 export type ContentQueue = Queue<Content>
 
@@ -91,16 +92,46 @@ export interface Deal {
 export type DealQueue = Queue<Deal>
 
 export type ContentSource = {
+  provider: 'r2' | 's3'
   bucketName: string
   bucketRegion: string
   key: string
-  bucketUrl?: string
+}
+
+export interface ContentResolver {
+  resolve: (item: Content) => Promise<Result<Uint8Array, ContentResolverError>>
 }
 
 export type Result<T = unknown, X extends {} = {}> = Variant<{
   ok: T
   error: X
 }>
+
+/**
+ * Workflows
+ */
+
+export type ConsumerWorkflowResponse = Promise<Result<ConsumerWorkflowOkResponse, ConsumerWorkflowErrorResponse>>
+export type ProducerWorkflowResponse = Promise<Result<{}, ProducerWorkflowErrorResponse>>
+
+export interface ConsumerWorkflowOkResponse {
+  count: number
+}
+
+export type ConsumerWorkflowErrorResponse =
+  | DatabaseOperationError
+  | SqsSendMessageError
+
+export type ProducerWorkflowErrorResponse =
+  | DatabaseOperationError
+  | ContentResolverError
+  | ContentEncodeError
+  | DatabaseForeignKeyConstraintError
+  | DatabaseValueToUpdateAlreadyTakenError
+
+/**
+ * Errors
+ */
 
 export interface DatabaseOperationError extends Error {
   name: 'DatabaseOperationFailed'
@@ -111,6 +142,18 @@ export interface DatabaseForeignKeyConstraintError extends Error {
 
 export interface DatabaseValueToUpdateAlreadyTakenError extends Error {
   name: 'DatabaseValueToUpdateAlreadyTaken'
+}
+
+export interface SqsSendMessageError extends Error {
+  name: 'SqsSendMessageFailed'
+}
+
+export interface ContentResolverError extends Error {
+  name: 'ContentResolverFailed'
+}
+
+export interface ContentEncodeError extends Error {
+  name: 'ContentEncodeFailed'
 }
 
 /**
