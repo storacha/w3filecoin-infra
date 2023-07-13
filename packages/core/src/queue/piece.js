@@ -35,6 +35,7 @@ const decode = (rows) => {
     priority: /** @type {number} */(piece.priority),
     inserted: /** @type {Date} */(piece.inserted).toISOString(),
     aggregate: piece.aggregate && parseLink(/** @type {string} */ piece.aggregate),
+    size: /** @type {bigint} */(BigInt(/** @type {string} */ (piece.size))) | 0n,
   }))
 }
 
@@ -95,13 +96,14 @@ export function createPieceQueue (conf) {
         ok: {}
       }
     },
-    peek: async ({ limit = DEFAULT_LIMIT } = {}) => {
+    peek: async ({ limit = DEFAULT_LIMIT, offset = 0 } = {}) => {
       let queuePeakResponse
       try {
         queuePeakResponse = await dbClient
           .selectFrom(CARGO)
           .selectAll()
           .limit(limit)
+          .offset(offset)
           .execute()
       } catch (/** @type {any} */ error) {
         return {

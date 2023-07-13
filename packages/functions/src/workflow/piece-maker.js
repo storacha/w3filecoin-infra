@@ -1,6 +1,4 @@
-
 import * as Sentry from '@sentry/serverless'
-import { RDS } from 'sst/node/rds'
 import { SQSClient } from '@aws-sdk/client-sqs'
 
 import { createContentResolver } from '@w3filecoin/core/src/content-resolver'
@@ -8,7 +6,7 @@ import { createContentQueue } from '@w3filecoin/core/src/queue/content'
 import { createPieceQueue } from '@w3filecoin/core/src/queue/piece'
 import * as pieceMakerWorkflow from '@w3filecoin/core/src/workflow/piece-maker'
 
-import { mustGetEnv } from '../utils.js'
+import { getDbEnv, mustGetEnv } from '../utils.js'
 
 Sentry.AWSLambda.init({
   environment: process.env.SST_STAGE,
@@ -94,16 +92,6 @@ function getBuildPieceEnv () {
   return {
     db: getDbEnv(),
     contentResolverUrlR2: mustGetEnv('CONTENT_RESOLVER_URL_R2')
-  }
-}
-
-function getDbEnv () {
-  const { defaultDatabaseName, secretArn, clusterArn} = RDS.w3filecoinrds
-
-  return {
-    database: defaultDatabaseName,
-    secretArn,
-    resourceArn: clusterArn,
   }
 }
 

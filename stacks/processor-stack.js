@@ -86,4 +86,21 @@ export function ProcessorStack({ stack, app }) {
       }
     }
   )
+
+  // `aggregator`
+  new Cron(
+    stack,
+    'aggregator-consumer',
+    {
+      schedule: 'rate(10 minutes)',
+      job: {
+        function: {
+          handler: 'packages/functions/src/workflow/aggregator.run',
+          environment: {},
+          bind: [db],
+          timeout: 15 * 60,
+        },
+      }
+    }
+  )
 }

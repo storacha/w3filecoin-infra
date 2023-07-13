@@ -72,13 +72,14 @@ export function createContentQueue (conf) {
         ok: {}
       }
     },
-    peek: async ({ limit = DEFAULT_LIMIT } = {}) => {
+    peek: async ({ limit = DEFAULT_LIMIT, offset = 0 } = {}) => {
       let queuePeakResponse
       try {
         queuePeakResponse = await dbClient
           .selectFrom(CONTENT_QUEUE)
           .selectAll()
           .limit(limit)
+          .offset(offset)
           .execute()
       } catch (/** @type {any} */ error) {
         return {

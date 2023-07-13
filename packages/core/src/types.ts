@@ -1,4 +1,5 @@
 import { UnknownLink as Link } from 'multiformats/link'
+import { PaddedPieceSize } from '@web3-storage/data-segment'
 import { Kysely } from 'kysely'
 import { Database } from './schema'
 
@@ -29,6 +30,7 @@ export interface ItemWithPriority {
 }
 export interface ConsumerOptions {
   limit?: number
+  offset?: number
 }
 export interface Queue<In, Out = Inserted<In>> extends Producer<In>, Consumer<Out> {}
 export interface PriorityQueue<In extends ItemWithPriority, Out = Inserted<In>> extends PriorityProducer<In>, Consumer<Out> {}
@@ -61,12 +63,14 @@ export type ContentQueue = Queue<Content>
 export interface Piece {
   link: Link
   content: Link
-  size: number
+  size: PaddedPieceSize
   priority?: number
 }
 export interface Inclusion {
   piece: Link
   priority: number
+  aggregate?: Link
+  size: PaddedPieceSize
 }
 export type PieceQueue = PriorityQueue<Piece, Inserted<Inclusion>>
 
@@ -75,7 +79,7 @@ export type PieceQueue = PriorityQueue<Piece, Inserted<Inclusion>>
  */
 export interface Aggregate {
   link: Link
-  size: number
+  size: PaddedPieceSize
 }
 export interface AggregateWithInclusionPieces extends Aggregate {
   pieces: Link[]
@@ -113,6 +117,7 @@ export type Result<T = unknown, X extends {} = {}> = Variant<{
 
 export type ConsumerWorkflowResponse = Promise<Result<ConsumerWorkflowOkResponse, ConsumerWorkflowErrorResponse>>
 export type ProducerWorkflowResponse = Promise<Result<{}, ProducerWorkflowErrorResponse>>
+export type AggregatorWorkflowResponse = Promise<Result<ConsumerWorkflowOkResponse, AggregatorWorkflowErrorResponse>>
 
 export interface ConsumerWorkflowOkResponse {
   count: number
@@ -126,6 +131,12 @@ export type ProducerWorkflowErrorResponse =
   | DatabaseOperationError
   | ContentResolverError
   | ContentEncodeError
+  | DatabaseForeignKeyConstraintError
+  | DatabaseValueToUpdateAlreadyTakenError
+
+export type AggregatorWorkflowErrorResponse =
+  | ContentEncodeError
+  | DatabaseOperationError
   | DatabaseForeignKeyConstraintError
   | DatabaseValueToUpdateAlreadyTakenError
 

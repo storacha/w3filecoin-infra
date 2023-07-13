@@ -1,5 +1,5 @@
 import { SendMessageCommand } from '@aws-sdk/client-sqs'
-import { CommP } from '@web3-storage/data-segment'
+import { Piece } from '@web3-storage/data-segment'
 import { encode as JSONencode, decode as JSONdecode } from '@ipld/dag-json'
 import { fromString } from 'uint8arrays/from-string'
 import { toString } from 'uint8arrays/to-string'
@@ -95,10 +95,10 @@ export async function buildPiece ({ item, pieceQueue, contentResolver }) {
     return { error: contentResolverError }
   }
 
-  const commP = CommP.build(bytes)
+  const piece = Piece.build(bytes)
   const { error } = await pieceQueue.put({
-    link: commP.link(),
-    size: commP.pieceSize,
+    link: piece.link(),
+    size: piece.size,
     content: content.link
   })
 

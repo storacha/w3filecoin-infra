@@ -31,7 +31,7 @@ const encode = (aggregateItem) => ({
 const decode = (rows) => {
   return rows.map(aggregate => ({
     link: parseLink(/** @type {string} */ (aggregate.link)),
-    size: /** @type {number} */(Number.parseInt(/** @type {string} */ (aggregate.size))) | 0,
+    size: /** @type {bigint} */(BigInt(/** @type {string} */ (aggregate.size))) | 0n,
     inserted: /** @type {Date} */(aggregate.inserted).toISOString(),
   }))
 }
@@ -108,12 +108,13 @@ export function createAggregateQueue (conf) {
         ok: {}
       }
     },
-    peek: async ({ limit = DEFAULT_LIMIT } = {}) => {
+    peek: async ({ limit = DEFAULT_LIMIT, offset = 0 } = {}) => {
       let queuePeakResponse
       try {
         queuePeakResponse = await dbClient
           .selectFrom(AGGREGATE_QUEUE)
           .selectAll()
+          .offset(offset)
           .limit(limit)
           .execute()
       } catch (/** @type {any} */ error) {

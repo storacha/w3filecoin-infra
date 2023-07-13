@@ -39,6 +39,7 @@ export interface Cargo {
   aggregate: string | null;
   priority: number | null;
   inserted: Timestamp | null;
+  size: Int8 | null;
 }
 
 export interface Content {
@@ -57,7 +58,7 @@ export interface ContentQueue {
 
 export interface Deal {
   aggregate: string;
-  status: DealStatus;
+  status: Generated<DealStatus | null>;
   detail: Json | null;
   inserted: Generated<Timestamp | null>;
   signed: Timestamp | null;

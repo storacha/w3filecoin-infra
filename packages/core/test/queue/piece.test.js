@@ -47,6 +47,7 @@ test('can insert to piece queue and peek queued pieces', async t => {
     }
     t.truthy(cargoItem)
     t.is(item.priority, 0)
+    t.deepEqual(item.size, cargoItem.piece.size)
     t.truthy(item.inserted)
   }
 })
