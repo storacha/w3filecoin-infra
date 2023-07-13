@@ -66,7 +66,7 @@ export function ProcessorStack({ stack, app }) {
           handler: 'packages/functions/src/workflow/piece-maker.consume',
           environment: {
             QUEUE_URL: pieceMakerItems.queueUrl,
-            QUEUE_REGION: stack.region
+            QUEUE_REGION: stack.region,
           },
           bind: [db],
         },

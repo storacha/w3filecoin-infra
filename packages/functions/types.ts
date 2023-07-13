@@ -9,6 +9,6 @@ declare module 'sst/node/rds' {
   }
 
   export interface RDSResources {
-    Cluster: Cluster
+    w3filecoinrds: Cluster
   }
 }

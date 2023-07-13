@@ -99,7 +99,7 @@ function getProducerEnv () {
 }
 
 function getDbEnv () {
-  const { defaultDatabaseName, secretArn, clusterArn} = RDS.Cluster
+  const { defaultDatabaseName, secretArn, clusterArn} = RDS.w3filecoinrds
 
   return {
     database: defaultDatabaseName,
