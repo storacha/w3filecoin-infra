@@ -40,6 +40,13 @@ export function ProcessorStack({ stack, app }) {
     stack,
     'piece-maker-producer-queue',
     {
+      cdk: {
+        queue: {
+          // During the deduplication interval (5 minutes), Amazon SQS treats
+          // messages that are sent with identical body content
+          contentBasedDeduplication: true
+        }
+      },
       consumer: {
         function: pieceMakerProducerHandler,
         cdk: {
@@ -47,7 +54,7 @@ export function ProcessorStack({ stack, app }) {
             batchSize: 1,
           },
         }
-      }
+      },
       // TODO: DLQ
     }
   )

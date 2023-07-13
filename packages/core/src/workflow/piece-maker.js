@@ -4,6 +4,13 @@ import { CommP } from '@web3-storage/data-segment'
 import { SqsSendMessageError } from './errors.js'
 
 /**
+ * Reads queued content from the given `contentQueue` and sends each to
+ * a given SQS queue.
+ *
+ * It can fail returning error `DatabaseOperationError` or `SqsSendMessageError`.
+ * User can rely on these to try different infrastructure resources, or simply
+ * use different status codes for error monitoring.
+ *
  * @param {object} props
  * @param {import('../types.js').ContentQueue} props.contentQueue
  * @param {import('@aws-sdk/client-sqs').SQSClient} props.sqsClient
@@ -20,12 +27,16 @@ export async function consumer ({ contentQueue, sqsClient, queueUrl }) {
 
   try {
     for (const content of contentListResponse.ok) {
+      // Deduplicates messages with the same ID to not invoke unecessary lambdas
+      // through `contentBasedDeduplication` in SQS configuration.
+      // However, operations are idempotent and in case they happen to be executed
+      // after the message deduplication id timesout is also acceptable.
       const msgCommand = new SendMessageCommand({
         QueueUrl: queueUrl,
         MessageBody: JSON.stringify({
           ...content,
           link: content.link.toString()
-        })
+        }),
       })
   
       await sqsClient.send(msgCommand)
