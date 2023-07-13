@@ -6,7 +6,7 @@ import { parse as parseLink } from 'multiformats/link'
 
 import { createContentQueue } from '../../src/queue/content.js'
 import { createPieceQueue } from '../../src/queue/piece.js'
-import { ContentFetcherError } from '../../src/content-fetcher/errors.js'
+import { ContentResolverError } from '../../src/content-resolver/errors.js'
 import * as pieceMakerWorkflow from '../../src/workflow/piece-maker.js'
 
 import { createDatabase, createBucket, createQueue } from '../helpers/resources.js'
@@ -133,14 +133,14 @@ test('can consume content queue and write to producer queue', async t => {
 
   const contentItemsToProcess = normalizeContentItemsFromQueueMessages(queueMessages)
   // create content fetcher from memory fixtures
-  const contentFetcher = createContentFetcher(cargoItems)
+  const contentResolver = createContentResolver(cargoItems)
 
   // Process each content item
   for (const item of contentItemsToProcess) {
     const { error } = await pieceMakerWorkflow.producer({
       item,
       pieceQueue,
-      contentFetcher
+      contentResolver
     })
     t.falsy(error)
   }
@@ -185,19 +185,19 @@ test('can produce items gracefully when concurrently handling messages', async t
   const contentItemsToProcess = normalizeContentItemsFromQueueMessages(queueMessages)
 
   // create content fetcher from memory fixtures
-  const contentFetcher = createContentFetcher(cargoItems)
+  const contentResolver = createContentResolver(cargoItems)
 
   // Process each content item
   const res = await Promise.all([
     pieceMakerWorkflow.producer({
       item: contentItemsToProcess[0],
       pieceQueue,
-      contentFetcher
+      contentResolver
     }),
     pieceMakerWorkflow.producer({
       item: contentItemsToProcess[0],
       pieceQueue,
-      contentFetcher
+      contentResolver
     })
   ])
   t.falsy(res.find(r => r.error))
@@ -209,12 +209,12 @@ test('producer fails to put in piece queue when content not set', async t => {
   const cargoItems = await getCargo(10)
 
   // create content fetcher from memory fixtures
-  const contentFetcher = createContentFetcher(cargoItems)
+  const contentResolver = createContentResolver(cargoItems)
 
   const { error } = await pieceMakerWorkflow.producer({
     item: cargoItems[0].content,
     pieceQueue,
-    contentFetcher
+    contentResolver
   })
 
   t.truthy(error)
@@ -247,13 +247,13 @@ test('producer fails to put in piece queue when content fetcher cannot fetch con
 
   const contentItemsToProcess = normalizeContentItemsFromQueueMessages(queueMessages)
   // create content fetcher without fixtures
-  const contentFetcher = createContentFetcher([])
+  const contentResolver = createContentResolver([])
 
   // Process each content item
   const { error: producerError } = await pieceMakerWorkflow.producer({
     item: contentItemsToProcess[0],
     pieceQueue,
-    contentFetcher
+    contentResolver
   })
   t.truthy(producerError)
 })
@@ -276,15 +276,15 @@ function normalizeContentItemsFromQueueMessages (queueMessages) {
 /**
  * @param {any[]} cargoItems
  */
-function createContentFetcher (cargoItems) {
-  /** @type {import('../../src/types.js').ContentFetcher} */
-  const contentFetcher = {
-    fetch: async function (item) {
+function createContentResolver (cargoItems) {
+  /** @type {import('../../src/types.js').ContentResolver} */
+  const contentResolver = {
+    resolve: async function (item) {
       const cargo = cargoItems.find(cargo => cargo.content.link.equals(item.link))
 
       if (!cargo) {
         return {
-          error: new ContentFetcherError()
+          error: new ContentResolverError()
         }
       }
       return {
@@ -293,5 +293,5 @@ function createContentFetcher (cargoItems) {
     }
   }
 
-  return contentFetcher
+  return contentResolver
 }

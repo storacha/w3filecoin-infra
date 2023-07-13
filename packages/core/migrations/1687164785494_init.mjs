@@ -17,7 +17,11 @@ export async function up(db) {
     .createTable('content')
     .addColumn('link', 'text', (col) => col.primaryKey())
     .addColumn('size', 'bigint', (col) => col.notNull())
-    // [{ bucketName: string, bucketRegion: string, key: string, bucketUrl: string }]
+    // source has a jsonb array with URLs of source that can be used to fetch content
+    // [
+    //   'https://carpark-prod-0.s3.us-west-2.amazonaws.com/bagbaiera2222anvq5hsvpi3ftbx4tojrjvdptd4q7jnhiny4ssntzwz3ed7q/bagbaiera2222anvq5hsvpi3ftbx4tojrjvdptd4q7jnhiny4ssntzwz3ed7q.car',
+    //   'https://fffa4b4363a7e5250af8357087263b3a.r2.cloudflarestorage.com/carpark-prod-0/bagbaiera2222anvq5hsvpi3ftbx4tojrjvdptd4q7jnhiny4ssntzwz3ed7q/bagbaiera2222anvq5hsvpi3ftbx4tojrjvdptd4q7jnhiny4ssntzwz3ed7q.car'
+    // ]
     .addColumn('source', 'jsonb', (col) => col.notNull())
     .addColumn('inserted', 'timestamp', (col) => col.defaultTo(sql`timezone('utc', now())`))
     .execute()

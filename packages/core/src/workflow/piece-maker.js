@@ -43,16 +43,16 @@ export async function consumer ({ contentQueue, sqsClient, queueUrl }) {
  * @param {object} props
  * @param {import('../types.js').Content} props.item
  * @param {import('../types.js').PieceQueue} props.pieceQueue
- * @param {import('../types.js').ContentFetcher} props.contentFetcher
+ * @param {import('../types.js').ContentResolver} props.contentResolver
  * @returns {import('../types.js').ProducerWorkflowResponse}
  */
-export async function producer ({ item, pieceQueue, contentFetcher }) {
+export async function producer ({ item, pieceQueue, contentResolver }) {
   // TODO: we can consider checking if already in the destination queue
   // before doing the precessing
 
-  const { ok: bytes, error: contentFetcherError } = await contentFetcher.fetch(item)
-  if (contentFetcherError) {
-    return { error: contentFetcherError }
+  const { ok: bytes, error: contentResolverError } = await contentResolver.resolve(item)
+  if (contentResolverError) {
+    return { error: contentResolverError }
   }
 
   const commP = CommP.build(bytes)

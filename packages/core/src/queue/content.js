@@ -8,10 +8,6 @@ export const CONTENT = 'content'
 export const CONTENT_QUEUE = 'content_queue'
 
 /**
- * @typedef {import('../types').ContentSource} ContentSource
- */
-
-/**
  * @param {import('../types').Content} contentItem 
  */
 const encode = (contentItem) => ({
@@ -28,7 +24,7 @@ const decode = (rows) => {
   return rows.map(content => ({
     link: parseLink(/** @type {string} */ (content.link)),
     size: /** @type {number} */(Number.parseInt(/** @type {string} */ (content.size))) | 0,
-    source: /** @type {ContentSource[]} */ (content.source),
+    source: /** @type {URL[]} */ (content.source.map((/** @type {string} */ s) => new URL(s))),
     inserted: /** @type {Date} */(content.inserted).toISOString(),
   }))
 }

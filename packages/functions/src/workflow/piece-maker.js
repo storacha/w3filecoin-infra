@@ -3,7 +3,7 @@ import * as Sentry from '@sentry/serverless'
 import { RDS } from 'sst/node/rds'
 import { SQSClient } from '@aws-sdk/client-sqs'
 
-import { createContentFetcher } from '@w3filecoin/core/src/content-fetcher'
+import { createContentResolver } from '@w3filecoin/core/src/content-resolver'
 import { createContentQueue } from '@w3filecoin/core/src/queue/content'
 import { createPieceQueue } from '@w3filecoin/core/src/queue/piece'
 import * as pieceMakerWorkflow from '@w3filecoin/core/src/workflow/piece-maker'
@@ -46,11 +46,11 @@ async function consumerHandler() {
  * @param {import('aws-lambda').SQSEvent} event
  */
 async function producerHandler(event) {
-  const { db, contentFetcherUrlR2 } = getProducerEnv()
+  const { db, contentResolverUrlR2 } = getProducerEnv()
   const pieceQueue = createPieceQueue(db)
-  const contentFetcher = createContentFetcher(
+  const contentResolver = createContentResolver(
     { clientOpts: {} },
-    { httpEndpoint: contentFetcherUrlR2 }
+    { httpEndpoint: contentResolverUrlR2 }
   )
 
   const item = parseContentQueueEvent(event)
@@ -58,7 +58,7 @@ async function producerHandler(event) {
     throw new Error('Invalid content format')
   }
 
-  const { error } = await pieceMakerWorkflow.producer({ item, pieceQueue, contentFetcher })
+  const { error } = await pieceMakerWorkflow.producer({ item, pieceQueue, contentResolver })
   if (error) {
     // TODO: Should we handle content fetcher error differently?
     return {
@@ -80,7 +80,7 @@ function getConsumerEnv () {
     db: getDbEnv(),
     queueUrl: mustGetEnv('QUEUE_URL'),
     queueRegion: mustGetEnv('QUEUE_REGION'),
-    contentFetcherUrlR2: mustGetEnv('CONTENT_FETCHER_URL_R2')
+    contentResolverUrlR2: mustGetEnv('CONTENT_RESOLVER_URL_R2')
   }
 }
 
@@ -90,7 +90,7 @@ function getConsumerEnv () {
 function getProducerEnv () {
   return {
     db: getDbEnv(),
-    contentFetcherUrlR2: mustGetEnv('CONTENT_FETCHER_URL_R2')
+    contentResolverUrlR2: mustGetEnv('CONTENT_RESOLVER_URL_R2')
   }
 }
 

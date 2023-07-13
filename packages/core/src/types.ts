@@ -50,7 +50,7 @@ export type PeerError = DatabaseOperationError
 export interface Content {
   link: Link
   size: number
-  source: ContentSource[]
+  source: URL[]
 }
 export type ContentQueue = Queue<Content>
 
@@ -91,14 +91,14 @@ export interface Deal {
 export type DealQueue = Queue<Deal>
 
 export type ContentSource = {
+  provider: 'r2' | 's3'
   bucketName: string
   bucketRegion: string
   key: string
-  bucketUrl?: string
 }
 
-export interface ContentFetcher {
-  fetch: (item: Content) => Promise<Result<Uint8Array, ContentFetcherError>>
+export interface ContentResolver {
+  resolve: (item: Content) => Promise<Result<Uint8Array, ContentResolverError>>
 }
 
 export type Result<T = unknown, X extends {} = {}> = Variant<{
@@ -123,7 +123,7 @@ export type ConsumerWorkflowErrorResponse =
 
 export type ProducerWorkflowErrorResponse =
   | DatabaseOperationError
-  | ContentFetcherError
+  | ContentResolverError
   | DatabaseForeignKeyConstraintError
   | DatabaseValueToUpdateAlreadyTakenError
 
@@ -146,8 +146,8 @@ export interface SqsSendMessageError extends Error {
   name: 'SqsSendMessageFailed'
 }
 
-export interface ContentFetcherError extends Error {
-  name: 'ContentFetcherFailed'
+export interface ContentResolverError extends Error {
+  name: 'ContentResolverFailed'
 }
 
 /**

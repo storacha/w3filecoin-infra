@@ -15,7 +15,7 @@ import {
  * @param {import('sst/constructs').StackContext} properties
  */
 export function ProcessorStack({ stack, app }) {
-  const { CONTENT_FETCHER_URL_R2 } = getEnv()
+  const { CONTENT_RESOLVER_URL_R2 } = getEnv()
   // Setup app monitoring with Sentry
   setupSentry(app, stack)
 
@@ -32,7 +32,7 @@ export function ProcessorStack({ stack, app }) {
       handler: 'packages/functions/src/workflow/piece-maker.producer',
       bind: [db],
       environment: {
-        CONTENT_FETCHER_URL_R2
+        CONTENT_RESOLVER_URL_R2
       }
     }
   )
