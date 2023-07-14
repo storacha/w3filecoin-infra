@@ -8,8 +8,6 @@ import { createContentQueue } from '@w3filecoin/core/src/queue/content'
 import { createPieceQueue } from '@w3filecoin/core/src/queue/piece'
 import * as pieceMakerWorkflow from '@w3filecoin/core/src/workflow/piece-maker'
 
-import { mustGetEnv } from '../utils.js'
-
 Sentry.AWSLambda.init({
   environment: process.env.SST_STAGE,
   dsn: process.env.SENTRY_DSN,
@@ -106,6 +104,16 @@ function getDbEnv () {
     secretArn,
     resourceArn: clusterArn,
   }
+}
+
+/**
+ * @param {string} name 
+ * @returns {string}
+ */
+function mustGetEnv (name) {
+  const value = process.env[name]
+  if (!value) throw new Error(`Missing env var: ${name}`)
+  return value
 }
 
 export const consume = Sentry.AWSLambda.wrapHandler(consumeHandler)

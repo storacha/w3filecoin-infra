@@ -8,6 +8,7 @@ import {
 import { DbStack } from './db-stack.js'
 import {
   setupSentry,
+  getEnv,
   getResourceName
 } from './config.js'
 
@@ -17,6 +18,8 @@ import {
 export function ProcessorStack({ stack, app }) {
   // Setup app monitoring with Sentry
   setupSentry(app, stack)
+
+  const { CONTENT_RESOLVER_URL_R2 } = getEnv()
 
   const { db } = use(DbStack)
 
@@ -31,7 +34,7 @@ export function ProcessorStack({ stack, app }) {
       handler: 'packages/functions/src/workflow/piece-maker.build',
       bind: [db],
       environment: {
-        CONTENT_RESOLVER_URL_R2: process.env.CONTENT_RESOLVER_URL_R2 ?? ''
+        CONTENT_RESOLVER_URL_R2
       }
     }
   )
