@@ -1,5 +1,6 @@
 import {
   Cron,
+  Function,
   Queue,
   use
 } from 'sst/constructs'
@@ -25,6 +26,18 @@ export function ProcessorStack({ stack, app }) {
   // - CRON resource calling `piece-maker` lambda
   // - lambda for consuming `piece-maker` DB view and queue its processing
   // - QUEUE triggers lambda functions to derive piece CIDs from received content
+  const pieceMakerHandler = new Function(
+    stack,
+    'piece-maker-handler',
+    {
+      handler: 'packages/functions/src/workflow/piece-maker.build',
+      bind: [db],
+      environment: {
+        CONTENT_RESOLVER_URL_R2
+      }
+    }
+  )
+
   const queueName = getResourceName('piece-maker-queue', stack.stage)
   const pieceMakerItems = new Queue(
     stack,
@@ -39,13 +52,7 @@ export function ProcessorStack({ stack, app }) {
         }
       },
       consumer: {
-        function: {
-          handler: 'packages/functions/src/workflow/piece-maker.build',
-          bind: [db],
-          environment: {
-            CONTENT_RESOLVER_URL_R2
-          }
-        },
+        function: pieceMakerHandler,
         cdk: {
           eventSource: {
             batchSize: 1,
