@@ -1,7 +1,21 @@
 import { UnknownLink as Link } from 'multiformats/link'
+import {
+  HandlerExecutionError,
+  HandlerNotFound,
+  InvalidAudience,
+  Unauthorized
+} from '@ucanto/interface'
+import { AggregateOfferFailure } from '@web3-storage/capabilities/dist/src/types'
 import { PaddedPieceSize } from '@web3-storage/data-segment'
 import { Kysely } from 'kysely'
 import { Database } from './schema'
+
+// AggregateOfferFailure
+
+export interface StorefrontSignerCtx {
+  did?: string
+  privateKey: string
+}
 
 export interface DialectProps {
   database: string
@@ -28,10 +42,7 @@ export interface PriorityProducer<Item extends ItemWithPriority> extends Produce
 export interface ItemWithPriority {
   priority?: number
 }
-export interface ConsumerOptions {
-  limit?: number
-  offset?: number
-}
+export interface ConsumerOptions extends SelectOptions {}
 export interface Queue<In, Out = Inserted<In>> extends Producer<In>, Consumer<Out> {}
 export interface PriorityQueue<In extends ItemWithPriority, Out = Inserted<In>> extends PriorityProducer<In>, Consumer<Out> {}
 export type Inserted<In> = In & { inserted: string }
@@ -112,12 +123,32 @@ export type Result<T = unknown, X extends {} = {}> = Variant<{
 }>
 
 /**
+ * View
+ */
+export interface DatabaseView {
+  selectCargoIncluded: (link: Link, options?: SelectOptions) => Promise<Result<CargoIncluded[], SelectError>>
+}
+
+export interface SelectOptions {
+  limit?: number
+  offset?: number
+}
+
+export interface CargoIncluded {
+  piece: Link,
+  size: PaddedPieceSize
+}
+
+export type SelectError = DatabaseOperationError
+
+/**
  * Workflows
  */
 
 export type ConsumerWorkflowResponse = Promise<Result<ConsumerWorkflowOkResponse, ConsumerWorkflowErrorResponse>>
 export type ProducerWorkflowResponse = Promise<Result<{}, ProducerWorkflowErrorResponse>>
 export type AggregatorWorkflowResponse = Promise<Result<ConsumerWorkflowOkResponse, AggregatorWorkflowErrorResponse>>
+export type SubmissionWorkflowResponse = Promise<Result<{}, SubmissionWorkflowErrorResponse>>
 
 export interface ConsumerWorkflowOkResponse {
   count: number
@@ -133,6 +164,18 @@ export type ProducerWorkflowErrorResponse =
   | ContentEncodeError
   | DatabaseForeignKeyConstraintError
   | DatabaseValueToUpdateAlreadyTakenError
+
+export type SubmissionWorkflowErrorResponse =
+  | DatabaseOperationError
+  | ContentResolverError
+  | ContentEncodeError
+  | DatabaseForeignKeyConstraintError
+  | DatabaseValueToUpdateAlreadyTakenError
+  | HandlerExecutionError
+  | HandlerNotFound
+  | InvalidAudience
+  | Unauthorized
+  | AggregateOfferFailure
 
 export type AggregatorWorkflowErrorResponse =
   | ContentEncodeError

@@ -150,7 +150,7 @@ test('can consume content queue and write to producer queue', async t => {
   }
 })
 
-test('can produce items gracefully when concurrently handling messages', async t => {
+test('can build items gracefully when concurrently handling messages', async t => {
   const { dbClient, sqsClient, queueUrl, queueMessages } = t.context
   const contentQueue = createContentQueue(dbClient)
   const pieceQueue = createPieceQueue(dbClient)

@@ -42,6 +42,12 @@ export interface Cargo {
   size: Int8 | null;
 }
 
+export interface Cargo_included {
+  piece: string | null;
+  aggregate: string | null;
+  size: Int8 | null;
+}
+
 export interface Content {
   link: string;
   size: Int8;
@@ -119,6 +125,7 @@ export interface Database {
   aggregate: Aggregate;
   aggregate_queue: AggregateQueue;
   cargo: Cargo;
+  cargo_included: Cargo_included;
   content: Content;
   content_queue: ContentQueue;
   deal: Deal;

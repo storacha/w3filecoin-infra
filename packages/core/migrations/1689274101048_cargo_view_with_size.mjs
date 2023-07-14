@@ -27,6 +27,24 @@ export async function up(db) {
         .orderBy('inserted')
     )
     .execute()
+
+  /**
+   * View for inclusion records that already have an aggregate
+   */
+  await db.schema
+    .createView('cargo_included')
+    .as(
+      db.selectFrom('inclusion')
+        .innerJoin('piece', 'piece.link', 'inclusion.piece')
+        .select([
+          'inclusion.piece',
+          'inclusion.aggregate',
+          'piece.size',
+        ])
+        .where('aggregate', 'is not', null)
+        .orderBy('inclusion.inserted')
+    )
+    .execute()
 }
 
 /**
