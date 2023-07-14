@@ -4,6 +4,7 @@ import {
   Queue,
   use
 } from 'sst/constructs'
+import { Duration } from 'aws-cdk-lib'
 
 import { DbStack } from './db-stack.js'
 import {
@@ -35,7 +36,8 @@ export function ProcessorStack({ stack, app }) {
       bind: [db],
       environment: {
         CONTENT_RESOLVER_URL_R2
-      }
+      },
+      timeout: 15 * 60,
     }
   )
 
@@ -46,6 +48,8 @@ export function ProcessorStack({ stack, app }) {
     {
       cdk: {
         queue: {
+          // Needs to be set as less or equal than consumer function
+          visibilityTimeout: Duration.seconds(15 * 60),
           // During the deduplication interval (5 minutes), Amazon SQS treats
           // messages that are sent with identical body content
           contentBasedDeduplication: true,
@@ -77,6 +81,7 @@ export function ProcessorStack({ stack, app }) {
             QUEUE_REGION: stack.region,
           },
           bind: [db],
+          timeout: 15 * 60,
         },
       }
     }
