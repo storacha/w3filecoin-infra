@@ -27,6 +27,7 @@ The high level flow for the w3filecoin Pipeline is:
 The w3filecoin pipeline is modeled into 3 different SST Stacks that will have their infrastructure provisioned in AWS via AWS CloudFormation. These are:
 
 - API Stack
+- Queue Stack
 - DB Stack
 - Processor Stack
 
@@ -34,13 +35,64 @@ The w3filecoin pipeline is modeled into 3 different SST Stacks that will have th
 
 ## API Stack
 
-TBC
-API Gateway to expose:
+The w3filecoin API Stack exposes a HTTP API that both enables its to request `pieces` to be included into Filecoin deals and get status of a Filecoin deal, as well as to receive reports of aggregates that failed to land into a Filecoin Deal.
+
+TODO
+- Post piece - w3filecoin is designed to enable multiple sources of CAR files to be easily integrated into the pipeline
+  - parties with permissions to write into the system can do so
 - Report API for failed aggregates to land into Storage Providers
 - Get to know state of deals
-- Receive signature requests
-- Receive requests to consume content - w3filecoin is designed to enable multiple sources of CAR files to be easily integrated into the pipeline
 - ...
+
+## Queue Stack
+
+When a `piece` is posted into the w3filecoin pipeline, its journey starts by getting queued to be aggregated into a larger `piece` that will be offered to Storage Providers, i.e. an aggregate. The `Queue stack` consists of a **multiple queue system**, where the individual pieces will be buffered together in several stages until they are ready to form an aggregate (**32 GiB**`** piece).
+
+This design is built on top of the following assumptions:
+- Maximum SQS batch size for standard queue is **10_000**
+- Maximum SQS batch size for FIFO queue is **10**
+- SQS FIFO queue guarantees that a consumer will always be called with **only** messages from a given group ID as long as there are messages available in that group
+- SQS FIFO queue garantees **exactly-once** processing
+- Maximum number of pieces for a **32 GiB**`** aggregate is **262_144**
+
+The `piece queue` is the first queue in this system and is a standard SQS queue. It buffers individual pieces until a batch of **10_000** is ready. Once this batch is ready, a SQS consumer will try to create smaller piece aggregates named Ferries. A ferry is a `dag-cbor` encoded data structure that contains a set of pieces that form a partial aggregate. This data structure will be stored so that only its CID is sent in SQS Messages.
+
+```typescript
+interface ferry {
+  pieces: PieceLink[],
+  aggregate: PieceLink
+}
+```
+
+A ferry consists of a buffer of pieces that are getting filled up to become an aggregate ready for a Filecoin deal. Depending on the stage in the queue, a ferry can have a size of `1/2/4/8/16 GiB`. This SHOULD allow a batch size of **10_000** to at least be able to create a ferry with size **1 GiB**.
+
+To create ferries from a a batch, the SQS consumer SHOULD start by sorting the received batch by `piece` size and start filling up aggregates. If an aggregate gets to its desirable size directly from the batch **32 GiB**, it should be stored and added to the `ferry queue` right away. Otherwise, the ferry is stored and added to the queue once all the batch is processed. Note that:
+- when the batch was processed to build the ferry, the consumer can opt for optimizing the ferry and discard part of the pieces back to the queue (for instance, decrease its size to the previous power of 2 value).
+- when a **32 GiB** is built from the initial batch, it is possible that no other ferry can get loaded with **1 GiB** of pieces. If that is the case, consumer can discard all the remaining pieces back to the queue.
+
+The second queue in this system is the `ferry queue`. It is a FIFO queue that relies on group IDs derived from the size of a ferry. In other words, ferries are grouped together by their size and smaller ferries can be merged over and over again until reaching the desired size of **32 GiB**. Consequently, a consumer of `ferry queue` can merge multiple ferries and put them back into the queue with a group ID closer to the last stage.
+
+The `ferry queue` buffers ferries until a batch of **10** is in the queue. This aims to reduce necessary IO and computation to get ferry content, sort and compute new ferry. However, we can rely on `maxBatchingWindow` of **5 minutes** to guarantee that ferries can continue to move forward, given a batch of `2` items is enough to merge and move to next stage.
+
+The SQS consumer SHOULD start by fetching all the `dag-cbor` encoded data of each ferry in the batch. Afterwards, ferries should be split into pairs to be merged. Their `pieces` are sorted by size (is it needed? or can we consider it just a piece with that size?) and a new ferry is created. Once ferry is created, it can be stored and re-added to the `ferry queue` (unless reaching desired size).
+
+The last queue in this system is the `aggregate queue`. Once a ferry reaches the desired size of **32 GiB** it is written to the `aggregate queue`. This queue is responsible to persist the pieces inclusion into the Database, as well as to set the aggregate offer ready to be submitted.
+
+![queues](./queue.svg)
+
+TODO:
+- check if we would need to discard based on header being too big? or other way we can optimize
+- should final step also be a queue `submit queue`?
+
+Other relevant nodes:
+- while `w3up` CAR files can be limited to `4 GiB` to have a better utilization of Fil sector space, same does not currently happen with `pickup` (and perhaps other systems in the future). Designing assuming maximum will be that value is not a good way to go.
+- current design enables us to quite easily support bigger deals.
+
+Challenges/compromises:
+- there is not uniqueness guarantees for `piece`. Wondering if we should write the piece right away to a DB once it is received and put in the queue. This will allow us to make sure `piece` is unique in the system. But, a first write in DB would actually be needed.
+  - actually this might be a good compromie for us to track `inserted` timestamp followe by the future `inclusion` timestamp.
+- what to do with priority?
+  - can we consider retrying deal with badcontent just with garbage?
 
 ## DB Stack
 
