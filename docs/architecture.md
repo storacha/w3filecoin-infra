@@ -107,6 +107,13 @@ The `deal-queue` is the final stage of this multiple queue system. It tracks dea
 
 ### Queues overview
 
+| name       | type     | batch | window | DLQ |
+|------------|----------|-------|--------|-----|
+| piece      | standard | 10000 | 300 s  | TBD |
+| ferry      | FIFO     | 2     | 5 m    | TBD |
+| submission | FIFO     | 1     | 5 m    | TBD |
+| deal | FIFO     | 10     | 5 m    | TBD |
+
 Other relevant notes:
 - with current approach, we have an append only log where writes into the Database only happen when we have a deal in the very end, also resulting in a super small ammount of operations on the DB
 - while `w3up` CAR files can be limited to `4 GiB` to have a better utilization of Fil sector space, same does not currently happen with `pickup` (and perhaps other systems in the future). Designing assuming maximum will be that value is not a good way to go.
