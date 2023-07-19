@@ -20,6 +20,8 @@ The high level flow for the w3filecoin Pipeline is:
 - **aggregate submission** to Storage Provider broker
 - **deal tracking** and **deal recording** once fulfilled
 
+TODO: Update diagram
+
 ![Pipeline processes](./processes.svg)
 
 The w3filecoin pipeline is modeled into 3 different SST Stacks that will have their infrastructure provisioned in AWS via AWS CloudFormation. These are:
@@ -28,13 +30,16 @@ The w3filecoin pipeline is modeled into 3 different SST Stacks that will have th
 - Processor Stack
 - Data Stack
 
+TODO: Update diagram
+
 ![Architecture](./architecture.png)
 
 ## API Stack
 
-The w3filecoin API Stack exposes a HTTP API that both enables its to request `pieces` to be included into Filecoin deals and get status of a Filecoin deal, as well as to receive reports of aggregates that failed to land into a Filecoin Deal.
+The w3filecoin API Stack exposes a HTTP API that both enables storefront APIs to request `pieces` to be included into Filecoin deals and get status of a Filecoin deal, as well as to receive reports of aggregates that failed to land into a Filecoin Deal.
 
-TODO
+TODO complete this subsection
+
 - Post piece - w3filecoin is designed to enable multiple sources of CAR files to be easily integrated into the pipeline
   - parties with permissions to write into the system can do so
 - Report API for failed aggregates to land into Storage Providers?
@@ -43,12 +48,11 @@ TODO
 
 ## Processor Stack
 
-When a `piece` is posted into the w3filecoin pipeline, its journey starts by getting queued to be aggregated into a larger `piece` that will be offered to Storage Providers, i.e. an aggregate. The `Queue stack` consists of a **multiple queue system**, where the individual pieces will be buffered together in several stages until they are ready to form an aggregate (**32 GiB** piece).
+When a `piece` is posted into the w3filecoin pipeline, its journey starts by getting queued to be aggregated into a larger `piece` that will be offered to Storage Providers, i.e. an aggregate. The `Queue stack` consists of a **multiple queue system**, where the individual pieces will be buffered together in several stages until they are ready to form an aggregate (**32 GiB** piece, or close to this size).
 
 This design is built on top of the following assumptions:
 - Maximum SQS batch size for standard queue is **10_000**
 - Maximum SQS batch size for FIFO queue is **10**
-- SQS FIFO queue guarantees that a consumer will always be called with **only** messages from a given group ID as long as there are messages available in that group
 - SQS FIFO queue garantees **exactly-once** processing
 - Maximum number of pieces for a **32 GiB** aggregate is **262_144**
 
