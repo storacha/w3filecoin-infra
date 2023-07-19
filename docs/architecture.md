@@ -46,53 +46,59 @@ TODO
 
 ## Queue Stack
 
-When a `piece` is posted into the w3filecoin pipeline, its journey starts by getting queued to be aggregated into a larger `piece` that will be offered to Storage Providers, i.e. an aggregate. The `Queue stack` consists of a **multiple queue system**, where the individual pieces will be buffered together in several stages until they are ready to form an aggregate (**32 GiB**`** piece).
+When a `piece` is posted into the w3filecoin pipeline, its journey starts by getting queued to be aggregated into a larger `piece` that will be offered to Storage Providers, i.e. an aggregate. The `Queue stack` consists of a **multiple queue system**, where the individual pieces will be buffered together in several stages until they are ready to form an aggregate (**32 GiB** piece).
 
 This design is built on top of the following assumptions:
 - Maximum SQS batch size for standard queue is **10_000**
 - Maximum SQS batch size for FIFO queue is **10**
 - SQS FIFO queue guarantees that a consumer will always be called with **only** messages from a given group ID as long as there are messages available in that group
 - SQS FIFO queue garantees **exactly-once** processing
-- Maximum number of pieces for a **32 GiB**`** aggregate is **262_144**
+- Maximum number of pieces for a **32 GiB** aggregate is **262_144**
 
 The `piece queue` is the first queue in this system and is a standard SQS queue. It buffers individual pieces until a batch of **10_000** is ready. Once this batch is ready, a SQS consumer will try to create smaller piece aggregates named Ferries. A ferry is a `dag-cbor` encoded data structure that contains a set of pieces that form a partial aggregate. This data structure will be stored so that only its CID is sent in SQS Messages.
 
 ```typescript
-interface ferry {
-  pieces: PieceLink[],
-  aggregate: PieceLink
+interface Ferry {
+  // Pieces inside the ferry
+  pieces: FerryPiece[],
+  // Aggregate composed by pieces in ferry enabling us to derive its size
+  aggregate: FerryPiece,
 }
+
+interface FerryPiece {
+  link: PieceLink,
+  // timestamp that piece was received
+  inserted: string,
+  // Policies that this piece is under
+  policies: PiecePolicy[]
+}
+
+type PiecePolicy = 'PREVIOUS_AGGREGATE_FAILED'
 ```
 
-A ferry consists of a buffer of pieces that are getting filled up to become an aggregate ready for a Filecoin deal. Depending on the stage in the queue, a ferry can have a size of `1/2/4/8/16 GiB`. This SHOULD allow a batch size of **10_000** to at least be able to create a ferry with size **1 GiB**.
+A ferry consists of a buffer of pieces that are getting filled up to become an aggregate ready for a Filecoin deal. This SHOULD allow a batch size of **10_000** to at least be able to create a ferry with size **1 GiB**.
 
-To create ferries from a a batch, the SQS consumer SHOULD start by sorting the received batch by `piece` size and start filling up aggregates. If an aggregate gets to its desirable size directly from the batch **32 GiB**, it should be stored and added to the `ferry queue` right away. Otherwise, the ferry is stored and added to the queue once all the batch is processed. Note that:
-- when the batch was processed to build the ferry, the consumer can opt for optimizing the ferry and discard part of the pieces back to the queue (for instance, decrease its size to the previous power of 2 value).
+To create ferries from a a batch, the SQS consumer SHOULD start by sorting the received batch by `piece` size and start filling up aggregates. If an aggregate gets to its desirable size directly from the batch **32 GiB**, it should be stored and added to the `aggregate queue` right away. Otherwise, the ferry is stored and added to the `ferry queue` once all the batch is processed. Note that:
 - when a **32 GiB** is built from the initial batch, it is possible that no other ferry can get loaded with **1 GiB** of pieces. If that is the case, consumer can discard all the remaining pieces back to the queue.
 
-The second queue in this system is the `ferry queue`. It is a FIFO queue that relies on group IDs derived from the size of a ferry. In other words, ferries are grouped together by their size and smaller ferries can be merged over and over again until reaching the desired size of **32 GiB**. Consequently, a consumer of `ferry queue` can merge multiple ferries and put them back into the queue with a group ID closer to the last stage.
+The second queue in this system is the `ferry queue`, a FIFO queue that acts as a reducer by concatenating the pieces of multiple ferries together generating bigger and bigger feries until one has the desirable size. In other words, the load of each ferry is concantenated, and its resulting ferry is added to the `ferry queue` again until an aggregate can be built. A queue consumer can act as soon as a batch of 2 is in the queue, so that aggregates can be created as soon as possible.
 
-The `ferry queue` buffers ferries until a batch of **10** is in the queue. This aims to reduce necessary IO and computation to get ferry content, sort and compute new ferry. However, we can rely on `maxBatchingWindow` of **5 minutes** to guarantee that ferries can continue to move forward, given a batch of `2` items is enough to merge and move to next stage.
-
-The SQS consumer SHOULD start by fetching all the `dag-cbor` encoded data of each ferry in the batch. Afterwards, ferries should be split into pairs to be merged. Their `pieces` are sorted by size (is it needed? or can we consider it just a piece with that size?) and a new ferry is created. Once ferry is created, it can be stored and re-added to the `ferry queue` (unless reaching desired size).
+The SQS consumer MUST start by fetching all the `dag-cbor` encoded data of both ferries in the batch. Afterwards, their pieces SHOULD be sorted by its size and a new aggregate is created. In case it has the desired **32 GiB** size, it should be sent into the `aggregate queue`, otherwise the new ferry should be stored and put back into the queue. Note that:
+- While pieces should be sorted by size, some policies in a piece might impact this sorting. For instance, if a piece was already in a previous aggregate that failed to be stored by a Storage Provider, it can be included faster into an aggregate
+- Note that excess pieces not included in **32 GiB** aggregate when ferries are concatenated MUST be included into a new ferry and put back into the queue
+- Minimum size for an aggregate can also be specified to guarantee we don't need to have exactly **32 GiB** to offer it
 
 The last queue in this system is the `aggregate queue`. Once a ferry reaches the desired size of **32 GiB** it is written to the `aggregate queue`. This queue is responsible to persist the pieces inclusion into the Database, as well as to set the aggregate offer ready to be submitted.
 
 ![queues](./queue.svg)
 
-TODO:
-- check if we would need to discard based on header being too big? or other way we can optimize
-- should final step also be a queue `submit queue`?
-
 Other relevant nodes:
 - while `w3up` CAR files can be limited to `4 GiB` to have a better utilization of Fil sector space, same does not currently happen with `pickup` (and perhaps other systems in the future). Designing assuming maximum will be that value is not a good way to go.
 - current design enables us to quite easily support bigger deals.
+- if an aggregate fails to land into a Storage Provider, the problematic piece(s) can be removed and a ferry created without that piece. This way, it can already be added to the `ferry queue`
 
 Challenges/compromises:
 - there is not uniqueness guarantees for `piece`. Wondering if we should write the piece right away to a DB once it is received and put in the queue. This will allow us to make sure `piece` is unique in the system. But, a first write in DB would actually be needed.
-  - actually this might be a good compromie for us to track `inserted` timestamp followe by the future `inclusion` timestamp.
-- what to do with priority?
-  - can we consider retrying deal with badcontent just with garbage?
 
 ## DB Stack
 
