@@ -42,6 +42,7 @@ TODO complete this subsection
 
 - Post piece - w3filecoin is designed to enable multiple sources of CAR files to be easily integrated into the pipeline
   - parties with permissions to write into the system can do so
+  - Piece should make its way for the queue if not there yet
 - Report API for failed aggregates to land into Storage Providers?
 - Get to know state of deals
 - ...
@@ -82,7 +83,7 @@ A ferry consists of a buffer of pieces that are getting filled up to become an a
 To create ferries from a a batch, the SQS consumer SHOULD start by sorting the received batch by `piece` size and start filling up aggregates. If an aggregate gets to its desirable size directly from the batch **32 GiB**, it should be stored and added to the `submission-queue` right away. Otherwise, the ferry is stored and added to the `ferry-queue` once all the batch is processed. Note that:
 - when a **32 GiB** is built from the initial batch, it is possible that no other ferry can get loaded with **1 GiB** of pieces. If that is the case, consumer can discard all the remaining pieces back to the queue.
 
-The second queue in this system is the `ferry-queue`, a FIFO queue that acts as a reducer by concatenating the pieces of multiple ferries together generating bigger and bigger feries until one has the desirable size. In other words, the load of each ferry is concantenated, and its resulting ferry is added to the `ferry-queue` again until an aggregate can be built. A queue consumer can act as soon as a batch of 2 is in the queue, so that aggregates can be created as soon as possible.
+The second queue in this system is the `ferry-queue`, a FIFO queue that acts as a reducer by concatenating the pieces of multiple ferries together generating bigger and bigger feries until one has the desirable size. In other words, the load of each ferry is concatenated, and its resulting ferry is added to the `ferry-queue` again until an aggregate can be built. A queue consumer can act as soon as a batch of 2 is in the queue, so that aggregates can be created as soon as possible.
 
 The SQS consumer MUST start by fetching all the `dag-cbor` encoded data of both ferries in the batch. Afterwards, their pieces SHOULD be sorted by its size and a new aggregate is created. In case it has the desired **32 GiB** size, it should be stored and its CID sent into the `submission-queue`, otherwise the new ferry should be stored and put back into the queue. Note that:
 - While pieces should be sorted by size, some policies in a piece might impact this sorting. For instance, if a piece was already in a previous aggregate that failed to be stored by a Storage Provider, it can be included faster into an aggregate
@@ -119,13 +120,12 @@ The `deal-queue` is the final stage of this multiple queue system. It tracks dea
 | deal | FIFO     | 10     | 5 m    | TBD |
 
 Other relevant notes:
-- with current approach, we have an append only log where writes into the Database only happen when we have a deal in the very end, also resulting in a super small ammount of operations on the DB
+- with current approach, we have an append only log where writes into the Database only happen when we have a deal in the very end, also resulting in a super small amount of operations on the DB
 - while `w3up` CAR files can be limited to `4 GiB` to have a better utilization of Fil sector space, same does not currently happen with `pickup` (and perhaps other systems in the future). Designing assuming maximum will be that value is not a good way to go.
 - current design enables us to quite easily support bigger deals.
 - if an aggregate fails to land into a Storage Provider, the problematic piece(s) can be removed and a ferry created without that piece. This way, it can already be added to the `ferry queue`
 
 Challenges/compromises:
-- there is not uniqueness guarantees for `piece`. Wondering if we should write the piece right away to a DB once it is received and put in the queue. This will allow us to make sure `piece` is unique in the system. But, a first write in DB would actually be needed.
 - where to hook alerts when things are getting delayed? we can hook alerts when requests to spade are failing, but will that be enough?
   - perhaps we should handle failure tolerance (if needed) in `spade-proxy` where we keep track of items failing in a queue that we can hook up a Filecoin lite node
 
@@ -147,11 +147,11 @@ To achieve required state management, we will be relying on a S3 Bucket and a dy
 2. Put and Get ferry blocks (S3 Bucket)
   - While `ferry-queue` is working, these blocks will be stored to be propagated through queue stages via their CIDs
   - Key `${blockCid}/{blockCid}`, Value empty with expiration date
-3. Write pieces together with the aggregate they are part of into the database
-  - See schema below
+3. Write pieces together with the aggregate they are part of (DynamoDB)
+  - Based on schema below
 4. Get deal state of a given piece
   - Rely on DynamoDB to get `link` of the aggregate within the piece (secondary index) and use it ask Spade for details for the deal
-  - In case there is no record in Dynamo, we can check S3 bucket to reply that piece is being aggregated
+  - In case there is no record in Dynamo, we can fallback to check S3 bucket, in order to reply that piece is being aggregated if it is there
 
 ### DynamoDB Schema
 
