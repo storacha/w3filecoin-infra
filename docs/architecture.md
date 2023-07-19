@@ -14,22 +14,19 @@ When a CAR file is written into a given web3.storage's bucket, its metadata gets
 
 The high level flow for the w3filecoin Pipeline is:
 
-- **Consume request** is received once a CAR file is written into a bucket with its metadata {`link`, `size`, `bucketName`, `bucketUrl`, `bucketRegion`, `key`}. This event is added to a `content_validator_queue`.
-- **Content Validator process** validates CARs and writes their references to a `content` table.
-- On its own schedule, **Piece maker process** can pull queued content from a `content_queue`, derive piece info for them and write records to a `piece` & `inclusion` tables.
-  - a `inclusion` table enables same piece to be included in another aggregate if a deal fails.
-- **Agregagtor process** reads from a `cargo_queue` (backed by `inclusion` table), attempts to create an aggregate and if successful it writes to an `aggregate` table.
-- **Submission process** reads from the `aggregate_queue`, submits aggregates to the agency (spade proxy) and writes deal record with status "PENDING".
-- TBD deal flow
+- **piece inclusion request** is received by a Storefront with `pieceCid` (TBD `endpoint` to get presigned urls from given we want to support w3up, web3.storage, ...?)
+- **piece queued** to be aggregated
+- **piece contenation** into ferries until a ferry has enough load to become an aggregate offer
+- **aggregate submission** to Storage Provider broker
+- **deal tracking** and **deal recording** once fulfilled
 
 ![Pipeline processes](./processes.svg)
 
 The w3filecoin pipeline is modeled into 3 different SST Stacks that will have their infrastructure provisioned in AWS via AWS CloudFormation. These are:
 
 - API Stack
-- Queue Stack
-- DB Stack
 - Processor Stack
+- Data Stack
 
 ![Architecture](./architecture.png)
 
@@ -40,11 +37,11 @@ The w3filecoin API Stack exposes a HTTP API that both enables its to request `pi
 TODO
 - Post piece - w3filecoin is designed to enable multiple sources of CAR files to be easily integrated into the pipeline
   - parties with permissions to write into the system can do so
-- Report API for failed aggregates to land into Storage Providers
+- Report API for failed aggregates to land into Storage Providers?
 - Get to know state of deals
 - ...
 
-## Queue Stack
+## Processor Stack
 
 When a `piece` is posted into the w3filecoin pipeline, its journey starts by getting queued to be aggregated into a larger `piece` that will be offered to Storage Providers, i.e. an aggregate. The `Queue stack` consists of a **multiple queue system**, where the individual pieces will be buffered together in several stages until they are ready to form an aggregate (**32 GiB** piece).
 
@@ -55,7 +52,7 @@ This design is built on top of the following assumptions:
 - SQS FIFO queue garantees **exactly-once** processing
 - Maximum number of pieces for a **32 GiB** aggregate is **262_144**
 
-The `piece queue` is the first queue in this system and is a standard SQS queue. It buffers individual pieces until a batch of **10_000** is ready. Once this batch is ready, a SQS consumer will try to create smaller piece aggregates named Ferries. A ferry is a `dag-cbor` encoded data structure that contains a set of pieces that form a partial aggregate. This data structure will be stored so that only its CID is sent in SQS Messages.
+The `piece-queue` is the first queue in this system and is a standard SQS queue. It buffers individual pieces until a batch of **10_000** is ready. Once this batch is ready, a SQS consumer will try to create smaller piece aggregates named Ferries. A ferry is a `dag-cbor` encoded data structure that contains a set of pieces that form a partial aggregate. This data structure will be stored so that only its CID is sent in SQS Messages.
 
 ```typescript
 interface Ferry {
@@ -66,209 +63,109 @@ interface Ferry {
 }
 
 interface FerryPiece {
-  link: PieceLink,
+  link: PieceCID,
   // timestamp that piece was received
   inserted: string,
   // Policies that this piece is under
   policies: PiecePolicy[]
 }
 
-type PiecePolicy = 'PREVIOUS_AGGREGATE_FAILED'
+type PiecePolicy = 'PREVIOUS_SUBMISSION_FAILED'
 ```
 
 A ferry consists of a buffer of pieces that are getting filled up to become an aggregate ready for a Filecoin deal. This SHOULD allow a batch size of **10_000** to at least be able to create a ferry with size **1 GiB**.
 
-To create ferries from a a batch, the SQS consumer SHOULD start by sorting the received batch by `piece` size and start filling up aggregates. If an aggregate gets to its desirable size directly from the batch **32 GiB**, it should be stored and added to the `aggregate queue` right away. Otherwise, the ferry is stored and added to the `ferry queue` once all the batch is processed. Note that:
+To create ferries from a a batch, the SQS consumer SHOULD start by sorting the received batch by `piece` size and start filling up aggregates. If an aggregate gets to its desirable size directly from the batch **32 GiB**, it should be stored and added to the `submission-queue` right away. Otherwise, the ferry is stored and added to the `ferry-queue` once all the batch is processed. Note that:
 - when a **32 GiB** is built from the initial batch, it is possible that no other ferry can get loaded with **1 GiB** of pieces. If that is the case, consumer can discard all the remaining pieces back to the queue.
 
-The second queue in this system is the `ferry queue`, a FIFO queue that acts as a reducer by concatenating the pieces of multiple ferries together generating bigger and bigger feries until one has the desirable size. In other words, the load of each ferry is concantenated, and its resulting ferry is added to the `ferry queue` again until an aggregate can be built. A queue consumer can act as soon as a batch of 2 is in the queue, so that aggregates can be created as soon as possible.
+The second queue in this system is the `ferry-queue`, a FIFO queue that acts as a reducer by concatenating the pieces of multiple ferries together generating bigger and bigger feries until one has the desirable size. In other words, the load of each ferry is concantenated, and its resulting ferry is added to the `ferry-queue` again until an aggregate can be built. A queue consumer can act as soon as a batch of 2 is in the queue, so that aggregates can be created as soon as possible.
 
-The SQS consumer MUST start by fetching all the `dag-cbor` encoded data of both ferries in the batch. Afterwards, their pieces SHOULD be sorted by its size and a new aggregate is created. In case it has the desired **32 GiB** size, it should be sent into the `aggregate queue`, otherwise the new ferry should be stored and put back into the queue. Note that:
+The SQS consumer MUST start by fetching all the `dag-cbor` encoded data of both ferries in the batch. Afterwards, their pieces SHOULD be sorted by its size and a new aggregate is created. In case it has the desired **32 GiB** size, it should be stored and its CID sent into the `submission-queue`, otherwise the new ferry should be stored and put back into the queue. Note that:
 - While pieces should be sorted by size, some policies in a piece might impact this sorting. For instance, if a piece was already in a previous aggregate that failed to be stored by a Storage Provider, it can be included faster into an aggregate
 - Note that excess pieces not included in **32 GiB** aggregate when ferries are concatenated MUST be included into a new ferry and put back into the queue
 - Minimum size for an aggregate can also be specified to guarantee we don't need to have exactly **32 GiB** to offer it
 
-The last queue in this system is the `aggregate queue`. Once a ferry reaches the desired size of **32 GiB** it is written to the `aggregate queue`. This queue is responsible to persist the pieces inclusion into the Database, as well as to set the aggregate offer ready to be submitted.
+Once a ferry reaches the desired size of **32 GiB** it is written into the `submission-queue`. Consumers for this queue can be triggered once a single item is in the batch, so that an aggregate offer can be submitted to spade and a `DealTracker` of the aggregate offer is added to the `deal-queue`.
+
+```typescript
+interface DealTracker {
+  // content of the offer
+  ferryCid: Link
+  // invocation and task CID to be able to go through receipts
+  invocation: Link
+  task: Link
+  // timestamp of invocation submitted
+  invoked: string
+  // timestamp of oldest piece
+  oldestPiece: string
+}
+```
+
+The `deal-queue` is the final stage of this multiple queue system. It tracks deal status until there is an update on the state of the deal to either `Approved` or `Rejected` by checking if a receipt exists. Once deal is settled, the ferry content is fetched and piece/aggregate mapping is written together with Deal status.
 
 ![queues](./queue.svg)
 
-Other relevant nodes:
+### Queues overview
+
+Other relevant notes:
+- with current approach, we have an append only log where writes into the Database only happen when we have a deal in the very end, also resulting in a super small ammount of operations on the DB
 - while `w3up` CAR files can be limited to `4 GiB` to have a better utilization of Fil sector space, same does not currently happen with `pickup` (and perhaps other systems in the future). Designing assuming maximum will be that value is not a good way to go.
 - current design enables us to quite easily support bigger deals.
 - if an aggregate fails to land into a Storage Provider, the problematic piece(s) can be removed and a ferry created without that piece. This way, it can already be added to the `ferry queue`
 
 Challenges/compromises:
 - there is not uniqueness guarantees for `piece`. Wondering if we should write the piece right away to a DB once it is received and put in the queue. This will allow us to make sure `piece` is unique in the system. But, a first write in DB would actually be needed.
+- where to hook alerts when things are getting delayed? we can hook alerts when requests to spade are failing, but will that be enough?
+  - perhaps we should handle failure tolerance (if needed) in `spade-proxy` where we keep track of items failing in a queue that we can hook up a Filecoin lite node
 
-## DB Stack
+## Data Stack
 
-The DB stack relies on Amazon RDS Database to keep the necessary state for the w3filecoin pipeline. Its data model was designed with the aim of being the data structure for each of the processors running within the pipeline, while also enabling the tracking of state of each item in the pipeline and to get a mapping between content CIDs and piece CIDs.
+The Data stack is responsible for the state of the w3filecoin.
 
-### Schema
+It keeps track of the received pieces, created aggregates, as well as in which aggregate a given piece is. In addition, it must keep the necessary state for the Ferry queue to operate, as well as the state of a given aggregate over time until a deal is fulfilled. It is worth mentioning, that keeping track of problematic pieces that could not be added to an aggregate should also be properly tracked.
 
-```sql
--- Table describes queue of verified CARs to be stored in filecoin
--- CAR is considered in queue when there is no piece referencing it
-CREATE TABLE content
-(
-  -- CAR CID
-  link TEXT PRIMARY KEY,
-  -- CAR Size
-  size number NOT NULL,
-  -- Source where the content can be fetched from.
-  -- It includes an array of { bucketName: string, bucketRegion: string, key: string, bucketUrl?: string }
-  source JSONB NOT NULL,
-  -- Timestamp
-  inserted TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
+To achieve required state management, we will be relying on a S3 Bucket and a dynamoDB table.
 
--- Table describes pieces derived corresponding to CARs in the content table. Link (commP) is
--- unique even though cargo reference is not, that is because there may be an error in piece
--- derivation and in that case another correct piece will reference the same content.
-CREATE TABLE piece
-(
-  -- Piece CID
-  link TEXT NOT NULL PRIMARY KEY,
-  -- Piece size
-  size number NOT NULL,
-  -- Reference to the content of this piece (CAR CID).
-  content TEXT NOT NULL REFERENCES content(link),
-  -- Time when the piece was derived from the content
-  inserted TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
+### Queries and Resources
 
-CREATE INDEX piece_content_idx ON piece (content);
-CREATE INDEX piece_inserted_idx ON piece (inserted);
+1. Check if piece is already in the pipeline (S3 Bucket)
+  - Before getting a piece into the pipelined queue, it should be stored to guarantee uniqueness
+  - Also important to be able to report back on in progress work when deal state of a piece is still unknown by fallbacking to Head Request in bucket
+  - Key `${pieceCid}/{pieceCid}`, Value empty
+    - TODO: actually we might need to use the value to be able to grab the URLs for the piece...
+2. Put and Get ferry blocks (S3 Bucket)
+  - While `ferry-queue` is working, these blocks will be stored to be propagated through queue stages via their CIDs
+  - Key `${blockCid}/{blockCid}`, Value empty with expiration date
+3. Write pieces together with the aggregate they are part of into the database
+  - See schema below
+4. Get deal state of a given piece
+  - Rely on DynamoDB to get `link` of the aggregate within the piece (secondary index) and use it ask Spade for details for the deal
+  - In case there is no record in Dynamo, we can check S3 bucket to reply that piece is being aggregated
 
--- Content for which we need to derive piece CIDs. We will have a process that
--- reads from this queue and writes into `piece` table.
-CREATE VIEW content_queue AS
-  SELECT content.*
-  FROM content
-  LEFT OUTER JOIN piece ON content.link = piece.content
-  WHERE piece.content IS NULL
-  ORDER BY piece.inserted;
+### DynamoDB Schema
 
--- Table describing pieces to be included into aggregates. If aggregate is NULL then the
--- piece is queued for the aggregation.
-CREATE TABLE inclusion
-(
-  -- Piece CID. Notice that it is not unique because in case of bad piece
-  -- aggregate will be rejected and good pieces will be written back here
-  -- to be included into new aggregate
-  piece TEXT NOT NULL REFERENCES piece(link),
-  
-  -- Aggregate CID, if NULL the the piece is queued for the aggregation
-  aggregate TEXT REFERENCES aggregate(link) NULL,
-
-  -- Priority in the queue. A counter on initial inserts hence providing FIFO order.
-  -- When piece is retried (after aggregate is rejected), it can keep original priority
-  -- hence prioritizing it over new items yet keeping original FIFO order among rejects.
-  priority NUMBER NOT NULL,
-
-  -- Time when the piece was added to the queue.
-  inserted TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
-
-   -- We may also want to write inclusion proof here
-);
-
-CREATE INDEX inclusion_priority_idx ON inclusion (priority DESC, inserted);
-
--- Piece may end up in multiple aggregates e.g. if aggregate was rejected
--- coalesce is used to create unique constraint with null aggregate column
--- @see https://dba.stackexchange.com/questions/299098/why-doesnt-my-unique-constraint-trigger/299107#299107
-CREATE INDEX piece_aggregate_unique_idx ON inclusion (piece, COALESCE(aggregate, ''));
-
--- Table for created aggregates. 
-CREATE TABLE aggregate
-(
-  -- commP of the aggregate (commP of the commPs)
-  link TEXT PRIMARY KEY NOT NULL,
-  -- Aggregate size
-  size number NOT NULL,
-  -- Time when the aggregate was created
-  inserted TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- View for inclusion records that do not have an aggregate.
-CREATE VIEW cargo AS
-  SELECT *
-  FROM inclusion
-  WHERE aggregate IS NULL
-  ORDER BY priority DESC, inserted;
-
--- State of aggregate deals. When aggregate is sent to spade-proxy status is 'PENDING'.
--- When spade-proxy requests a wallet signature, status will be updated to 'SIGNED'. Once
--- deal is accepted status changes to `APPROVED`, but if deal fails status will be set to
--- `REJECTED`.
-CREATE TABLE deal (
-  aggregate TEXT PRIMARY KEY NOT NULL REFERENCES aggregate(link),
-  status DEAL_STATUS DEFAULT 'PENDING',
-  -- if status is an error this may contain details about the error e.g. json containing
-  -- piece CIDs that were invalid.
-  detail JSONB,
-  -- Time when aggregate was send to spade-proxy
-  inserted TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
-  -- Time when aggregate was signed
-  signed TIMESTAMP WITH TIME ZONE,
-  -- Time when aggregate was processed (became APPROVED or REJECTED)
-  processed TIMESTAMP WITH TIME ZONE
-);
-
-CREATE INDEX deal_inserted_idx ON deal (inserted);
-CREATE INDEX deal_signed_idx ON deal (signed);
-CREATE INDEX deal_signed_idx ON deal (signed);
-CREATE INDEX deal_status_idx ON deal (status);
-
-CREATE TYPE DEAL_STATUS AS ENUM
-(
-  'PENDING',
-  'SIGNED',
-  'APPROVED',
-  'REJECTED'
-);
-
--- View of aggregates to be submitted to spade, that is all aggregates that we do not
--- have deal records for.
-CREATE VIEW aggregate_queue AS
-  SELECT aggregate.*
-  FROM aggregate
-  LEFT OUTER JOIN deal ON aggregate.link = deal.aggregate
-  WHERE deal.aggregate IS NULL;
-
--- View for deals pending.
-CREATE VIEW deal_pending AS
-  SELECT *
-  FROM deal
-  WHERE status = "PENDING"
-  ORDER BY inserted;
-
--- View for deals approved by storage providers.
-CREATE VIEW deal_approved AS
-  SELECT *
-  FROM deal
-  WHERE status = "APPROVED"
-  ORDER BY processed;
-
--- View for deals rejected by storage providers.
-CREATE VIEW deal_rejected AS
-  SELECT *
-  FROM deal
-  WHERE status = "REJECTED"
-  ORDER BY processed;
+```typescript
+interface aggregateEntry {
+  // CID of the aggregate (primary index)
+  link: PieceCID
+  // CID of the piece (can be secondary index)
+  piece: PieceCID
+  // timestamp for piece inserted
+  inserted: string
+  // timestamp for aggregate submission
+  submited: string
+  // timestamp for aggregate deal resolution
+  resolved: string
+  // TODO: perhaps timestamp for expired so that we can query future aggregates?
+  // TODO: inclusion proof?
+  // status of the deal
+  status: 'APPROVED' | 'REJECTED'
+  // failed reason
+  failedReaon?: string
+  // invocation and task CID to be able to go through receipts
+  invocation: CID
+  task: CID
+}
 ```
 
-![DB Schema](./db-schema.png)
-https://dbdiagram.io/d/649af07402bd1c4a5e249feb
-
-## Processor Stack
-
-The w3infra processor stack manages several concurrent workflows, deployed as lambda functions, that move items from one stage of the pipeline into another. Each workflow operates independently and on its own schedule, pulling items from one DB stack queue, and pushing into another after some processing.
-
-The workflows running in these pipeline are:
-
-1. **Content Validator workflow** validates CARs and writes references to `content` table.
-2. **Piece maker workflow** pulls queued content from `content_queue`, derive piece info for them and write records to the `piece` & `inclusion` tables.
-3. **Aggregator workflow** reads from the `cargo` view, attempts to create an aggregate and, if successful, writes to aggregate table.
-4. **Submission workflow** reads from the `aggregate_queue`, submits aggregates to the agency (spade proxy) and writes pending deal record.
-5. **Deal workflow** ... TBD
+Note: we can add a different table to track Deal specific metrics if needed?
