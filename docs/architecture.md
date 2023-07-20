@@ -88,7 +88,7 @@ A `PieceBatch` consists of a buffer of pieces that are getting filled up to beco
 
 The second queue in this system is the `batch-queue`, a FIFO queue that acts as a reducer by concatenating the pieces of multiple batches together generating bigger and bigger sets until one has the desirable size for an aggregate. A queue consumer can act as soon as a batch of 2 is in the queue, so that aggregates can be created as soon as possible.
 
-The SQS consumer MUST start by fetching the `dag-cbor` encoded data of both batches in the batch. Afterwards, their pieces SHOULD be sorted by its size and an aggregate is built with them. In case it has the desired **32 GiB** size, it should be stored and its CID sent into the `submission-queue`, otherwise the new batch should be stored and put back into the queue. Note that:
+The SQS consumer MUST start by fetching the `dag-cbor` encoded data of both batches in the batch. Afterwards, their pieces SHOULD be sorted by its size and an aggregate is built with them. In case it has the desired **32 GiB** size, it should be stored in the `buffer-store` and its CID sent into the `submission-queue`, otherwise the new batch should still be stored and put back into the queue. Note that:
 - While pieces should be sorted by size, policies in a piece might impact this sorting. For instance, if a piece was already in a previous aggregate that failed to be stored by a Storage Provider, it can be included faster into an aggregate
 - Note that excess pieces not included in **32 GiB** aggregate when batches are concatenated MUST be included into a new batch and put back into the queue
 - Minimum size for an aggregate can also be specified to guarantee we don't need to have exactly **32 GiB** to offer it
@@ -123,10 +123,10 @@ The `deal-queue` is the final stage of this multiple queue system. It tracks dea
 | deal       | FIFO     | 10    | 5 m    | TBD |
 
 Other relevant notes:
-- with current approach, we have an append only log where writes into the Database only happen when we have a deal in the very end, also resulting in a super small amount of operations on the DB
-- while `w3up` CAR files can be limited to `4 GiB` to have a better utilization of Fil sector space, same does not currently happen with `pickup` (and perhaps other systems in the future). Designing assuming maximum will be that value is not a good way to go.
-- current design enables us to quite easily support bigger deals.
-- if an aggregate fails to land into a Storage Provider, the problematic piece(s) can be removed and a ferry created without that piece. This way, it can already be added to the `ferry queue`
+- with this approach we have an append only log where writes into the Database only happen when we have a deal in the very end. Moreover, it results in a quite small number of operations on the DB
+- while `w3up` CAR files can be limited to `4 GiB` to have a better utilization of Fil sector space, same does not currently happen with `pickup` (and perhaps other systems in the future). Designing assuming an upper limit is not a good way to go in this system.
+- current design enables us to quite easily support bigger deals in the future.
+- if an aggregate fails to land into a Storage Provider, the problematic piece(s) can be removed and a batch can be created created without that piece. This way, it can already be added to the `batch queue`
 
 Challenges/compromises:
 - where to hook alerts when things are getting delayed? we can hook alerts when requests to spade are failing, but will that be enough?
@@ -136,7 +136,7 @@ Challenges/compromises:
 
 The Data stack is responsible for the state of the w3filecoin.
 
-It keeps track of the received pieces, created aggregates, as well as in which aggregate a given piece is. In addition, it must keep the necessary state for the Ferry queue to operate, as well as the state of a given aggregate over time until a deal is fulfilled. It is worth mentioning, that keeping track of problematic pieces that could not be added to an aggregate should also be properly tracked.
+It keeps track of the received pieces, submitted aggregates, as well as in which aggregate a given piece is. In addition, it must keep the necessary state for the `buffer-queue` to operate, as well as the state of a given aggregate over time until a deal is fulfilled. It is worth mentioning, that keeping track of problematic pieces that could not be added to an aggregate should also be properly tracked.
 
 To achieve required state management, we will be relying on a S3 Bucket and a dynamoDB table.
 
@@ -144,11 +144,11 @@ To achieve required state management, we will be relying on a S3 Bucket and a dy
 
 1. Check if piece is already in the pipeline (S3 Bucket)
   - Before getting a piece into the pipelined queue, it should be stored to guarantee uniqueness
-  - Also important to be able to report back on in progress work when deal state of a piece is still unknown by fallbacking to Head Request in bucket
+  - Also important to be able to report back on the in progress work when deal state of a piece is still unknown by fallbacking to Head Request in bucket
   - Key `${pieceCid}/{pieceCid}`, Value empty
     - TODO: actually we might need to use the value to be able to grab the URLs for the piece...
-2. Put and Get ferry blocks (S3 Bucket)
-  - While `ferry-queue` is working, these blocks will be stored to be propagated through queue stages via their CIDs
+2. Put and Get batch blocks (S3 Bucket)
+  - While `batch-queue` is working, these blocks will be stored to be propagated through queue stages via their CIDs
   - Key `${blockCid}/{blockCid}`, Value empty with expiration date
 3. Write pieces together with the aggregate they are part of (DynamoDB)
   - Based on schema below
