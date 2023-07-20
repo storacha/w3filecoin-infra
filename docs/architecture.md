@@ -8,7 +8,7 @@
 
 Taking into account that [web3.storage](http://web3.storage) onboards any type of content (up to a maximum of 4GiB-padded shards to have better utilization of Fil sector space), multiple CAR files uploaded need to be aggregated into a bigger Piece that can be offered to Filecoin Storage Providers. w3filecoin pipeline keeps track of queued CARs (cargo) to be included in Storage Provider deals.
 
-When a CAR file is written into a given web3.storage's bucket, its piece is computed and sent into the w3filecoin processing pipeline. This pipeline is composed of multiple processing queues that will perform the processing of pieces until they land into a Filecoin deal.
+When a CAR file is written into a given web3.storage's bucket, its piece is computed and sent into the w3filecoin processing pipeline. This pipeline is composed of multiple processing queues that accumulate pieces into aggregates and submit them into a Filecoin deal queue.
 
 ## High Level design
 
@@ -16,7 +16,7 @@ The high level flow for the w3filecoin Pipeline is:
 
 - **piece inclusion request** is received by a Storefront with `pieceCid` (TBD `endpoint` to get presigned urls from given we want to support w3up, web3.storage, ...?)
 - **piece queued** to be aggregated
-- **piece contenation** into ferries until a ferry has enough load to become an aggregate offer
+- **piece concatenation** into ferries until a ferry has enough load to become an aggregate offer
 - **aggregate submission** to Storage Provider broker
 - **deal tracking** and **deal recording** once fulfilled
 
@@ -36,28 +36,35 @@ TODO: Update diagram
 
 ## API Stack
 
-The w3filecoin API Stack exposes a HTTP API that both enables storefront APIs to request `pieces` to be included into Filecoin deals and get status of a Filecoin deal, as well as to receive reports of aggregates that failed to land into a Filecoin Deal.
+The w3filecoin stack has an API that authorized _Storefront_s can use in order to:
+
+- Submit _piece_s for to be included into the aggregates for which Filecoin deals are arranged.
+- Query Filecoin deal status of the aggregate by submitted _piece_s.
+
+And an API for the authorized deal _Broker_s in order to:
+
+- Report failed aggregate deals
 
 TODO complete this subsection
 
-- Post piece - w3filecoin is designed to enable multiple sources of CAR files to be easily integrated into the pipeline
-  - parties with permissions to write into the system can do so
-  - Piece should make its way for the queue if not there yet
+- Piece submission - w3filecoin is designed to enable CARs from multiple sources to easily enter into the pipeline
+  - Authorized actors can submit pieces into the system
+  - Submitted pieces go through aggregation and deal submission process
 - Report API for failed aggregates to land into Storage Providers?
 - Get to know state of deals
 - ...
 
 ## Processor Stack
 
-When a `piece` is posted into the w3filecoin pipeline, its journey starts by getting queued to be aggregated into a larger `piece` that will be offered to Storage Providers, i.e. an aggregate. The `Queue stack` consists of a **multiple queue system**, where the individual pieces will be buffered together in several stages until they are ready to form an aggregate (**32 GiB** piece, or close to this size).
+When a `piece` is submitted into the w3filecoin pipeline, its journey starts by getting queued to be included into an `aggregate` piece (large compound piece) that is offered to Storage Providers. The `Queue stack` consists of a **multiple queue system**, where individual pieces get accumulated until they can be formed into (**32GiB** piece) aggregate.
 
 This design is built on top of the following assumptions:
 - Maximum SQS batch size for standard queue is **10_000**
 - Maximum SQS batch size for FIFO queue is **10**
 - SQS FIFO queue garantees **exactly-once** processing
-- Maximum number of pieces for a **32 GiB** aggregate is **262_144**
+- Maximum number of pieces in a **32 GiB** aggregate is **262_144**
 
-The `piece-queue` is the first queue in this system and is a standard SQS queue. It buffers individual pieces until a batch of **10_000** is ready. Once this batch is ready, a SQS consumer will try to create smaller piece aggregates named Ferries. A ferry is a `dag-cbor` encoded data structure that contains a set of pieces that form a partial aggregate. This data structure will be stored so that only its CID is sent in SQS Messages.
+The `piece-queue` is the first queue in this system and is a standard SQS queue. It buffers individual pieces into a batch of **10_000**. Once this batch is ready, a SQS consumer encodes set of pieces into a `Ferry` structure in  DAG-CBOR format, stores it and submits it's CID into a next SQS queue. This allows us to keep messages in the queue small.
 
 ```typescript
 interface Ferry {
@@ -75,7 +82,12 @@ interface FerryPiece {
   policies: PiecePolicy[]
 }
 
-type PiecePolicy = 'PREVIOUS_SUBMISSION_FAILED'
+type PiecePolicy =
+  | NORMAL
+  | RETRY
+
+type NORMAL = 0
+type RETRY = 1
 ```
 
 A ferry consists of a buffer of pieces that are getting filled up to become an aggregate ready for a Filecoin deal. This SHOULD allow a batch size of **10_000** to at least be able to create a ferry with size **1 GiB**.
