@@ -4,7 +4,7 @@
 
 ## Background
 
-[web3.storage](http://web3.storage) is a Storefront providing APIs to enable users to easily upload CAR files, while getting them available on the IPFS Network and stored in multiple locations via Filecoin Storage Providers. It relies on Spade as a broker to get their user data into Filecoin Storage Providers. Currently, Spade requires a Filecoin Piece with size between 15.875GiB and 31.75GiB to create deals with Filecoin Storage Providers. Moreover, the closer a Filecoin Piece is closer to the upper bound, the most optimal are the associated storage costs.
+[web3.storage](http://web3.storage) is a Storefront providing APIs to enable users to easily upload CAR files, while getting them available on the IPFS Network and stored in multiple locations via Filecoin Storage Providers. It relies on Spade as a broker to get their user data into Filecoin Storage Providers. Currently, Spade requires a Filecoin Piece with size between 16GiB and 32GiB to create deals with Filecoin Storage Providers. Moreover, the closer a Filecoin Piece is closer to the upper bound, the most optimal are the associated storage costs.
 
 Taking into account that [web3.storage](http://web3.storage) onboards any type of content (up to a maximum of 4GiB-padded shards to have better utilization of Fil sector space), multiple CAR files uploaded need to be aggregated into a bigger Piece that can be offered to Filecoin Storage Providers. w3filecoin pipeline keeps track of queued CARs (cargo) to be included in Storage Provider deals.
 
@@ -69,17 +69,15 @@ The `piece-queue` is the first queue in this system and is a standard SQS queue.
 ```typescript
 interface Ferry {
   // Pieces inside the ferry
-  pieces: FerryPiece[],
-  // Aggregate composed by pieces in ferry enabling us to derive its size
-  aggregate: FerryPiece,
+  pieces: FerryPiece[]
 }
 
 interface FerryPiece {
-  link: PieceCID,
-  // timestamp that piece was received
-  inserted: string,
+  piece: PieceCID
+  // number of milliseconds elapsed since the epoch when piece was received
+  inserted: number
   // Policies that this piece is under
-  policies: PiecePolicy[]
+  policy: PiecePolicy
 }
 
 type PiecePolicy =
