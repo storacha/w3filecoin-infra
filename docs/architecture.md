@@ -20,9 +20,7 @@ The high level flow for the w3filecoin Pipeline is:
 - **aggregate submission** to Storage Provider broker
 - **deal tracking** and **deal recording** once fulfilled
 
-TODO: Update diagram
-
-![Pipeline processes](./processes.svg)
+![Pipeline processes](./pipeline.svg)
 
 The w3filecoin pipeline is modeled into 3 different SST Stacks that will have their infrastructure provisioned in AWS via AWS CloudFormation. These are:
 
@@ -30,9 +28,7 @@ The w3filecoin pipeline is modeled into 3 different SST Stacks that will have th
 - Processor Stack
 - Data Stack
 
-TODO: Update diagram
-
-![Architecture](./architecture.png)
+![Architecture](./architecture.svg)
 
 ## API Stack
 
@@ -64,15 +60,15 @@ This design is built on top of the following assumptions:
 - SQS FIFO queue garantees **exactly-once** processing
 - Maximum number of pieces in a **32 GiB** aggregate is **262_144**
 
-The `piece-queue` is the first queue in this system and is a standard SQS queue. It buffers individual pieces into a batch of **10_000**. Once this batch is ready, a SQS consumer encodes set of pieces into a `Ferry` structure in  DAG-CBOR format, stores it and submits it's CID into a next SQS queue. This allows us to keep messages in the queue small.
+The `piece-queue` is the first queue in this system and is a standard SQS queue. It buffers individual pieces received into a batch of **10_000**. Once this batch is ready, a SQS consumer encodes set of pieces into a `PieceBatch` structure in DAG-CBOR format, stores it in the `buffer-store` and submits it's CID into a second processing queue `batch-queue`. This allows us to keep messages in the queue small.
 
 ```typescript
-interface Ferry {
-  // Pieces inside the ferry
-  pieces: FerryPiece[]
+interface PieceBatch {
+  // Pieces inside the batch
+  pieces: BatchPiece[]
 }
 
-interface FerryPiece {
+interface BatchPiece {
   piece: PieceCID
   // number of milliseconds elapsed since the epoch when piece was received
   inserted: number
@@ -88,19 +84,16 @@ type NORMAL = 0
 type RETRY = 1
 ```
 
-A ferry consists of a buffer of pieces that are getting filled up to become an aggregate ready for a Filecoin deal. This SHOULD allow a batch size of **10_000** to at least be able to create a ferry with size **1 GiB**.
+A `PieceBatch` consists of a buffer of pieces that are getting filled up to become an aggregate ready for a Filecoin deal. This SHOULD allow a batch size of **10_000** to at least be able to create a batch with size **1 GiB**.
 
-To create ferries from a a batch, the SQS consumer SHOULD start by sorting the received batch by `piece` size and start filling up aggregates. If an aggregate gets to its desirable size directly from the batch **32 GiB**, it should be stored and added to the `submission-queue` right away. Otherwise, the ferry is stored and added to the `ferry-queue` once all the batch is processed. Note that:
-- when a **32 GiB** is built from the initial batch, it is possible that no other ferry can get loaded with **1 GiB** of pieces. If that is the case, consumer can discard all the remaining pieces back to the queue.
+The second queue in this system is the `batch-queue`, a FIFO queue that acts as a reducer by concatenating the pieces of multiple batches together generating bigger and bigger sets until one has the desirable size for an aggregate. A queue consumer can act as soon as a batch of 2 is in the queue, so that aggregates can be created as soon as possible.
 
-The second queue in this system is the `ferry-queue`, a FIFO queue that acts as a reducer by concatenating the pieces of multiple ferries together generating bigger and bigger feries until one has the desirable size. In other words, the load of each ferry is concatenated, and its resulting ferry is added to the `ferry-queue` again until an aggregate can be built. A queue consumer can act as soon as a batch of 2 is in the queue, so that aggregates can be created as soon as possible.
-
-The SQS consumer MUST start by fetching all the `dag-cbor` encoded data of both ferries in the batch. Afterwards, their pieces SHOULD be sorted by its size and a new aggregate is created. In case it has the desired **32 GiB** size, it should be stored and its CID sent into the `submission-queue`, otherwise the new ferry should be stored and put back into the queue. Note that:
-- While pieces should be sorted by size, some policies in a piece might impact this sorting. For instance, if a piece was already in a previous aggregate that failed to be stored by a Storage Provider, it can be included faster into an aggregate
-- Note that excess pieces not included in **32 GiB** aggregate when ferries are concatenated MUST be included into a new ferry and put back into the queue
+The SQS consumer MUST start by fetching the `dag-cbor` encoded data of both batches in the batch. Afterwards, their pieces SHOULD be sorted by its size and an aggregate is built with them. In case it has the desired **32 GiB** size, it should be stored and its CID sent into the `submission-queue`, otherwise the new batch should be stored and put back into the queue. Note that:
+- While pieces should be sorted by size, policies in a piece might impact this sorting. For instance, if a piece was already in a previous aggregate that failed to be stored by a Storage Provider, it can be included faster into an aggregate
+- Note that excess pieces not included in **32 GiB** aggregate when batches are concatenated MUST be included into a new batch and put back into the queue
 - Minimum size for an aggregate can also be specified to guarantee we don't need to have exactly **32 GiB** to offer it
 
-Once a ferry reaches the desired size of **32 GiB** it is written into the `submission-queue`. Consumers for this queue can be triggered once a single item is in the batch, so that an aggregate offer can be submitted to spade and a `DealTracker` of the aggregate offer is added to the `deal-queue`.
+Once a built aggregate reaches the desired size of **32 GiB** it is written into the `submission-queue`. Consumers for this queue can be triggered once a single item is in the batch, so that an aggregate offer can be submitted to spade and a `DealTracker` of the aggregate offer is added to the `deal-queue`.
 
 ```typescript
 interface DealTracker {
@@ -125,9 +118,9 @@ The `deal-queue` is the final stage of this multiple queue system. It tracks dea
 | name       | type     | batch | window | DLQ |
 |------------|----------|-------|--------|-----|
 | piece      | standard | 10000 | 300 s  | TBD |
-| ferry      | FIFO     | 2     | 5 m    | TBD |
+| batch      | FIFO     | 2     | 5 m    | TBD |
 | submission | FIFO     | 1     | 5 m    | TBD |
-| deal | FIFO     | 10     | 5 m    | TBD |
+| deal       | FIFO     | 10    | 5 m    | TBD |
 
 Other relevant notes:
 - with current approach, we have an append only log where writes into the Database only happen when we have a deal in the very end, also resulting in a super small amount of operations on the DB
