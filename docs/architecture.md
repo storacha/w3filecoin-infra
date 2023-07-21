@@ -28,7 +28,7 @@ The w3filecoin pipeline is modeled into 3 different SST Stacks that will have th
 - Processor Stack
 - Data Stack
 
-![Architecture](./architecture.svg)
+![Architecture](./architecture.png)
 
 ## API Stack
 
