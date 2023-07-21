@@ -66,9 +66,9 @@
     {
       "id": "pointer:pointer",
       "typeName": "pointer",
-      "x": -29.35428497272828,
-      "y": 708.3042965961785,
-      "lastActivityTimestamp": 1689933956728,
+      "x": -451.7953312018019,
+      "y": 223.20452144101785,
+      "lastActivityTimestamp": 1689938646720,
       "meta": {}
     },
     {
@@ -79,9 +79,9 @@
       "typeName": "page"
     },
     {
-      "x": 71.09550418561301,
-      "y": -82.0408702373136,
-      "z": 0.5384116105269462,
+      "x": 1067.5685990632483,
+      "y": 263.8538161609349,
+      "z": 0.46366792396772816,
       "meta": {},
       "id": "camera:page:NcTbTvpauUBwQxgzeo96z",
       "typeName": "camera"
@@ -127,7 +127,7 @@
       "screenBounds": {
         "x": 0,
         "y": 0,
-        "w": 760,
+        "w": 1030,
         "h": 825.8333129882812
       },
       "zoomBrush": null,
@@ -1918,7 +1918,7 @@
       "typeName": "shape"
     },
     {
-      "x": 200,
+      "x": 225.75845336914062,
       "y": 380,
       "rotation": 0,
       "isLocked": false,
@@ -1928,8 +1928,8 @@
       "props": {
         "color": "yellow",
         "size": "l",
-        "w": 269.9609375,
-        "text": "Piece set store",
+        "w": 218.44140625,
+        "text": "Buffer store",
         "font": "draw",
         "align": "middle",
         "autoSize": true,
@@ -4586,7 +4586,6 @@
       "isLocked": false,
       "opacity": 1,
       "meta": {},
-      "id": "shape:1DK3r3qlheeYlQ45d0c9P",
       "type": "arrow",
       "parentId": "page:NcTbTvpauUBwQxgzeo96z",
       "index": "b1L",
@@ -4612,6 +4611,7 @@
         "text": "",
         "font": "draw"
       },
+      "id": "shape:1DK3r3qlheeYlQ45d0c9P",
       "typeName": "shape"
     },
     {
@@ -4621,7 +4621,6 @@
       "isLocked": false,
       "opacity": 1,
       "meta": {},
-      "id": "shape:hwYFHpYuHGENtkbuGsO4y",
       "type": "text",
       "props": {
         "color": "red",
@@ -4635,6 +4634,7 @@
       },
       "parentId": "page:NcTbTvpauUBwQxgzeo96z",
       "index": "b1M",
+      "id": "shape:hwYFHpYuHGENtkbuGsO4y",
       "typeName": "shape"
     }
   ]

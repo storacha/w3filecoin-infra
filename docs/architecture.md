@@ -54,35 +54,35 @@ This design is built on top of the following assumptions:
 - SQS FIFO queue garantees **exactly-once** processing
 - Maximum number of pieces in a **32 GiB** aggregate is **262_144**
 
-The `piece-queue` is the first queue in this system and is a standard SQS queue. It buffers individual pieces received into a batch of **10_000**. Once this batch is ready, a SQS consumer encodes set of pieces into a `PieceBatch` structure (DAG-CBOR format), stores it in the `batch-store` and submits it's CID into a second processing queue `batch-queue`. This allows us to keep messages in the queue small. See [batch schema](#batch-store-schema)
+The `piece-queue` is the first queue in this system and is a standard SQS queue. It buffers individual pieces received into a batch of **10_000**. Once this batch is ready, a SQS consumer encodes set of pieces into a `PieceBuffer` structure (DAG-CBOR format), stores it in the `buffer-store` and submits it's CID into a second processing queue `buffer-queue`. This allows us to keep messages in the queue small.
 
-A `PieceBatch` consists of a buffer of pieces that are getting filled up, in order to become an aggregate ready for a Filecoin deal. This SHOULD allow a batch size of **10_000** to at least be able to create a batch with size **1 GiB**.
+A `PieceBuffer` consists of a buffer of pieces that are getting filled up, in order to become an aggregate ready for a Filecoin deal. See [buffer schema](#buffer-store-schema). This SHOULD allow a batch size of **10_000** to at least be able to create a buffer with size **1 GiB**.
 
-The second queue in this system is the `batch-queue`, a FIFO queue that acts as a reducer by concatenating the pieces of multiple batches together generating bigger and bigger sets until one has the desirable size for an aggregate. A queue consumer can act as soon as a batch of 2 is in the queue, so that aggregates can be created as soon as possible.
+The second queue in this system is the `buffer-queue`, a FIFO queue that acts as a reducer by concatenating the pieces of multiple buffers together generating bigger and bigger sets until one has the desirable size for an aggregate. A queue consumer can act as soon as a batch of 2 is in the queue, so that aggregates can be created as soon as possible.
 
-The SQS consumer MUST start by fetching the `dag-cbor` encoded data of both batches in the batch. Afterwards, their pieces SHOULD be sorted by its size and an aggregate is built with them. In case it has the desired **32 GiB** size, it should be stored in the `batch-store` and its CID sent into the `aggregate-queue`, otherwise the new batch should still be stored and put back into the queue. Note that:
+The SQS consumer MUST start by fetching the `dag-cbor` encoded data of both buffers in the batch. Afterwards, their pieces SHOULD be sorted by its size and an aggregate is built with them. In case it has the desired **32 GiB** size, it should be stored in the `buffer-store` and its CID sent into the `aggregate-queue`, otherwise the new buffer should still be stored and put back into the queue. Note that:
 - While pieces should be sorted by size, policies in a piece might impact this sorting. For instance, if a piece was already in a previous aggregate that failed to be stored by a Storage Provider, it can be included faster into an aggregate
-- Note that excess pieces not included in **32 GiB** aggregate when batches are concatenated MUST be included into a new batch and put back into the queue
+- Excess pieces not included in **32 GiB** aggregate when buffers are concatenated MUST be included into a new buffer and put back into the queue
 - Minimum size for an aggregate can also be specified to guarantee we don't need to have exactly **32 GiB** to offer it
 
 Once a built aggregate reaches the desired size of **32 GiB** it is written into the `aggregate-queue`, the final stage of this aggregation multiple queue system.
 Consumers for this queue can be triggered once a single item is in the batch, so that an aggregate offer can be submitted to spade and its record stored in the `aggregate-store`. See [aggregate schema](#aggregate-store-schema)
 
-Once an aggregate offer is submitted, it can take several days until it lands into a sealed deal with a Filecoin Storage Provider. The processor MUST have a recurrent `deal-tracking` Job that polls for `offer/arrange` receipts for the `OFFERED` aggregates. Once an aggregate has an approved deal, the `inclusion-store` should be populated with all the pieces part of the successful aggregate. In case the offer failed, a new `piece-batch` MUST be added to the appropriate queue with the pieces that did not have impact on the offer failure. The pieces that caused the failure MUST still be added to the `inclusion-store`, so that we can report their failure reason. See [inclusion schema](#inclusion-store-schema)
+Once an aggregate offer is submitted, it can take several days until it lands into a sealed deal with a Filecoin Storage Provider. The processor MUST have a recurrent `deal-tracking` Job that polls for `offer/arrange` receipts for the `OFFERED` aggregates. Once an aggregate has an approved deal, the `inclusion-store` should be populated with all the pieces part of the successful aggregate. In case the offer failed, a new `piece-buffer` MUST be added to the appropriate queue with the pieces that did not have impact on the offer failure. The pieces that caused the failure MUST still be added to the `inclusion-store`, so that we can report their failure reason. See [inclusion schema](#inclusion-store-schema)
 
 ### Queues overview
 
 | name      | type     | batch | window | DLQ |
 |-----------|----------|-------|--------|-----|
 | piece     | standard | 10000 | 300 s  | TBD |
-| batch     | FIFO     | 2     | 5 m    | TBD |
-| aggregate | FIFO     | 1     | 5 m    | TBD |
+| buffer    | FIFO     | 2     | 300 s  | TBD |
+| aggregate | FIFO     | 1     | 300 s  | TBD |
 
 Other relevant notes:
 - with the approach above, we have an append only log where database writes only need to happen when information leaves or gets into the system. This results in a quite small number of operations on the DB.
 - while `w3up` CAR files can be limited to `4 GiB` to have a better utilization of Fil sector space, same does not currently happen with `pickup` (and perhaps other systems in the future). Designing assuming an upper limit is not a good way to go in this system.
 - current design enables us to quite easily support bigger deals in the future.
-- if an aggregate fails to land into a Storage Provider, the problematic piece(s) can be removed and a batch can be created without the problamtic piece(s). This way, it can already be added to the `batch-queue`
+- if an aggregate fails to land into a Storage Provider, the problematic piece(s) can be removed and a buffer can be created without the problamtic piece(s). This way, it can already be added to the `buffer-queue`
 - we can support different producers (e.g. web3.storage, nft.storage, ...), as well as different requirements of aggregate building and aggregate submissions (e.g. different SLA requirements) by relying on SQS `message group id`
 - having a `deal-tracking` job instead of an additional queue gives us some additional benefits:
   - we can have bigger intervals between each run compared to a maximum timeout of **300 seconds** for a queue consumer, enabling us to decrease number of requests
@@ -92,14 +92,14 @@ Other relevant notes:
 
 The Data stack is responsible for the state of the w3filecoin.
 
-It keeps track of the received pieces, submitted aggregates, as well as in which aggregate a given piece is (inclusion). In addition, it must keep the necessary state for the `batch-queue` to operate, as well as the state of a given aggregate over time until a deal is fulfilled. It is worth mentioning, that keeping track of problematic pieces that could not be added to an aggregate should also be properly tracked.
+It keeps track of the received pieces, submitted aggregates, as well as in which aggregate a given piece is (inclusion). In addition, it must keep the necessary state for the `buffer-queue` to operate, as well as the state of a given aggregate over time until a deal is fulfilled. It is worth mentioning, that keeping track of problematic pieces that could not be added to an aggregate should also be properly tracked.
 
 To achieve required state management, we will be relying on a S3 Bucket and a dynamoDB table as follows:
 
 | store           | type     | key                      | expiration |
 |-----------------|----------|--------------------------|------------|
 | piece-store     | DynamoDB | `piece`                  | ---        |
-| batch-store     | S3       | `${blockCid}/{blockCid}` | 30 days    |
+| buffer-store    | S3       | `${blockCid}/{blockCid}` | 30 days    |
 | aggregate-store | DynamoDB | `piece`                  | ---        |
 | inclusion-store | DynamoDB | `aggregate`              | ---        |
 
@@ -108,8 +108,8 @@ To achieve required state management, we will be relying on a S3 Bucket and a dy
 1. Check if piece is already in the pipeline (`inclusion-store` with fallback for `piece-store`)
   - Before getting a piece into the pipelined queue, it should be stored to guarantee uniqueness
   - Also important to be able to report back on the "in progress" work when deal state of a piece is still unknown by fallbacking to Head Request in bucket
-2. Put and Get batch blocks (`batch-store`)
-  - While `batch-queue` is concatenating batches, these blocks will be stored to be propagated through queue stages via their CIDs
+2. Put and Get buffer blocks (`buffer-store`)
+  - While `buffer-queue` is concatenating buffers, these blocks will be stored to be propagated through queue stages via their CIDs
   - Key `${blockCid}/{blockCid}`, Value empty with expiration date
 3. Put aggregates offered to `spade` and get aggregates pending resolution (`aggregate-store`)
 4. Write pieces together with the aggregate they are part of (`inclusion-store`)
@@ -132,15 +132,15 @@ interface piece {
 }
 ```
 
-### `batch-store` schema
+### `buffer-store` schema
 
 ```typescript
-interface Batch {
-  // Pieces inside the batch
-  pieces: BatchPiece[]
+interface PieceBuffer {
+  // Pieces inside the buffer
+  pieces: Piece[]
 }
 
-interface BatchPiece {
+interface Piece {
   piece: PieceCID
   // number of milliseconds elapsed since the epoch when piece was received
   inserted: number
@@ -162,8 +162,8 @@ type RETRY = 1
 interface Aggregate {
   // CID of the aggregate
   piece: PieceCID
-  // CID of the batch resulting in the offered aggregate
-  batchCid: Link
+  // CID of the buffer resulting in the offered aggregate
+  bufferCid: Link
   // invocation and task CID to be able to go through receipts
   invocation: Link
   task: Link
