@@ -8,8 +8,7 @@
   "dependencies": {
     "@aws-sdk/client-sqs": "^3.363.0",
     "@aws-sdk/client-s3": "^3.363.0",
-    "@w3filecoin/core": "*",
-    "multiformats": "^12.0.1"
+    "@w3filecoin/core": "*"
   },
   "devDependencies": {
     "@sentry/serverless": "7.52.1",

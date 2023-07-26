@@ -4,7 +4,7 @@ import { CID } from 'multiformats/cid'
 import * as raw from 'multiformats/codecs/raw'
 import { sha256 } from 'multiformats/hashes/sha2'
 import * as CAR from '@ucanto/transport/car'
-import { CommP } from '@web3-storage/data-segment'
+import { Piece } from '@web3-storage/data-segment'
 
 /**
  * @param {number} length
@@ -13,12 +13,13 @@ export async function getCargo (length) {
   const cars = await Promise.all(Array.from({ length }).map(() => randomCAR(128)))
 
   return Promise.all(cars.map(async car => {
-    const commP = CommP.build(car.bytes)
+    const piece = Piece.build(car.bytes)
 
+    
     return {
       piece: {
-        link: commP.link(),
-        size: commP.pieceSize,
+        link: piece.link,
+        size: piece.size,
       },
       content: {
         link: car.cid.link(),
