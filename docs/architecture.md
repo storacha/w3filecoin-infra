@@ -123,12 +123,14 @@ TODO: metrics
 
 ```typescript
 interface piece {
-  // CID of the piece
+  // CID of the piece `bagy...content` (primary index, partition key)
   piece: PieceCID
-  // timestamp for piece inserted
-  inserted: string
-  // TODO: identifier of producer to tie with `group-id`
-  // TODO: identifier of tier
+  // number of milliseconds elapsed since the epoch for piece inserted
+  insertedAt: number
+  // identifier of producer to derive `group-id` `did:web:web3.storage` (primary index, sort key)
+  space: string
+  // identifier of group to derive `group-id` `did:web:free.web3.storage`
+  group: string
 }
 ```
 
@@ -143,7 +145,7 @@ interface PieceBuffer {
 interface Piece {
   piece: PieceCID
   // number of milliseconds elapsed since the epoch when piece was received
-  inserted: number
+  insertedAt: number
   // Policies that this piece is under
   policy: PiecePolicy
 }
@@ -160,19 +162,18 @@ type RETRY = 1
 
 ```typescript
 interface Aggregate {
-  // CID of the aggregate
+  // PieceCid of an Aggregate `bagy...aggregate` (primary index, partition key)
   piece: PieceCID
-  // CID of the buffer resulting in the offered aggregate
-  bufferCid: Link
-  // invocation and task CID to be able to go through receipts
+  // CID of dag-cbor block `bafy...cbor`
+  buffer: Link
+  // CID of `aggregate/add` invocation `bafy...inv`
   invocation: Link
+  // CID of `aggregate/add` task `bafy...task`
   task: Link
-  // number of milliseconds elapsed since the epoch when first piece was submitted
-  olderPieceInserted: number
   // number of milliseconds elapsed since the epoch when aggregate was submitted
-  inserted: number
-  // known status of the aggregate
-  status: AggregateStatus
+  insertedAt: number
+  // known status of the aggregate (a secondary index)
+  stat: AggregateStatus
 }
 
 type AggregateStatus =
@@ -189,23 +190,29 @@ type REJECTED = 2
 
 ```typescript
 interface Inclusion {
-  // CID of the aggregate (primary index)
+  // PieceCid of an Aggregate `bagy...aggregate` (primary index, partition key)
   aggregate: PieceCID
-  // CID of the piece (can be secondary index)
+  // PieceCid of a Filecoin Piece `bagy...content` (primary index, sort key + a secondary index)
   piece: PieceCID
-  // timestamp for piece inserted
-  inserted: string
-  // timestamp for aggregate submission
-  submited: string
-  // timestamp for aggregate deal resolution
-  resolved: string
-  // TODO: perhaps timestamp for expired so that we can query future aggregates?
+  // number of milliseconds elapsed since the epoch for piece inserted `1690464180271`
+  insertedAt: string
+  // number of milliseconds elapsed since the epoch for aggregate submission `1690464180271`
+  submitedAt: string
+  // number of milliseconds elapsed since the epoch for aggregate deal resolution `1690464180271`
+  resolvedAt: string
   // TODO: inclusion proof?
-  // status of the deal
-  status: 'APPROVED' | 'REJECTED'
+  // status of the inclusion
+  stat: InclusionStatus
   // failed reason
   failedReaon?: string
 }
+
+type InclusionStatus =
+  | APPROVED
+  | REJECTED
+
+type APPROVED = 0
+type REJECTED = 1
 ```
 
 ### `metrics-store` schema
