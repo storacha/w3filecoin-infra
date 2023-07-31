@@ -6,8 +6,7 @@
     "typecheck": "tsc --build"
   },
   "dependencies": {
-    "@aws-sdk/client-sqs": "^3.363.0",
-    "@aws-sdk/client-s3": "^3.363.0",
+    "@ucanto/transport": "^8.0.0",
     "@w3filecoin/core": "*"
   },
   "devDependencies": {

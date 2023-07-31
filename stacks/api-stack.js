@@ -1,5 +1,6 @@
-import { Api } from 'sst/constructs'
+import { Api, Config, use } from 'sst/constructs'
 
+import { ProcessorStack } from './processor-stack.js'
 import {
   getApiPackageJson,
   getGitInfo,
@@ -14,10 +15,17 @@ export function ApiStack({ app, stack }) {
   // Setup app monitoring with Sentry
   setupSentry(app, stack)
 
+  const {
+    pieceQueue
+  } = use(ProcessorStack)
+
   // Setup API
   const customDomain = getCustomDomain(stack.stage, process.env.HOSTED_ZONE)
   const pkg = getApiPackageJson()
   const git = getGitInfo()
+
+  const privateKey = new Config.Secret(stack, 'PRIVATE_KEY')
+  const ucanLogBasicAuth = new Config.Secret(stack, 'UCAN_LOG_BASIC_AUTH')
 
   const api = new Api(stack, 'api', {
     customDomain,
@@ -28,13 +36,24 @@ export function ApiStack({ app, stack }) {
           VERSION: pkg.version,
           COMMIT: git.commit,
           STAGE: stack.stage,
-        }
+          DID: process.env.DID ?? '',
+          BROKER_DID: process.env.BROKER_DID ?? '',
+          BROKER_URL: process.env.BROKER_URL ?? '',
+          UCAN_LOG_URL: process.env.UCAN_LOG_URL ?? '',
+          PIECE_QUEUE_URL: pieceQueue.queueUrl,
+          PIECE_QUEUE_REGION: stack.region
+        },
+        bind: [
+          privateKey,
+          ucanLogBasicAuth
+        ]
       }
     },
     routes: {
       'GET /':        'packages/functions/src/api/get.home',
       'GET /error':   'packages/functions/src/api/get.error',
-      'GET /version': 'packages/functions/src/api/get.version'
+      'GET /version': 'packages/functions/src/api/get.version',
+      'POST /':       'functions/ucan-invocation-router.handler',
     },
   })
 

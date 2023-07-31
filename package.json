@@ -13,7 +13,7 @@
     "console": "sst console",
     "lint": "tsc && eslint '**/*.js'",
     "clean": "rm -rf dist node_modules ./*/{.cache,dist,node_modules}",
-    "test": "npm test -w packages/core",
+    "test": "npm test -w packages/core -w packages/filecoin-client",
     "test-integration": "ava --verbose --serial --timeout=300s test/*.test.js"
   },
   "devDependencies": {
