@@ -106,11 +106,11 @@ To achieve required state management, we will be relying on a S3 Bucket and a dy
 ### Queries and associayed stores
 
 1. Check if piece is already in the pipeline (`inclusion-store` with fallback for `piece-store`)
-  - Before getting a piece into the pipelined queue, it should be stored to guarantee uniqueness
+  - Before getting a piece into the pipelined queue, it should be stored to guarantee uniqueness per storefront (tenant)
   - Also important to be able to report back on the "in progress" work when deal state of a piece is still unknown by fallbacking to Head Request in bucket
 2. Put and Get buffer blocks (`buffer-store`)
   - While `buffer-queue` is concatenating buffers, these blocks will be stored to be propagated through queue stages via their CIDs
-  - Key `${blockCid}/{blockCid}`, Value empty with expiration date
+  - Key `${blockCid}/{blockCid}`, Value `PieceBuffer` with expiration date
 3. Put aggregates offered to `spade` and get aggregates pending resolution (`aggregate-store`)
 4. Write pieces together with the aggregate they are part of (`inclusion-store`)
 5. Get deal state of a given piece (`inclusion-store` with fallback for `piece-store`)
@@ -128,7 +128,7 @@ interface Piece {
   // number of milliseconds elapsed since the epoch for piece inserted
   insertedAt: number
   // identifier of producer to derive `group-id` `did:web:web3.storage` (primary index, sort key)
-  space: string
+  storefront: string
   // identifier of group to derive `group-id` `did:web:free.web3.storage`
   group: string
 }
