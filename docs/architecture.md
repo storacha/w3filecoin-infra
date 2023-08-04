@@ -8,7 +8,7 @@
 
 Taking into account that [web3.storage](http://web3.storage) onboards any type of content (up to a maximum of 4GiB-padded shards to have better utilization of Fil sector space), multiple CAR files uploaded need to be aggregated into a bigger Piece that can be offered to Filecoin Storage Providers. w3filecoin pipeline keeps track of queued CARs (cargo) to be included in Storage Provider deals.
 
-When a CAR file is written into a given web3.storage's bucket, its piece is computed and sent into the w3filecoin processing pipeline. This pipeline is composed of multiple processing queues that accumulate pieces into aggregates and submit them into a Filecoin deal queue.
+After CAR file is added to web3.storage's bucket, its piece is computed and sent into the w3filecoin processing pipeline. This pipeline is composed of multiple processing queues that accumulate pieces into aggregates and submit them into a Filecoin deal queue.
 
 ## High Level design
 
@@ -16,7 +16,7 @@ The high level flow for the w3filecoin Pipeline is:
 
 - **piece inclusion request** is received by an authorized Storefront with `pieceCid`
 - **piece queued** to be aggregated
-- **piece buffering** until a buffer has enough pieces to become an aggregate offer
+- **aggregate buffering** until a buffer has enough pieces to become an aggregate offer
 - **aggregate submission** to Storage Provider broker
 - **deal tracking** and **deal recording** once fulfilled
 
@@ -122,7 +122,7 @@ TODO: metrics
 ### `piece-store` schema
 
 ```typescript
-interface piece {
+interface Piece {
   // CID of the piece `bagy...content` (primary index, partition key)
   piece: PieceCID
   // number of milliseconds elapsed since the epoch for piece inserted
@@ -139,10 +139,10 @@ interface piece {
 ```typescript
 interface PieceBuffer {
   // Pieces inside the buffer
-  pieces: Piece[]
+  pieces: BufferedPiece[]
 }
 
-interface Piece {
+interface BufferedPiece {
   piece: PieceCID
   // number of milliseconds elapsed since the epoch when piece was received
   insertedAt: number
@@ -165,7 +165,7 @@ interface Aggregate {
   // PieceCid of an Aggregate `bagy...aggregate` (primary index, partition key)
   piece: PieceCID
   // CID of dag-cbor block `bafy...cbor`
-  buffer: Link
+  buffer: Link<PieceBuffer>
   // CID of `aggregate/add` invocation `bafy...inv`
   invocation: Link
   // CID of `aggregate/add` task `bafy...task`
