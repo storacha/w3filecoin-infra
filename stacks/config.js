@@ -67,8 +67,7 @@ export function setupSentry (app, stack) {
  */
 export function getEnv() {
   return {
-    SENTRY_DSN: mustGetEnv('SENTRY_DSN'),
-    CONTENT_RESOLVER_URL_R2: mustGetEnv('CONTENT_RESOLVER_URL_R2')
+    SENTRY_DSN: mustGetEnv('SENTRY_DSN')
   }
 }
 
