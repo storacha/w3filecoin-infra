@@ -28,12 +28,12 @@ export function connectTable (target) {
 export const pieceStoreTableProps = {
   fields: {
     piece: 'string',        // `bagy...content` as PieceCid of a Filecoin Piece
-    space: 'string',        // `did:web:web3.storage`
+    storefront: 'string',   // `did:web:web3.storage`
     group: 'string',        // `did:web:free.web3.storage`
     insertedAt: 'number',   // `1690464180271` as number of milliseconds elapsed since the epoch
   },
-  // piece + space must be unique to satisfy index constraint
-  primaryIndex: { partitionKey: 'piece', sortKey: 'space' },
+  // piece + storefront must be unique to satisfy index constraint
+  primaryIndex: { partitionKey: 'piece', sortKey: 'storefront' },
 }
 
 /** @type TableProps */
@@ -44,14 +44,14 @@ export const aggregateStoreTableProps = {
     invocation: 'string',   // `bafy...inv` as CID of `aggregate/add` invocation
     task: 'string',         // `bafy...task` as CID of `aggregate/add` task
     stat: 'number',         // `0` as 'OFFERED' | `1` as 'APPROVED' | `2` as 'REJECTED'
-    insertedAt: 'string',   // `1690464180271` as number of milliseconds elapsed since the epoch
+    insertedAt: 'number',   // `1690464180271` as number of milliseconds elapsed since the epoch
   },
   // piece must be unique to satisfy index constraint
   primaryIndex: { partitionKey: 'piece' },
   globalIndexes: {
     indexStat: {
       partitionKey: 'stat',
-      sortKey: 'id',
+      sortKey: 'insertedAt',
       projection: 'all'
     }
   }
@@ -63,9 +63,9 @@ export const inclusionStoreTableProps = {
     aggregate: 'string',    // `bagy...aggregate` as PieceCid of an Aggregate
     piece: 'string',        // `bagy...content` as PieceCid of a Filecoin Piece
     stat: 'number',         // `0` as 'APPROVED' | `1` as 'REJECTED'
-    insertedAt: 'string',   // `1690464180271` as number of milliseconds elapsed since the epoch for piece inserted
-    submitedAt: 'string',   // `1690464180271` as number of milliseconds elapsed since the epoch for aggregate submission
-    resolvedAt: 'string',   // `1690464180271` as number of milliseconds elapsed since the epoch for aggregate deal resolution
+    insertedAt: 'number',   // `1690464180271` as number of milliseconds elapsed since the epoch for piece inserted
+    submitedAt: 'number',   // `1690464180271` as number of milliseconds elapsed since the epoch for aggregate submission
+    resolvedAt: 'number',   // `1690464180271` as number of milliseconds elapsed since the epoch for aggregate deal resolution
     failedReason: 'string', // 'invalid piece for content'
   },
   // aggregate + piece must be unique to satisfy index constraint
@@ -73,7 +73,7 @@ export const inclusionStoreTableProps = {
   globalIndexes: {
     indexPiece: {
       partitionKey: 'piece',
-      sortKey: 'id',
+      sortKey: 'resolvedAt',
       projection: 'all'
     }
   }

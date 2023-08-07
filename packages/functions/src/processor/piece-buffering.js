@@ -2,7 +2,8 @@ import * as Sentry from '@sentry/serverless'
 import { Bucket } from 'sst/node/bucket'
 
 import { createQueueClient } from '@w3filecoin/core/src/queue/client'
-import { createBucketStoreClient } from '@w3filecoin/core/src/store/client/bucket.js'
+import { createBucketStoreClient } from '@w3filecoin/core/src/store/bucket-client.js'
+import { encode, decode } from '@w3filecoin/core/src/data/buffer.js'
 import { bufferPieces } from '@w3filecoin/core/src/workflow/piece-buffering'
 
 import { mustGetEnv } from '../utils.js'
@@ -24,18 +25,27 @@ Sentry.AWSLambda.init({
 async function pieceBufferringWorkflow (sqsEvent) {
   const { storeClient, queueClient } = getProps()
   const pieceRecords = sqsEvent.Records.map(r => r.body)
+
+  // TODO: confirm group ID uniqueness
   const groupId = sqsEvent.Records[0].attributes.MessageGroupId
 
-  await bufferPieces({
+  const { ok, error } = await bufferPieces({
     storeClient,
     queueClient,
     pieceRecords,
     groupId
   })
 
+  if (error) {
+    return {
+      statusCode: 500,
+      body: error.message
+    }
+  }
+
   return {
     statusCode: 200,
-    body: pieceRecords.length
+    body: ok
   }
 }
 
@@ -47,12 +57,17 @@ function getProps () {
 
   return {
     storeClient: createBucketStoreClient({
-      name: bufferStoreBucketName.bucketName,
       region: bufferStoreBucketRegion
+    }, {
+      name: bufferStoreBucketName.bucketName,
+      encodeRecord: encode.storeRecord,
+      decodeRecord: decode.storeRecord
     }),
     queueClient: createQueueClient({
-      url: bufferQueueUrl,
       region: bufferQueueRegion
+    }, {
+      queueUrl: bufferQueueUrl,
+      encodeMessage: encode.message,
     })
   }
 }

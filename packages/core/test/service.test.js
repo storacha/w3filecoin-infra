@@ -2,6 +2,7 @@ import { Aggregator } from '@web3-storage/filecoin-api/test'
 import { ed25519 } from '@ucanto/principal'
 import { Consumer } from 'sqs-consumer'
 import pWaitFor from 'p-wait-for'
+import delay from 'delay'
 
 import { createQueueClient } from '../src/queue/client.js'
 import { createTableStoreClient } from '../src/store/table-client.js'
@@ -11,7 +12,6 @@ import { encode, decode } from '../src/data/piece.js'
 import { testService as test } from './helpers/context.js'
 
 import {
-  createBucket,
   createDynamodDb,
   createTable,
   createQueue
@@ -22,12 +22,12 @@ test.beforeEach(async (t) => {
   const dynamo = await createDynamodDb()
 
   /** @type {import('@aws-sdk/client-sqs').Message[]} */
-  const queueMessages = []
+  const queuedMessages = []
   const queueConsumer = Consumer.create({
     queueUrl: sqs.queueUrl,
     sqs: sqs.client,
     handleMessage: (message) => {
-      queueMessages.push(message)
+      queuedMessages.push(message)
       return Promise.resolve()
     }
   })
@@ -38,7 +38,7 @@ test.beforeEach(async (t) => {
     queueName: sqs.queueName,
     queueUrl: sqs.queueUrl,
     queueConsumer,
-    queueMessages
+    queuedMessages
   })
 })
 
@@ -47,13 +47,21 @@ test.beforeEach(async t => {
   await pWaitFor(() => t.context.queueConsumer.isRunning)
 })
 
-test.afterEach(t => {
+test.afterEach(async t => {
   t.context.queueConsumer.stop()
+  await delay(1000)
 })
 
 for (const [title, unit] of Object.entries(Aggregator.test)) {
-  test(title, async (t) => {
-    const { dynamoClient, sqsClient, queueUrl } = t.context
+  const define = title.startsWith('only ')
+    // eslint-disable-next-line no-only-tests/no-only-tests
+    ? test.only
+    : title.startsWith('skip ')
+    ? test.skip
+    : test
+
+  define(title, async (t) => {
+    const { dynamoClient, sqsClient, queueUrl, queuedMessages } = t.context
     const tableName = await createTable(dynamoClient, pieceStoreTableProps)
 
     // context
@@ -69,15 +77,13 @@ for (const [title, unit] of Object.entries(Aggregator.test)) {
       queueUrl,
       encodeMessage: encode.message,
     })
-
-    const brokerDid = ''
-    const brokerUrl = ''
-
     await unit(
       {
-        equal: t.is,
-        deepEqual: t.deepEqual,
-        ok: t.true,
+        ok: (actual, message) => t.truthy(actual, message),
+        equal: (actual, expect, message) =>
+          t.is(actual, expect, message ? String(message) : undefined),
+        deepEqual: (actual, expect, message) =>
+          t.deepEqual(actual, expect, message ? String(message) : undefined),
       },
       {
         id,
@@ -88,8 +94,7 @@ for (const [title, unit] of Object.entries(Aggregator.test)) {
         },
         pieceStore,
         addQueue,
-        brokerDid,
-        brokerUrl
+        queuedMessages
       }
     )
   })

@@ -4,34 +4,51 @@ import { CID } from 'multiformats/cid'
 import * as raw from 'multiformats/codecs/raw'
 import { sha256 } from 'multiformats/hashes/sha2'
 import * as CAR from '@ucanto/transport/car'
-import { Piece } from '@web3-storage/data-segment'
+import { Aggregate, Piece } from '@web3-storage/data-segment'
 
 /**
  * @param {number} length
+ * @param {number} size
  */
-export async function getCargo (length) {
-  const cars = await Promise.all(Array.from({ length }).map(() => randomCAR(128)))
+export async function randomCargo(length, size) {
+  const cars = await Promise.all(
+    Array.from({ length }).map(() => randomCAR(size))
+  )
 
-  return Promise.all(cars.map(async car => {
+  return cars.map((car) => {
     const piece = Piece.build(car.bytes)
 
-    
     return {
-      piece: {
-        link: piece.link,
-        size: piece.size,
-      },
-      content: {
-        link: car.cid.link(),
-        size: car.size,
-        source: [
-          getS3ContentSource('us-west-2', 'carpark-prod-0', `${car.cid.link()}/${car.cid.link()}.car`),
-          getR2ContentSource('carpark-prod-0', `${car.cid.link()}/${car.cid.link()}.car`)
-        ],
-        bytes: car.bytes
-      }
+      link: piece.link,
+      content: car.cid,
+      height: piece.height,
+      size: piece.size,
     }
-  }))
+  })
+}
+
+/**
+ * @param {number} length
+ * @param {number} size
+ */
+export async function randomAggregate(length, size) {
+  const pieces = await randomCargo(length, size)
+
+  const aggregateBuild = Aggregate.build({
+    pieces,
+  })
+
+  return {
+    pieces: pieces.map((p) => ({
+      link: p.link,
+      height: p.height,
+      content: p.content,
+    })),
+    aggregate: {
+      link: aggregateBuild.link,
+      height: aggregateBuild.height,
+    },
+  }
 }
 
 /** @param {number} size */

@@ -1,45 +1,53 @@
 import { PieceLink } from '@web3-storage/data-segment'
-import { UnknownLink as Link } from '@ucanto/interface'
+import { UnknownLink } from '@ucanto/interface'
 
 // Data Structures
 export type Piece <Piece = PieceLink> = {
   piece: Piece
-  insertedAt?: number
-  space: string
+  insertedAt: number
+  storefront: string
   group: string
 }
 
-export type Buffer = {
-  pieces: BufferPiece[]
+export type Buffer <P> = {
+  pieces: BufferedPiece<P>[]
+  // identifier of storefront `did:web:web3.storage`
+  storefront: string
+  // identifier of group within storefront
+  group: string
 }
 
-export type BufferPiece <Piece = PieceLink> = {
+export type BufferedPiece <Piece = PieceLink> = {
   piece: Piece
   insertedAt: number
   // Policies that this piece is under
   policy: PiecePolicy
 }
 
-export type Aggregate = {
+export type Aggregate <Piece = PieceLink, Link = UnknownLink> = {
   // PieceCid of an Aggregate `bagy...aggregate`
-  piece: PieceLink
+  piece: Piece
   // CID of dag-cbor block `bafy...cbor`
   buffer: Link
   // CID of `aggregate/add` invocation `bafy...inv`
-  invocation: Link
+  invocation?: Link
   // CID of `aggregate/add` task `bafy...task`
-  task: Link
+  task?: Link
   // number of milliseconds elapsed since the epoch when aggregate was submitted
   insertedAt: number
+  // identifier of storefront `did:web:web3.storage`
+  storefront: string
+  // identifier of group within storefront
+  group: string
   // known status of the aggregate (a secondary index)
   stat: AggregateStatus
 }
 
-export interface Inclusion {
+export interface Inclusion <Piece = PieceLink> {
   // PieceCid of an Aggregate `bagy...aggregate`
-  aggregate: PieceLink
+  aggregate: Piece
   // PieceCid of a Filecoin Piece `bagy...content`
-  piece: PieceLink
+  piece: Piece
   // number of milliseconds elapsed since the epoch for piece inserted `1690464180271`
   insertedAt: number
   // number of milliseconds elapsed since the epoch for aggregate submission `1690464180271`
@@ -50,7 +58,7 @@ export interface Inclusion {
   // status of the inclusion
   stat: InclusionStatus
   // failed reason
-  failedReaon?: string
+  failedReason?: string
 }
 
 // Enums
@@ -70,22 +78,22 @@ type OFFERED = 0
 type APPROVED = 1
 type REJECTED = 2
 
-type InclusionStatus =
+export type InclusionStatus =
   | SUCCESS
   | FAIL
 
 type SUCCESS = 0
 type FAIL = 1
 
-// Data structure encoding
+// Data structure encoding/decoding
 
-export interface Encoder <R> {
-  storeRecord: (r: R) => Record<string, any>
-  storeKey: (r: R) => Record<string, any>
-  message: (r: R) => string
+export interface Encoder <Data, StoreRecord, StoreKey> {
+  storeRecord: (data: Data) => Promise<StoreRecord>
+  storeKey: (data: Data) => Promise<StoreKey>
+  message: (data: Data) => Promise<string>
 }
 
-export interface Decoder <R> {
-  storeRecord: (r: Record<string, any>) => R
-  message: (m: string) => R
+export interface Decoder <Data, StoreRecord, MessageRecord> {
+  storeRecord: (storeRecord: StoreRecord) => Promise<Data>
+  message: (message: string) => Promise<MessageRecord>
 }

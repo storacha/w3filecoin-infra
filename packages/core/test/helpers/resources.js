@@ -62,7 +62,8 @@ export function dynamoDBTableConfig ({ fields, primaryIndex, globalIndexes = {} 
   const globalIndexValues = Object.values(globalIndexes)
   const attributes = [
     ...Object.values(primaryIndex),
-    ...globalIndexValues.map((value) => value.partitionKey)
+    ...globalIndexValues.map((value) => value.partitionKey),
+    ...globalIndexValues.map((value) => value.sortKey)
   ]
 
   const AttributeDefinitions = Object.entries(fields)
@@ -76,7 +77,7 @@ export function dynamoDBTableConfig ({ fields, primaryIndex, globalIndexes = {} 
     .map(([IndexName, val]) => ({
       IndexName,
       KeySchema: toKeySchema(val),
-      Projection: { ProjectionType: 'KEYS_ONLY' },
+      Projection: { ProjectionType: 'ALL' },
       ProvisionedThroughput: {
         ReadCapacityUnits: 5,
         WriteCapacityUnits: 5
@@ -112,7 +113,7 @@ function toKeySchema ({partitionKey, sortKey}) {
  * @param {number} [opts.port]
  * @param {string} [opts.region]
  */
-export async function createBucket(opts = {}) {
+export async function createS3(opts = {}) {
   const region = opts.region || 'us-west-2'
   const port = opts.port || 9000
 
@@ -131,16 +132,20 @@ export async function createBucket(opts = {}) {
     },
   }
 
-  const client = new S3Client(clientOpts)
+  return {
+    client: new S3Client(clientOpts),
+    clientOpts,
+  }
+}
+
+/**
+ * @param {S3Client} s3
+ */
+export async function createBucket(s3) {
   const id = customAlphabet('1234567890abcdefghijklmnopqrstuvwxyz', 10)
   const Bucket = id()
-  await client.send(new CreateBucketCommand({ Bucket }))
-
-  return {
-    client,
-    clientOpts,
-    bucketName: Bucket
-  }
+  await s3.send(new CreateBucketCommand({ Bucket }))
+  return Bucket
 }
 
 /**

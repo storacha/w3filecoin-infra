@@ -7,7 +7,7 @@ import {
   pieceStoreTableProps,
   aggregateStoreTableProps,
   inclusionStoreTableProps
-} from '../packages/core/src/store'
+} from '../packages/core/src/store/index.js'
 
 import {
   setupSentry,

@@ -2,7 +2,9 @@ import * as Sentry from '@sentry/serverless'
 import { Bucket } from 'sst/node/bucket'
 
 import { createQueueClient } from '@w3filecoin/core/src/queue/client'
-import { createBucketStoreClient } from '@w3filecoin/core/src/store/client/bucket.js'
+import { createBucketStoreClient } from '@w3filecoin/core/src/store/bucket-client.js'
+import { encode as bufferEncode, decode as bufferDecode } from '@w3filecoin/core/src/data/buffer.js'
+import { encode as aggregateEncode } from '@w3filecoin/core/src/data/aggregate.js'
 import { reduceBuffer } from '@w3filecoin/core/src/workflow/buffer-reducing'
 
 import { mustGetEnv } from '../utils.js'
@@ -20,7 +22,7 @@ Sentry.AWSLambda.init({
  * 2. An aggregate is built with the buffer items (properly sorted) in order to try to reach
  * a desired size for `aggregate/add`.
  * 2. 1. If possible, the new buffer is stored and its reference is sent to the `aggregate-queue`. 
- *       A new buffer is created with the remaining pieces. Finally, it is stored and added to `buffer-queue`.
+ * A new buffer is created with the remaining pieces. Finally, it is stored and added to `buffer-queue`.
  * 2. 2. Otherwise, the new buffer is stored and added to the `buffer-queue`.
  *
  * @param {import('aws-lambda').SQSEvent} sqsEvent
@@ -46,10 +48,9 @@ async function bufferReducingWorkflow (sqsEvent) {
   const { storeClient, bufferQueueClient, aggregateQueueClient } = getProps()
   const bufferRecords = sqsEvent.Records.map(r => r.body)
   const groupId = sqsEvent.Records[0].attributes.MessageGroupId
-
   // TODO: confirm group ID uniqueness
 
-  await reduceBuffer({
+  const { ok, error } = await reduceBuffer({
     storeClient,
     bufferQueueClient,
     aggregateQueueClient,
@@ -57,9 +58,16 @@ async function bufferReducingWorkflow (sqsEvent) {
     groupId
   })
 
+  if (error) {
+    return {
+      statusCode: 500,
+      body: error.message
+    }
+  }
+
   return {
     statusCode: 200,
-    body: bufferRecords.length
+    body: ok
   }
 }
 
@@ -71,16 +79,23 @@ function getProps () {
 
   return {
     storeClient: createBucketStoreClient({
-      name: bufferStoreBucketName.bucketName,
       region: bufferStoreBucketRegion
+    }, {
+      name: bufferStoreBucketName.bucketName,
+      encodeRecord: bufferEncode.storeRecord,
+      decodeRecord: bufferDecode.storeRecord,
     }),
     bufferQueueClient: createQueueClient({
-      url: bufferQueueUrl,
       region: bufferQueueRegion
+    }, {
+      queueUrl: bufferQueueUrl,
+      encodeMessage: bufferEncode.message,
     }),
     aggregateQueueClient: createQueueClient({
-      url: aggregateQueueUrl,
       region: aggregateQueueRegion
+    }, {
+      queueUrl: aggregateQueueUrl,
+      encodeMessage: aggregateEncode.message,
     })
   }
 }

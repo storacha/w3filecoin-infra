@@ -1,40 +1,46 @@
 import { SendMessageCommand } from '@aws-sdk/client-sqs'
+import { QueueOperationFailed, EncodeRecordFailed } from '@web3-storage/filecoin-api/errors'
 
 import { connectQueue } from './index.js'
 
 /**
- * @template T
+ * @template Data
+ *
  * @param {import('./types.js').QueueConnect | import('@aws-sdk/client-sqs').SQSClient} conf
  * @param {object} context
  * @param {string} context.queueUrl
- * @param {(item: T) => string} context.encodeMessage
- * @returns {import('@web3-storage/filecoin-api/types').Queue<T>}
+ * @param {(item: Data) => Promise<string>} context.encodeMessage
+ * @returns {import('@web3-storage/filecoin-api/types').Queue<Data>}
  */
 export function createQueueClient (conf, context) {
   const queueClient = connectQueue(conf)
   return {
-    add: async (record) => {
+    add: async (record, options = {}) => {
+      /** @type {string} */
       let encodedRecord
       try {
-        encodedRecord = context.encodeMessage(record)
-      } catch (/** @type {any} */ err) {
+        encodedRecord = await context.encodeMessage(record)
+      } catch (/** @type {any} */ error) {
         return {
-          // TODO: specify error
-          error: err
+          error: new EncodeRecordFailed(error.message)
         }
       }
 
       const cmd = new SendMessageCommand({
         QueueUrl: context.queueUrl,
-        MessageBody: encodedRecord
+        MessageBody: encodedRecord,
+        MessageGroupId: options.messageGroupId
       })
 
+      let r
       try {
-        await queueClient.send(cmd)
-      } catch (/** @type {any} */ err) {
+        r = await queueClient.send(cmd)
+        if (r.$metadata.httpStatusCode !== 200) {
+          throw new Error(`failed sending message to queue with code ${r.$metadata.httpStatusCode}`)
+        }
+      } catch (/** @type {any} */ error) {
         return {
-          // TODO: specify error
-          error: err
+          error: new QueueOperationFailed(error.message)
         }
       }
 

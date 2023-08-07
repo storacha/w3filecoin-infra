@@ -1,7 +1,9 @@
 import * as ed25519 from '@ucanto/principal/ed25519'
 import * as Server from '@ucanto/server'
-import * as CAR from '@ucanto/transport/car'
 import * as DID from '@ipld/dag-ucan/did'
+import { CAR, HTTP } from '@ucanto/transport'
+import { connect } from '@ucanto/client'
+
 
 import { createService } from '@web3-storage/filecoin-api/aggregator'
 
@@ -33,4 +35,25 @@ export const createUcantoServer = (servicePrincipal, context, errorReporter) =>
     return signer.withDID(did)
   }
   return signer
+}
+
+/**
+ * 
+ * @param {{ did: string, url: string }} config 
+ * @returns 
+ */
+export function getBrokerServiceConnection (config) {
+  const aggregationServicePrincipal = DID.parse(config.did) // 'did:web:spade.web3.storage'
+  const aggregationServiceURL = new URL(config.url) // 'https://spade-proxy.web3.storage'
+
+  const aggregationServiceConnection = connect({
+    id: aggregationServicePrincipal,
+    codec: CAR.outbound,
+    channel: HTTP.open({
+      url: aggregationServiceURL,
+      method: 'POST',
+    }),
+  })
+
+  return aggregationServiceConnection
 }

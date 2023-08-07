@@ -3,20 +3,24 @@ import {
   GetObjectCommand
 } from '@aws-sdk/client-s3'
 import pRetry from 'p-retry'
+import { StoreOperationFailed, StoreNotFound, EncodeRecordFailed } from '@web3-storage/filecoin-api/errors'
 
 import { connectBucket } from './index.js'
 
 /**
- * @template R
- * @template K
+ * @typedef {{ key: string, value: Uint8Array}} StoreRecord
+ * @typedef {string} StoreKey
+ */
+
+/**
+ * @template Data
  *
  * @param {import('./types.js').BucketConnect | import('@aws-sdk/client-s3').S3Client} conf
  * @param {object} context
  * @param {string} context.name
- * @param {(item: R) => { key: string, value: Uint8Array}} context.encodeRecord
- * @param {(item: Record<string, any>) => R} context.decodeRecord
- * @param {(key: K) => string} context.encodeKey
- * @returns {import('./types.js').ExtendedStore<R, K>}
+ * @param {(data: Data) => Promise<StoreRecord>} context.encodeRecord
+ * @param {(item: StoreRecord) => Promise<Data>} context.decodeRecord
+ * @returns {import('@web3-storage/filecoin-api/types').Store<Data>}
  */
 export function createBucketStoreClient (conf, context) {
   const bucketClient = connectBucket(conf)
@@ -25,11 +29,10 @@ export function createBucketStoreClient (conf, context) {
     put: async (record) => {
       let encodedRecord
       try {
-        encodedRecord = context.encodeRecord(record)
-      } catch (/** @type {any} */ err) {
+        encodedRecord = await context.encodeRecord(record)
+      } catch (/** @type {any} */ error) {
         return {
-          // TODO: specify error
-          error: err
+          error: new EncodeRecordFailed(error.message)
         }
       }
 
@@ -42,9 +45,9 @@ export function createBucketStoreClient (conf, context) {
       // retry to avoid throttling errors
       try {
         await pRetry(() => bucketClient.send(putCmd))
-      } catch (/** @type {any} */ err) {
+      } catch (/** @type {any} */ error) {
         return {
-          error: err
+          error: new StoreOperationFailed(error.message)
         }
       }
 
@@ -53,39 +56,31 @@ export function createBucketStoreClient (conf, context) {
       }
     },
     get: async (key) => {
-      let encodedKey
-      try {
-        encodedKey = context.encodeKey(key)
-      } catch (/** @type {any} */ err) {
-        return {
-          // TODO: specify error
-          error: err
-        }
-      }
-
       const putCmd = new GetObjectCommand({
         Bucket: context.name,
-        Key: encodedKey
+        Key: key
       })
 
       let res
-      // retry to avoid throttling errors
       try {
-        res = await pRetry(() => bucketClient.send(putCmd))
-      } catch (/** @type {any} */ err) {
+        res = await bucketClient.send(putCmd)
+      } catch (/** @type {any} */ error) {
         return {
-          error: err
+          error: new StoreOperationFailed(error.message)
         }
       }
 
       if (!res || !res.Body) {
         return {
-          error: new Error('not found')
+          error: new StoreNotFound('item not found in store')
         }
       }
 
       return {
-        ok: context.decodeRecord(await res.Body.transformToByteArray())
+        ok: await context.decodeRecord({
+          key,
+          value: await res.Body.transformToByteArray()
+        })
       }
     }
   }

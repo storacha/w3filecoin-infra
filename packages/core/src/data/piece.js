@@ -5,63 +5,66 @@ import { parseLink } from '@ucanto/server'
 
 /**
  * @typedef {import('@web3-storage/data-segment').PieceLink} PieceLink
+ * @typedef {import('./types.js').Piece<PieceLink>} Data
+ * @typedef {import('./types.js').Piece<string>} StoreRecord
+ * @typedef {Omit<import('./types.js').Piece<string>, "insertedAt" | "group">} StoreKey
  */
 
 /**
- * @type {import('./types').Encoder<import('./types.js').Piece<PieceLink>>}
+ * @type {import('./types').Encoder<Data, StoreRecord, StoreKey>}
  */
 export const encode = {
   /**
    * Encode piece data structure to store record.
    */
   storeRecord: (piece) => {
-    return {
+    return Promise.resolve({
       ...piece,
       piece: piece.piece.toString(),
       insertedAt: piece.insertedAt || Date.now()
-    }
+    })
   },
   /**
    * Encode key from store record.
    *
-   * @param {Omit<import('./types.js').Piece<PieceLink>, "insertedAt" | "group">} piece
-   * @returns {Omit<import('./types.js').Piece<string>, "insertedAt" | "group">}
+   * @param {import('./types.js').Piece<PieceLink>} piece
+   * @returns {Promise<StoreKey>}
    */
   storeKey: (piece) => {
-    return {
+    return Promise.resolve({
       piece: piece.piece.toString(),
-      space: piece.space
-    }
+      storefront: piece.storefront
+    })
   },
   /**
    * Encode piece data structure to queue message.
    */
   message: (piece) => {
     const encodedBytes = JSONencode(piece)
-    return toString(encodedBytes)
+    return Promise.resolve(toString(encodedBytes))
   }
 }
 
 /**
- * @type {import('./types').Decoder<import('./types.js').Piece<PieceLink>>}
+ * @type {import('./types').Decoder<Data, StoreRecord, Data>}
  */
 export const decode = {
   /**
    * Decode piece data structure from queue message.
    */
-  storeRecord: (pieceRecord) => {
-    return {
-      piece: parseLink(pieceRecord.piece),
-      space: pieceRecord.space,
-      group: pieceRecord.group,
-      insertedAt: pieceRecord.insertedAt,
-    }
+  storeRecord: (storeRecord) => {
+    return Promise.resolve({
+      piece: parseLink(storeRecord.piece),
+      storefront: storeRecord.storefront,
+      group: storeRecord.group,
+      insertedAt: storeRecord.insertedAt,
+    })
   },
   /**
    * Decode piece data structure from queue message.
    */
-  message: (pieceMakerItem) => {
-    const decodedBytes = fromString(pieceMakerItem)
-    return JSONdecode(decodedBytes)
+  message: (messageBody) => {
+    const decodedBytes = fromString(messageBody)
+    return Promise.resolve(JSONdecode(decodedBytes))
   }
 }

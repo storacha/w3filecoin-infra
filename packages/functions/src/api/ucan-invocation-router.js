@@ -1,14 +1,15 @@
 import * as Sentry from '@sentry/serverless'
 import { Config } from 'sst/node/config'
 import { Table } from 'sst/node/table'
+// eslint-disable-next-line no-unused-vars
 import { API } from '@ucanto/core'
 import * as CAR from '@ucanto/transport/car'
+import * as Server from '@ucanto/server'
 
 import { connect as ucanLogConnect } from '@w3filecoin/core/src/ucan-log.js'
-import { getServiceSigner } from '@w3filecoin/core/src/service.js'
 import { createTableStoreClient } from '@w3filecoin/core/src/store/table-client.js'
 import { createQueueClient } from '@w3filecoin/core/src/queue/client.js'
-import { createUcantoServer } from '@w3filecoin/core/src/service.js'
+import { createUcantoServer, getServiceSigner } from '@w3filecoin/core/src/service.js'
 import { encode, decode } from '@w3filecoin/core/src/data/piece.js'
 
 import { mustGetEnv } from '../utils.js'
@@ -35,8 +36,6 @@ export async function ucanInvocationRouter(request) {
     pieceStoreTableRegion,
     pieceQueueUrl,
     pieceQueueRegion,
-    brokerDid,
-    brokerUrl
   } = getLambdaEnv()
 
   if (request.body === undefined) {
@@ -72,8 +71,6 @@ export async function ucanInvocationRouter(request) {
   const server = createUcantoServer(serviceSigner, {
     pieceStore,
     addQueue,
-    brokerDid,
-    brokerUrl,
     id: serviceSigner
   }, {
     catch: (/** @type {string | Error} */ err) => {
@@ -105,7 +102,6 @@ export async function ucanInvocationRouter(request) {
   await ucanLog.log(CAR.request.encode(message))
 
   // Execute invocations
-  // @ts-expect-error message with unknown...
   const outgoing = await Server.execute(message, server)
   const response = await encoder.encode(outgoing)
 

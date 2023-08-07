@@ -16,15 +16,14 @@ export function ApiStack({ app, stack }) {
   setupSentry(app, stack)
 
   const {
-    pieceQueue
+    pieceQueue,
+    privateKey
   } = use(ProcessorStack)
 
   // Setup API
   const customDomain = getCustomDomain(stack.stage, process.env.HOSTED_ZONE)
   const pkg = getApiPackageJson()
   const git = getGitInfo()
-
-  const privateKey = new Config.Secret(stack, 'PRIVATE_KEY')
   const ucanLogBasicAuth = new Config.Secret(stack, 'UCAN_LOG_BASIC_AUTH')
 
   const api = new Api(stack, 'api', {

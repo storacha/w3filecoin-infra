@@ -105,7 +105,10 @@ export function setupSentry (app, stack) {
  */
 export function getEnv() {
   return {
-    SENTRY_DSN: mustGetEnv('SENTRY_DSN')
+    SENTRY_DSN: mustGetEnv('SENTRY_DSN'),
+    DID: mustGetEnv('DID'),
+    BROKER_DID: mustGetEnv('BROKER_DID'),
+    BROKER_URL: mustGetEnv('BROKER_URL'),
   }
 }
 

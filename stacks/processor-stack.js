@@ -1,21 +1,30 @@
-import { Queue, use } from 'sst/constructs'
+import { Queue, Config, use } from 'sst/constructs'
 import { Duration } from 'aws-cdk-lib'
 
 import { DataStack } from './data-stack.js'
-import { setupSentry, getResourceName } from './config.js'
+import {
+  // setupSentry,
+  getEnv,
+  getResourceName
+} from './config.js'
 
 /**
  * @param {import('sst/constructs').StackContext} properties
  */
 export function ProcessorStack({ stack, app }) {
+  const { DID, BROKER_DID, BROKER_URL } = getEnv()
   // Setup app monitoring with Sentry
   // setupSentry(app, stack)
   // TODO: enable
+
+  const privateKey = new Config.Secret(stack, 'PRIVATE_KEY')
 
   const {
     bufferStoreBucket,
     aggregateStoreTable
   } = use(DataStack)
+
+  // TODO: Events from piece table to piece-queue
 
   /**
    * 1st processor queue - piece buffering workflow
@@ -126,8 +135,9 @@ export function ProcessorStack({ stack, app }) {
         aggregateStoreTable
       ],
       environment: {
-        BROKER_DID: '',
-        // TODO
+        DID,
+        BROKER_DID,
+        BROKER_URL,
       }
     },
     cdk: {
@@ -142,6 +152,7 @@ export function ProcessorStack({ stack, app }) {
   return {
     pieceQueue,
     bufferQueue,
-    aggregateQueue
+    aggregateQueue,
+    privateKey
   }
 }

@@ -12,12 +12,15 @@
     "@aws-sdk/client-s3": "^3.363.0",
     "@aws-sdk/util-dynamodb": "3.363.0",
     "@ipld/dag-ucan": "^3.3.2",
+    "@ucanto/client": "^8.0.0",
     "@ucanto/interface": "^8.0.0",
     "@ucanto/principal": "^8.0.0",
     "@ucanto/server": "^8.0.0",
     "@ucanto/transport": "^8.0.0",
+    "@web3-storage/capabilities": "file://../../../w3up/packages/capabilities",
     "@web3-storage/data-segment": "^2.2.0",
     "@web3-storage/filecoin-api": "file://../../../w3up/packages/filecoin-api",
+    "@web3-storage/filecoin-client": "file://../../../w3up/packages/filecoin-client",
     "multiformats": "12.0.1",
     "uint8arrays": "^4.0.4",
     "p-retry": "^5.1.2"
@@ -26,6 +29,8 @@
     "@ipld/car": "5.1.1",
     "ava": "^5.3.0",
     "nanoid": "^4.0.0",
+    "delay": "^6.0.0",
+    "p-defer": "^4.0.0",
     "p-wait-for": "^5.0.2",
     "sqs-consumer": "^7.2.2",
     "testcontainers": "^9.8.0"
@@ -37,7 +42,9 @@
     "rules": {
       "unicorn/no-for-loop": "off",
       "unicorn/no-null": "off",
-      "unicorn/prefer-math-trunc": "off"
+      "unicorn/no-useless-promise-resolve-reject": "off",
+      "unicorn/prefer-math-trunc": "off",
+      "jsdoc/require-param": "off"
     }
   }
 }
