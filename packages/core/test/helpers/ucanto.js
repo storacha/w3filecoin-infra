@@ -15,18 +15,13 @@ const nop = (/** @type {any} */ invCap) => {}
  * @param {(inCap: any) => void} [options.onCall]
  * @param {boolean} [options.mustFail]
  */
-export async function getBrokerServiceServer (serviceProvider, options = {}) {
+export async function getDealerServiceServer (serviceProvider, options = {}) {
   const onCall = options.onCall || nop
 
-  /** @type {import('@web3-storage/capabilities/types').AggregateAddSuccess} */
-  const aggregateAddResponse = {
-    status: 'queued',
-  }
-
   const service = mockService({
-    aggregate: {
+    deal: {
       add: Server.provideAdvanced({
-        capability: FilecoinCapabilities.aggregateAdd,
+        capability: FilecoinCapabilities.dealAdd,
         handler: async ({ invocation, context }) => {
           const invCap = invocation.capabilities[0]
 
@@ -38,13 +33,18 @@ export async function getBrokerServiceServer (serviceProvider, options = {}) {
             return {
               error: new OperationFailed(
                 'failed to add to aggregate',
-                invCap.nb.piece
+                invCap.nb.aggregate
               )
             }
           }
 
+          /** @type {import('@web3-storage/capabilities/types').DealAddSuccess} */
+          const dealAddResponse = {
+            aggregate: invCap.nb.aggregate,
+          }
+
           // Create effect for receipt with self signed queued operation
-          const fx = await FilecoinCapabilities.aggregateAdd
+          const fx = await FilecoinCapabilities.dealAdd
           .invoke({
             issuer: context.id,
             audience: context.id,
@@ -55,7 +55,7 @@ export async function getBrokerServiceServer (serviceProvider, options = {}) {
 
           onCall(invCap)
 
-          return Server.ok(aggregateAddResponse).join(fx.link())
+          return Server.ok(dealAddResponse).join(fx.link())
         }
       })
     }
@@ -78,9 +78,9 @@ export async function getBrokerServiceServer (serviceProvider, options = {}) {
   }
 }
 
-export async function getBrokerServiceCtx () {
+export async function getDealerServiceCtx () {
   const aggregator = await Signer.generate()
-  const broker = await Signer.generate()
+  const dealer = await Signer.generate()
   
   return {
     aggregator: {
@@ -88,10 +88,10 @@ export async function getBrokerServiceCtx () {
       privateKey: Signer.format(aggregator),
       raw: aggregator
     },
-    broker: {
-      did: broker.did(),
-      privateKey: Signer.format(broker),
-      raw: broker
+    dealer: {
+      did: dealer.did(),
+      privateKey: Signer.format(dealer),
+      raw: dealer
     }
   }
 }

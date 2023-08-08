@@ -1,11 +1,12 @@
 import { Aggregate, Piece } from '@web3-storage/data-segment'
-import { Broker } from '@web3-storage/filecoin-client'
+import { Dealer } from '@web3-storage/filecoin-client'
 import { decode as aggregateDecode } from '../data/aggregate.js'
 
 /**
  * @typedef {import('@web3-storage/data-segment').PieceLink} PieceLink
+ * @typedef {import('@web3-storage/data-segment').LegacyPieceLink} LegacyPieceLink
  * @typedef {import('../data/types.js').Buffer<PieceLink>} Buffer
- * @typedef {import('../data/types.js').Aggregate<PieceLink>} Aggregate
+ * @typedef {import('../data/types.js').Aggregate<LegacyPieceLink>} Aggregate
  */
 
 /**
@@ -14,14 +15,14 @@ import { decode as aggregateDecode } from '../data/aggregate.js'
  * @param {import('@web3-storage/filecoin-api/types').Store<Aggregate>} props.aggregateStoreClient
  * @param {string} props.aggregateRecord
  * @param {import('@web3-storage/filecoin-client/types').InvocationConfig} props.invocationConfig
- * @param {import('@ucanto/principal/ed25519').ConnectionView<any>} props.brokerServiceConnection
+ * @param {import('@ucanto/principal/ed25519').ConnectionView<any>} props.dealerServiceConnection
  */
-export async function addAggregate ({
+export async function dealerAdd ({
   bufferStoreClient,
   aggregateStoreClient,
   aggregateRecord,
   invocationConfig,
-  brokerServiceConnection
+  dealerServiceConnection
 }) {
   const bufferRef = await aggregateDecode.message(aggregateRecord)
   const bufferReference = await getAggregateBuffer(bufferRef, bufferStoreClient)
@@ -32,22 +33,17 @@ export async function addAggregate ({
   }
 
   const aggregate = Aggregate.build({
-    pieces: bufferReference.ok.pieces.map(p => ({
-      link: p.piece,
-      // TODO: size should not be needed once encoded, so using random
-      size: Piece.PaddedSize.from(128)
-    })),
+    pieces: bufferReference.ok.pieces.map(p => Piece.fromLink(p.piece)),
   })
 
-  // Add aggregate to broker
-  const add = await Broker.aggregateAdd(
+  // Add aggregate to dealer
+  const add = await Dealer.dealAdd(
     invocationConfig,
-    aggregate.link,
+    aggregate.toInfo().link,
     bufferReference.ok.pieces.map(p => p.piece),
-    {
-      tenantId: bufferReference.ok.storefront,
-    },
-    { connection: brokerServiceConnection }
+    bufferReference.ok.storefront,
+    'label',
+    { connection: dealerServiceConnection }
   )
 
   if (add.out.error) {
@@ -58,7 +54,7 @@ export async function addAggregate ({
 
   // Save aggregate
   const aggregateStored = await aggregateStoreClient.put({
-    piece: aggregate.link,
+    piece: aggregate.toInfo().link,
     buffer: bufferRef.buffer,
     task: add.ran.link(),
     invocation: add.ran.link(),
@@ -79,7 +75,7 @@ export async function addAggregate ({
 }
 
 /**
- * @param {{ piece?: import("@web3-storage/data-segment").PieceLink; buffer: any; invocation?: import("multiformats").UnknownLink | undefined; task?: import("multiformats").UnknownLink | undefined; insertedAt?: number; stat?: import("../data/types.js").AggregateStatus; }} bufferRef
+ * @param {{ piece?: import("@web3-storage/data-segment").LegacyPieceLink; buffer: any; invocation?: import("multiformats").UnknownLink | undefined; task?: import("multiformats").UnknownLink | undefined; insertedAt?: number; stat?: import("../data/types.js").AggregateStatus; }} bufferRef
  * @param {import('@web3-storage/filecoin-api/types').Store<Buffer>} storeClient
  */
 async function getAggregateBuffer (bufferRef, storeClient) {

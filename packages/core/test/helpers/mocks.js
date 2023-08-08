@@ -6,13 +6,13 @@ const notImplemented = () => {
 
 /**
  * @param {Partial<
- * import('@web3-storage/filecoin-client/types').BrokerService
+ * import('@web3-storage/filecoin-client/types').DealerService
  * >} impl
  */
 export function mockService(impl) {
  return {
-   aggregate: {
-     add: withCallCount(impl.aggregate?.add ?? notImplemented),
+   deal: {
+     add: withCallCount(impl.deal?.add ?? notImplemented),
    },
  }
 }

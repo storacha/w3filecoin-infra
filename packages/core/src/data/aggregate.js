@@ -5,8 +5,9 @@ import { parseLink } from '@ucanto/server'
 
 /**
  * @typedef {import('@web3-storage/data-segment').PieceLink} PieceLink
+ * @typedef {import('@web3-storage/data-segment').LegacyPieceLink} LegacyPieceLink
  * @typedef {import('@ucanto/interface').UnknownLink} UnknownLink
- * @typedef {import('./types.js').Aggregate<PieceLink, UnknownLink>} Data
+ * @typedef {import('./types.js').Aggregate<LegacyPieceLink, UnknownLink>} Data
  * @typedef {import('./types.js').Aggregate<string, string>} StoreRecord
  * @typedef {Pick<import('./types.js').Aggregate<string, string>, "piece">} StoreKey
  */

@@ -18,7 +18,7 @@
     "@ucanto/server": "^8.0.0",
     "@ucanto/transport": "^8.0.0",
     "@web3-storage/capabilities": "file://../../../w3up/packages/capabilities",
-    "@web3-storage/data-segment": "^2.2.0",
+    "@web3-storage/data-segment": "file://../../../data-segment",
     "@web3-storage/filecoin-api": "file://../../../w3up/packages/filecoin-api",
     "@web3-storage/filecoin-client": "file://../../../w3up/packages/filecoin-client",
     "multiformats": "12.0.1",

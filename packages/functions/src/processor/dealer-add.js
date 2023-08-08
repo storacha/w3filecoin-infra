@@ -3,12 +3,12 @@ import { Bucket } from 'sst/node/bucket'
 import { Table } from 'sst/node/table'
 import { Config } from 'sst/node/config'
 
-import { getBrokerServiceConnection, getServiceSigner } from '@w3filecoin/core/src/service.js'
+import { getServiceConnection, getServiceSigner } from '@w3filecoin/core/src/service.js'
 import { createTableStoreClient } from '@w3filecoin/core/src/store/table-client.js'
 import { createBucketStoreClient } from '@w3filecoin/core/src/store/bucket-client.js'
 import { encode as bufferEncode, decode as bufferDecode } from '@w3filecoin/core/src/data/buffer.js'
 import { encode as aggregateEncode, decode as aggregateDecode } from '@w3filecoin/core/src/data/aggregate.js'
-import { addAggregate } from '@w3filecoin/core/src/workflow/aggregate-add.js'
+import { dealerAdd } from '@w3filecoin/core/src/workflow/dealer-add.js'
 
 import { mustGetEnv } from '../utils.js'
 
@@ -21,11 +21,11 @@ Sentry.AWSLambda.init({
 /**
  * Get EventRecord from the SQS Event triggering the handler.
  * The event contains a batch of `aggregate`(s) provided from `buffer-queue`. These
- * aggregates should be stored and added to the broker.
+ * aggregates should be stored and added to the dealer.
  *
  * @param {import('aws-lambda').SQSEvent} sqsEvent
  */
-async function aggregateAddWorkflow (sqsEvent) {
+async function dealerAddWorkflow (sqsEvent) {
   if (sqsEvent.Records.length !== 1) {
     return {
       statusCode: 400,
@@ -34,19 +34,19 @@ async function aggregateAddWorkflow (sqsEvent) {
   }
 
   const { bufferStoreClient, aggregateStoreClient } = getProps()
-  const { did, brokerDid, brokerUrl } = getEnv()
+  const { did, dealerDid, dealerUrl } = getEnv()
   const { PRIVATE_KEY: privateKey } = Config
   const aggregateRecord = sqsEvent.Records[0].body
 
-  const brokerServiceConnection = getBrokerServiceConnection({
-    did: brokerDid,
-    url: brokerUrl
+  const dealerServiceConnection = getServiceConnection({
+    did: dealerDid,
+    url: dealerUrl
   })
   const issuer = getServiceSigner({
     did,
     privateKey
   })
-  const audience = brokerServiceConnection.id
+  const audience = dealerServiceConnection.id
   /** @type {import('@web3-storage/filecoin-client/types').InvocationConfig} */
   const invocationConfig = {
     issuer,
@@ -54,18 +54,17 @@ async function aggregateAddWorkflow (sqsEvent) {
     with: issuer.did(),
   }
 
-  const { ok, error } = await addAggregate({
+  const { ok, error } = await dealerAdd({
     bufferStoreClient,
     aggregateStoreClient,
     aggregateRecord,
-    brokerServiceConnection,
+    dealerServiceConnection,
     invocationConfig
   })
 
   if (error) {
     return {
       statusCode: 500,
-      // @ts-expect-error ucanto invocation may have {} error type
       body: error.message || 'failed to add aggregate'
     }
   }
@@ -111,9 +110,9 @@ function getEnv () {
     aggregateStoreTableName: Table['aggregate-store'],
     aggregateStoreTableRegion: mustGetEnv('AWS_REGION'),
     did: mustGetEnv('DID'),
-    brokerDid: mustGetEnv('BROKER_DID'),
-    brokerUrl: mustGetEnv('BROKER_URL'),
+    dealerDid: mustGetEnv('DEALER_DID'),
+    dealerUrl: mustGetEnv('DEALER_URL'),
   }
 }
 
-export const workflow = Sentry.AWSLambda.wrapHandler(aggregateAddWorkflow)
+export const workflow = Sentry.AWSLambda.wrapHandler(dealerAddWorkflow)

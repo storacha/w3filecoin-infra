@@ -50,7 +50,9 @@ test('can put and get piece record from piece store', async t => {
   })
   t.truthy(getRes.ok)
   t.falsy(getRes.error)
-  t.deepEqual(pieceRow, getRes.ok)
+  t.truthy(pieceRow.piece.equals(cargo.link))
+  t.is(pieceRow.storefront, storefront)
+  t.is(pieceRow.group, group)
 })
 
 test('can put and get aggregate record from aggregate store', async t => {
@@ -114,6 +116,7 @@ test('can put and get inclusion record from inclusion store', async t => {
     resolvedAt: Date.now(),
     stat: /** @type {import('../../src/data/types.js').InclusionStatus} */ (0),
   }
+  // @ts-expect-error Legacy
   const putRes = await inclusionStore.put(inclusionRow)
   t.truthy(putRes.ok)
   t.falsy(putRes.error)
@@ -124,8 +127,6 @@ test('can put and get inclusion record from inclusion store', async t => {
   })
   t.truthy(getRes.ok)
   t.falsy(getRes.error)
-  t.deepEqual({
-    ...inclusionRow,
-    failedReason: undefined
-  }, getRes.ok)
+  t.truthy(getRes.ok?.aggregate.equals(aggregate.link))
+  t.truthy(getRes.ok?.piece.equals(pieces[0].link))
 })

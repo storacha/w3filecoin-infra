@@ -107,8 +107,10 @@ export function getEnv() {
   return {
     SENTRY_DSN: mustGetEnv('SENTRY_DSN'),
     DID: mustGetEnv('DID'),
-    BROKER_DID: mustGetEnv('BROKER_DID'),
-    BROKER_URL: mustGetEnv('BROKER_URL'),
+    DEALER_DID: mustGetEnv('DEALER_DID'),
+    DEALER_URL: mustGetEnv('DEALER_URL'),
+    MAX_AGGREGATE_SIZE: process.env.MAX_AGGREGATE_SIZE || String(2**35),
+    MIN_AGGREGATE_SIZE: process.env.MIN_AGGREGATE_SIZE || String(2**34),
   }
 }
 

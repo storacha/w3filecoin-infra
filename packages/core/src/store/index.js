@@ -44,6 +44,8 @@ export const aggregateStoreTableProps = {
     invocation: 'string',   // `bafy...inv` as CID of `aggregate/add` invocation
     task: 'string',         // `bafy...task` as CID of `aggregate/add` task
     stat: 'number',         // `0` as 'OFFERED' | `1` as 'APPROVED' | `2` as 'REJECTED'
+    storefront: 'string',   // `did:web:web3.storage`
+    group: 'string',        // `did:web:free.web3.storage`
     insertedAt: 'number',   // `1690464180271` as number of milliseconds elapsed since the epoch
   },
   // piece must be unique to satisfy index constraint

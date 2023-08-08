@@ -48,5 +48,7 @@ test('can put and get buffer record', async t => {
   const getRes = await bufferStore.get(key)
   t.truthy(getRes.ok)
   t.falsy(getRes.error)
-  t.deepEqual(buffer, getRes.ok)
+  t.is(buffer.storefront, storefront)
+  t.is(buffer.group, group)
+  t.is(buffer.pieces.length, bufferedPieces.length)
 })

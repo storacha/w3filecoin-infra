@@ -1,4 +1,4 @@
-import { PieceLink } from '@web3-storage/data-segment'
+import { PieceLink, LegacyPieceLink } from '@web3-storage/data-segment'
 import { UnknownLink } from '@ucanto/interface'
 
 // Data Structures
@@ -24,7 +24,7 @@ export type BufferedPiece <Piece = PieceLink> = {
   policy: PiecePolicy
 }
 
-export type Aggregate <Piece = PieceLink, Link = UnknownLink> = {
+export type Aggregate <Piece = LegacyPieceLink, Link = UnknownLink> = {
   // PieceCid of an Aggregate `bagy...aggregate`
   piece: Piece
   // CID of dag-cbor block `bafy...cbor`

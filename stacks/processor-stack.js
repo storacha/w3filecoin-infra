@@ -12,7 +12,13 @@ import {
  * @param {import('sst/constructs').StackContext} properties
  */
 export function ProcessorStack({ stack, app }) {
-  const { DID, BROKER_DID, BROKER_URL } = getEnv()
+  const {
+    DID,
+    DEALER_DID,
+    DEALER_URL,
+    MAX_AGGREGATE_SIZE,
+    MIN_AGGREGATE_SIZE,
+  } = getEnv()
   // Setup app monitoring with Sentry
   // setupSentry(app, stack)
   // TODO: enable
@@ -112,7 +118,9 @@ export function ProcessorStack({ stack, app }) {
         BUFFER_QUEUE_URL: bufferQueue.queueUrl,
         BUFFER_QUEUE_REGION: stack.region,
         AGGREGATE_QUEUE_URL: aggregateQueue.queueUrl,
-        AGGREGATE_QUEUE_REGION: stack.region
+        AGGREGATE_QUEUE_REGION: stack.region,
+        MAX_AGGREGATE_SIZE,
+        MIN_AGGREGATE_SIZE,
       }
     },
     cdk: {
@@ -125,24 +133,24 @@ export function ProcessorStack({ stack, app }) {
   })
 
   /**
-   * Handle queued aggregates to be added to broker
+   * Handle queued aggregates to be sent to dealer
    */
   aggregateQueue.addConsumer(stack, {
     function: {
-      handler: 'packages/functions/src/processor/aggregate-add.workflow',
+      handler: 'packages/functions/src/processor/dealer-add.workflow',
       bind: [
         bufferStoreBucket,
         aggregateStoreTable
       ],
       environment: {
         DID,
-        BROKER_DID,
-        BROKER_URL,
+        DEALER_DID,
+        DEALER_URL
       }
     },
     cdk: {
       eventSource: {
-        // as soon as we have one, we should add it to broker for deal
+        // as soon as we have one, we should add it to the dealer
         batchSize: 1,
         maxBatchingWindow: Duration.minutes(5)
       },

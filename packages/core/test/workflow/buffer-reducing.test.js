@@ -1,4 +1,4 @@
-import { tesWorkflow as test } from '../helpers/context.js'
+import { tesWorkflowWithMultipleQueues as test } from '../helpers/context.js'
 import { createS3, createBucket, createQueue } from '../helpers/resources.js'
 import { randomCargo } from '../helpers/cargo.js'
 
@@ -16,45 +16,61 @@ import { createQueueClient } from '../../src/queue/client.js'
 import { reduceBuffer } from '../../src/workflow/buffer-reducing.js'
 
 /**
+ * @typedef {import('../helpers/context.js').QueueContext} QueueContext
  * @typedef {import('../../src/data/types.js').PiecePolicy} PiecePolicy
  */
 
 test.beforeEach(async (t) => {
-  const sqs = await createQueue()
+  await delay(1000)
+  const queueNames = ['buffer', 'aggregate']
+  /** @type {Record<string, QueueContext>} */
+  const queues = {}
 
-  /** @type {import('@aws-sdk/client-sqs').Message[]} */
-  const queuedMessages = []
-  const queueConsumer = Consumer.create({
-    queueUrl: sqs.queueUrl,
-    sqs: sqs.client,
-    handleMessage: (message) => {
-      queuedMessages.push(message)
-      return Promise.resolve()
+  for (const name of queueNames) {
+    const sqs = await createQueue()
+
+    /** @type {import('@aws-sdk/client-sqs').Message[]} */
+    const queuedMessages = []
+    const queueConsumer = Consumer.create({
+      queueUrl: sqs.queueUrl,
+      sqs: sqs.client,
+      handleMessage: (message) => {
+        queuedMessages.push(message)
+        return Promise.resolve()
+      }
+    })
+
+    queues[name] = {
+      sqsClient: sqs.client,
+      queueName: sqs.queueName,
+      queueUrl: sqs.queueUrl,
+      queueConsumer,
+      queuedMessages
     }
-  })
+  }
 
   Object.assign(t.context, {
     s3: (await createS3()).client,
-    sqsClient: sqs.client,
-    queueName: sqs.queueName,
-    queueUrl: sqs.queueUrl,
-    queueConsumer,
-    queuedMessages
+    queues
   })
 })
 
 test.beforeEach(async t => {
-  t.context.queueConsumer.start()
-  await pWaitFor(() => t.context.queueConsumer.isRunning)
+  for (const [_, q] of Object.entries(t.context.queues)) {
+    q.queueConsumer.start()
+    await pWaitFor(() => q.queueConsumer.isRunning)
+  }
 })
 
 test.afterEach(async t => {
-  t.context.queueConsumer.stop()
-  await delay(1000)
+  for (const [_, q] of Object.entries(t.context.queues)) {
+    q.queueConsumer.stop()
+    await delay(1000)
+  }
 })
 
 test('can reduce received buffers', async t => {
-  const { s3, sqsClient, queueUrl, queuedMessages } = t.context
+  const { s3, queues } = t.context
 
   const bucketName = await createBucket(s3)
   const { buffers, bufferRecords } = await getBuffers(2)
@@ -64,12 +80,12 @@ test('can reduce received buffers', async t => {
     encodeRecord: bufferEncode.storeRecord,
     decodeRecord: bufferDecode.storeRecord,
   })
-  const bufferQueueClient = createQueueClient(sqsClient, {
-    queueUrl,
+  const bufferQueueClient = createQueueClient(queues['buffer'].sqsClient, {
+    queueUrl: queues['buffer'].queueUrl,
     encodeMessage: bufferEncode.message,
   })
-  const aggregateQueueClient = createQueueClient(sqsClient, {
-    queueUrl,
+  const aggregateQueueClient = createQueueClient(queues['aggregate'].sqsClient, {
+    queueUrl: queues['aggregate'].queueUrl,
     encodeMessage: aggregateEncode.message,
   })
 
@@ -82,28 +98,29 @@ test('can reduce received buffers', async t => {
     storeClient,
     bufferQueueClient,
     aggregateQueueClient,
-    bufferRecords
+    bufferRecords,
+    minAggregateSize: 128 * 10,
+    maxAggregateSize: 2 ** 35
   })
 
-  t.truthy(reduceBufferResp.ok)
   t.falsy(reduceBufferResp.error)
-  t.is(reduceBufferResp.ok, buffers.length)
+  t.is(reduceBufferResp.ok, 0)
 
   // Validate message received to queue
-  await pWaitFor(() => queuedMessages.length === 1)
+  await pWaitFor(() => queues['buffer'].queuedMessages.length === 1)
 
-  const aggregateRef = await aggregateDecode.message(queuedMessages[0].Body || '')
+  const aggregateRef = await aggregateDecode.message(queues['buffer'].queuedMessages[0].Body || '')
   const getBufferRes = await storeClient.get(
     `${aggregateRef.buffer}/${aggregateRef.buffer}`
   )
-  t.truthy(getBufferRes.ok)
-  t.falsy(getBufferRes.error)
+  t.falsy(getBufferRes.ok)
+  t.truthy(getBufferRes.error)
 })
 
 // TODO: merge and remaining
 
 test('fails reducing received buffers if fails to read them from store', async t => {
-  const { s3, sqsClient, queueUrl } = t.context
+  const { s3, queues } = t.context
 
   const bucketName = await createBucket(s3)
   const { buffers, bufferRecords } = await getBuffers(2)
@@ -113,12 +130,12 @@ test('fails reducing received buffers if fails to read them from store', async t
     encodeRecord: bufferEncode.storeRecord,
     decodeRecord: bufferDecode.storeRecord,
   })
-  const bufferQueueClient = createQueueClient(sqsClient, {
-    queueUrl,
+  const bufferQueueClient = createQueueClient(queues['buffer'].sqsClient, {
+    queueUrl: queues['buffer'].queueUrl,
     encodeMessage: bufferEncode.message,
   })
-  const aggregateQueueClient = createQueueClient(sqsClient, {
-    queueUrl,
+  const aggregateQueueClient = createQueueClient(queues['aggregate'].sqsClient, {
+    queueUrl: queues['aggregate'].queueUrl,
     encodeMessage: aggregateEncode.message,
   })
 
@@ -129,7 +146,9 @@ test('fails reducing received buffers if fails to read them from store', async t
     storeClient,
     bufferQueueClient,
     aggregateQueueClient,
-    bufferRecords
+    bufferRecords,
+    minAggregateSize: 128 * 10,
+    maxAggregateSize: 2 ** 35
   })
 
   t.falsy(reduceBufferResp.ok)
@@ -137,8 +156,8 @@ test('fails reducing received buffers if fails to read them from store', async t
   t.is(reduceBufferResp.error?.name, StoreOperationErrorName)
 })
 
-test('fails reducing received buffers if fails to queue aggregate', async t => {
-  const { s3, sqsClient, queueUrl } = t.context
+test('fails reducing received buffers if fails to queue buffer', async t => {
+  const { s3, queues } = t.context
 
   const bucketName = await createBucket(s3)
   const { buffers, bufferRecords } = await getBuffers(2)
@@ -148,14 +167,17 @@ test('fails reducing received buffers if fails to queue aggregate', async t => {
     encodeRecord: bufferEncode.storeRecord,
     decodeRecord: bufferDecode.storeRecord,
   })
-  const bufferQueueClient = createQueueClient(sqsClient, {
-    queueUrl,
-    encodeMessage: bufferEncode.message,
-  })
-  const aggregateQueueClient = {
+  const bufferQueueClient = {
     add: () => {
       return {
         error: new QueueOperationFailed('could not queue buffer')
+      }
+    }
+  }
+  const aggregateQueueClient = {
+    add: () => {
+      return {
+        error: new QueueOperationFailed('could not queue aggregate')
       }
     }
   }
@@ -167,10 +189,13 @@ test('fails reducing received buffers if fails to queue aggregate', async t => {
 
   const reduceBufferResp = await reduceBuffer({
     storeClient,
+    // @ts-expect-error adapted queue
     bufferQueueClient,
     // @ts-expect-error adapted queue
     aggregateQueueClient,
-    bufferRecords
+    bufferRecords,
+    minAggregateSize: 128 * 10,
+    maxAggregateSize: 2 ** 35
   })
 
   t.falsy(reduceBufferResp.ok)

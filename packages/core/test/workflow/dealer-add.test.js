@@ -6,7 +6,7 @@ import {
   createTable
 } from '../helpers/resources.js'
 import { randomAggregate } from '../helpers/cargo.js'
-import { getBrokerServiceServer, getBrokerServiceCtx } from '../helpers/ucanto.js'
+import { getDealerServiceServer, getDealerServiceCtx } from '../helpers/ucanto.js'
 import { OperationErrorName } from '../helpers/errors.js'
 
 import { StoreOperationErrorName } from '@web3-storage/filecoin-api/errors'
@@ -19,7 +19,7 @@ import { createTableStoreClient } from '../../src/store/table-client.js'
 import { createBucketStoreClient } from '../../src/store/bucket-client.js'
 import { aggregateStoreTableProps } from '../../src/store/index.js'
 
-import { addAggregate } from '../../src/workflow/aggregate-add.js'
+import { dealerAdd } from '../../src/workflow/dealer-add.js'
 
 /**
  * @typedef {import('../../src/data/types.js').PiecePolicy} PiecePolicy
@@ -44,26 +44,26 @@ test('can add produced aggregate', async t => {
   // Store buffer used for aggregate
   await bufferStoreClient.put(buffer)
 
-  const aggregateAddCall = pDefer()
-  const { invocationConfig, brokerService } = await getService({
-    onCall: aggregateAddCall
+  const dealAddCall = pDefer()
+  const { invocationConfig, dealerService } = await getService({
+    onCall: dealAddCall
   })
-  const addAggregateResp = await addAggregate({
+  const dealerAddResp = await dealerAdd({
     bufferStoreClient,
     aggregateStoreClient,
     aggregateRecord: await aggregateEncode.message(aggregateRecord),
     invocationConfig,
-    brokerServiceConnection: brokerService.connection
+    dealerServiceConnection: dealerService.connection
   })
 
-  t.truthy(addAggregateResp.ok)
-  t.falsy(addAggregateResp.error)
-  t.is(addAggregateResp.ok, 1)
+  t.truthy(dealerAddResp.ok)
+  t.falsy(dealerAddResp.error)
+  t.is(dealerAddResp.ok, 1)
 
   // Validate ucanto server call
-  t.is(brokerService.service.aggregate.add.callCount, 1)
-  const invCap = await aggregateAddCall.promise
-  t.is(invCap.can, 'aggregate/add')
+  t.is(dealerService.service.deal.add.callCount, 1)
+  const invCap = await dealAddCall.promise
+  t.is(invCap.can, 'deal/add')
 
   // TODO: validate CID of piece invCap.nb.piece
   // TODO: validate deal content invCap.nb.deal
@@ -77,28 +77,27 @@ test('fails adding aggregate if fails to read from store', async t => {
     aggregateStoreClient
   } = await getContext(t.context)
 
-  const aggregateAddCall = pDefer()
-  const { invocationConfig, brokerService } = await getService({
-    onCall: aggregateAddCall
+  const dealAddCall = pDefer()
+  const { invocationConfig, dealerService } = await getService({
+    onCall: dealAddCall
   })
-  const addAggregateResp = await addAggregate({
+  const dealerAddResp = await dealerAdd({
     bufferStoreClient,
     aggregateStoreClient,
     aggregateRecord: await aggregateEncode.message(aggregateRecord),
     invocationConfig,
-    brokerServiceConnection: brokerService.connection
+    dealerServiceConnection: dealerService.connection
   })
 
-  t.falsy(addAggregateResp.ok)
-  t.truthy(addAggregateResp.error)
-  // @ts-expect-error {} can be type of ucanto error
-  t.is(addAggregateResp.error?.name, StoreOperationErrorName)
+  t.falsy(dealerAddResp.ok)
+  t.truthy(dealerAddResp.error)
+  t.is(dealerAddResp.error?.name, StoreOperationErrorName)
 
   // Validate ucanto server call
-  t.is(brokerService.service.aggregate.add.callCount, 0)
+  t.is(dealerService.service.deal.add.callCount, 0)
 })
 
-test('fails adding aggregate if fails to offer to broker', async t => {
+test('fails adding aggregate if fails to add to dealer', async t => {
   const {
     aggregateRecord,
     bufferStoreClient,
@@ -109,26 +108,25 @@ test('fails adding aggregate if fails to offer to broker', async t => {
   // Store buffer used for aggregate
   await bufferStoreClient.put(buffer)
 
-  const aggregateAddCall = pDefer()
-  const { invocationConfig, brokerService } = await getService({
-    onCall: aggregateAddCall,
+  const dealAddCall = pDefer()
+  const { invocationConfig, dealerService } = await getService({
+    onCall: dealAddCall,
     mustFail: true
   })
-  const addAggregateResp = await addAggregate({
+  const dealerAddResp = await dealerAdd({
     bufferStoreClient,
     aggregateStoreClient,
     aggregateRecord: await aggregateEncode.message(aggregateRecord),
     invocationConfig,
-    brokerServiceConnection: brokerService.connection
+    dealerServiceConnection: dealerService.connection
   })
 
-  t.falsy(addAggregateResp.ok)
-  t.truthy(addAggregateResp.error)
-  // @ts-expect-error {} can be type of ucanto error
-  t.is(addAggregateResp.error?.name, OperationErrorName)
+  t.falsy(dealerAddResp.ok)
+  t.truthy(dealerAddResp.error)
+  t.is(dealerAddResp.error?.name, OperationErrorName)
 
   // Validate ucanto server call
-  t.is(brokerService.service.aggregate.add.callCount, 1)
+  t.is(dealerService.service.deal.add.callCount, 1)
 })
 
 /**
@@ -177,15 +175,15 @@ async function getContext (context) {
  * @param {boolean} [options.mustFail]
  */
 async function getService (options) {
-  const { broker, aggregator } = await getBrokerServiceCtx()
-  const brokerService = await getBrokerServiceServer(broker.raw, {
+  const { dealer, aggregator } = await getDealerServiceCtx()
+  const dealerService = await getDealerServiceServer(dealer.raw, {
     onCall: (invCap) => {
       options.onCall.resolve(invCap)
     },
     mustFail: options.mustFail
   })
   const issuer = getServiceSigner(aggregator)
-  const audience = brokerService.connection.id
+  const audience = dealerService.connection.id
   /** @type {import('@web3-storage/filecoin-client/types').InvocationConfig} */
   const invocationConfig = {
     issuer,
@@ -195,7 +193,7 @@ async function getService (options) {
 
   return {
     invocationConfig,
-    brokerService
+    dealerService
   }
 }
 

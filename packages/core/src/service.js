@@ -42,18 +42,18 @@ export const createUcantoServer = (servicePrincipal, context, errorReporter) =>
  * @param {{ did: string, url: string }} config 
  * @returns 
  */
-export function getBrokerServiceConnection (config) {
-  const aggregationServicePrincipal = DID.parse(config.did) // 'did:web:spade.web3.storage'
-  const aggregationServiceURL = new URL(config.url) // 'https://spade-proxy.web3.storage'
+export function getServiceConnection (config) {
+  const servicePrincipal = DID.parse(config.did) // 'did:web:spade.web3.storage'
+  const serviceURL = new URL(config.url) // 'https://spade-proxy.web3.storage'
 
-  const aggregationServiceConnection = connect({
-    id: aggregationServicePrincipal,
+  const serviceConnection = connect({
+    id: servicePrincipal,
     codec: CAR.outbound,
     channel: HTTP.open({
-      url: aggregationServiceURL,
+      url: serviceURL,
       method: 'POST',
     }),
   })
 
-  return aggregationServiceConnection
+  return serviceConnection
 }

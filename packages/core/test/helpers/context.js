@@ -15,11 +15,15 @@ import anyTest from 'ava'
  * @typedef {object} BucketContext
  * @property {import('@aws-sdk/client-s3').S3Client} s3
  * 
+ * @typedef {object} MultipleQueueContext
+ * @property {Record<string, QueueContext>} queues
+ * 
  * @typedef {import('ava').TestFn<any>} Test
  * @typedef {import('ava').TestFn<QueueContext & DbContext>} TestService
  * @typedef {import('ava').TestFn<BucketContext & DbContext>} TestStore
  * @typedef {import('ava').TestFn<QueueContext>} TestQueue
  * @typedef {import('ava').TestFn<BucketContext & DbContext & QueueContext>} TestWorkflow
+ * @typedef {import('ava').TestFn<BucketContext & DbContext & MultipleQueueContext>} TestWorkflowWithMultipleQueues
  */
 
 // eslint-disable-next-line unicorn/prefer-export-from
@@ -36,3 +40,6 @@ export const testService = /** @type {TestService} */ (anyTest)
 
 // eslint-disable-next-line unicorn/prefer-export-from
 export const tesWorkflow = /** @type {TestWorkflow} */ (anyTest)
+
+// eslint-disable-next-line unicorn/prefer-export-from
+export const tesWorkflowWithMultipleQueues = /** @type {TestWorkflowWithMultipleQueues} */ (anyTest)

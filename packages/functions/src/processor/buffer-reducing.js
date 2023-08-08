@@ -46,6 +46,8 @@ async function bufferReducingWorkflow (sqsEvent) {
   }
 
   const { storeClient, bufferQueueClient, aggregateQueueClient } = getProps()
+  const { maxAggregateSize, minAggregateSize } = getEnv()
+
   const bufferRecords = sqsEvent.Records.map(r => r.body)
   const groupId = sqsEvent.Records[0].attributes.MessageGroupId
   // TODO: confirm group ID uniqueness
@@ -55,6 +57,8 @@ async function bufferReducingWorkflow (sqsEvent) {
     bufferQueueClient,
     aggregateQueueClient,
     bufferRecords,
+    maxAggregateSize,
+    minAggregateSize,
     groupId
   })
 
@@ -110,7 +114,9 @@ function getEnv () {
     bufferQueueUrl: mustGetEnv('BUFFER_QUEUE_URL'),
     bufferQueueRegion: mustGetEnv('BUFFER_QUEUE_REGION'),
     aggregateQueueUrl: mustGetEnv('AGGREGATE_QUEUE_URL'),
-    aggregateQueueRegion: mustGetEnv('AGGREGATE_QUEUE_REGION')
+    aggregateQueueRegion: mustGetEnv('AGGREGATE_QUEUE_REGION'),
+    maxAggregateSize: Number.parseInt(mustGetEnv('MAX_AGGREGATE_SIZE')),
+    minAggregateSize: Number.parseInt(mustGetEnv('MIN_AGGREGATE_SIZE')),
   }
 }
 
