@@ -30,22 +30,13 @@ export function ProcessorStack({ stack, app }) {
     aggregateStoreTable
   } = use(DataStack)
 
-  // TODO: Events from piece table to piece-queue
+  // TODO: Events from piece table to piece-queue need to be propagated
 
   /**
    * 1st processor queue - piece buffering workflow
    */
   const pieceQueueName = getResourceName('piece-queue', stack.stage)
-  const pieceQueue = new Queue(stack, pieceQueueName, {
-    cdk: {
-      queue: {
-        // During the deduplication interval (5 minutes), Amazon SQS treats
-        // messages that are sent with identical body content
-        contentBasedDeduplication: true,
-        queueName: `${pieceQueueName}.fifo`
-      }
-    }
-  })
+  const pieceQueue = new Queue(stack, pieceQueueName)
 
   /**
    * 2nd processor queue - buffer reducing workflow

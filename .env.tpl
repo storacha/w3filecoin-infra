@@ -13,9 +13,9 @@ DID=""
 # just for a local test
 PRIVATE_KEY=""
 
-# Aggregation service
-BROKER_DID=""
-BROKER_URL=""
+# Dealer service
+DEALER_DID=""
+DEALER_URL=""
 
 # Ucan log
 UCAN_LOG_URL=""

@@ -52,7 +52,7 @@ export function ApiStack({ app, stack }) {
       'GET /':        'packages/functions/src/api/get.home',
       'GET /error':   'packages/functions/src/api/get.error',
       'GET /version': 'packages/functions/src/api/get.version',
-      'POST /':       'functions/ucan-invocation-router.handler',
+      'POST /':       'packages/functions/src/api/ucan-invocation-router.handler',
     },
   })
 
