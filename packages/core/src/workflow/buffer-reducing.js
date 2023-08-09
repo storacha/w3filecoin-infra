@@ -157,7 +157,11 @@ async function handleBufferReducingWithAggregate ({
     }
   }
 
-  // Store remaining buffered pieces to reduce
+  // Store remaining buffered pieces to reduce if they exist
+  if (!aggregateInfo.remainingBufferedPieces.length) {
+    return { ok: {} }
+  }
+
   const remainingReducedBuffer = {
     pieces: aggregateInfo.remainingBufferedPieces,
     storefront,
@@ -269,7 +273,7 @@ function aggregatePieces (bufferedPieces, sizes) {
   const totalUsedSpace = builder.offset * BigInt(NODE_SIZE) + BigInt(builder.limit) * BigInt(Index.EntrySize) 
 
   // If not enough space return undefined
-  if (totalUsedSpace > BigInt(sizes.minAggregateSize)) {
+  if (totalUsedSpace < BigInt(sizes.minAggregateSize)) {
     return
   }
 
@@ -307,10 +311,10 @@ async function getBufferedPieces (bufferRecords, storeClient) {
 
   // Concatenate pieces and sort them by policy and size
   /** @type {BufferedPiece[]} */
-  const bufferedPieces = []
+  let bufferedPieces = []
   for (const b of bufferReferences) {
     // eslint-disable-next-line unicorn/prefer-spread
-    bufferedPieces.concat(b.ok?.pieces || [])
+    bufferedPieces = bufferedPieces.concat(b.ok?.pieces || [])
   }
   bufferedPieces.sort(sortPieces)
 

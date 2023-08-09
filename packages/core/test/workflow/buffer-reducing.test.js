@@ -56,20 +56,20 @@ test.beforeEach(async (t) => {
 })
 
 test.beforeEach(async t => {
-  for (const [_, q] of Object.entries(t.context.queues)) {
+  for (const [, q] of Object.entries(t.context.queues)) {
     q.queueConsumer.start()
     await pWaitFor(() => q.queueConsumer.isRunning)
   }
 })
 
 test.afterEach(async t => {
-  for (const [_, q] of Object.entries(t.context.queues)) {
+  for (const [, q] of Object.entries(t.context.queues)) {
     q.queueConsumer.stop()
     await delay(1000)
   }
 })
 
-test('can reduce received buffers', async t => {
+test('can reduce received buffers without creating an aggregate if not enough size', async t => {
   const { s3, queues } = t.context
 
   const bucketName = await createBucket(s3)
@@ -80,12 +80,12 @@ test('can reduce received buffers', async t => {
     encodeRecord: bufferEncode.storeRecord,
     decodeRecord: bufferDecode.storeRecord,
   })
-  const bufferQueueClient = createQueueClient(queues['buffer'].sqsClient, {
-    queueUrl: queues['buffer'].queueUrl,
+  const bufferQueueClient = createQueueClient(queues.buffer.sqsClient, {
+    queueUrl: queues.buffer.queueUrl,
     encodeMessage: bufferEncode.message,
   })
-  const aggregateQueueClient = createQueueClient(queues['aggregate'].sqsClient, {
-    queueUrl: queues['aggregate'].queueUrl,
+  const aggregateQueueClient = createQueueClient(queues.aggregate.sqsClient, {
+    queueUrl: queues.aggregate.queueUrl,
     encodeMessage: aggregateEncode.message,
   })
 
@@ -99,7 +99,7 @@ test('can reduce received buffers', async t => {
     bufferQueueClient,
     aggregateQueueClient,
     bufferRecords,
-    minAggregateSize: 128 * 10,
+    minAggregateSize: 2 ** 34,
     maxAggregateSize: 2 ** 35
   })
 
@@ -107,14 +107,139 @@ test('can reduce received buffers', async t => {
   t.is(reduceBufferResp.ok, 0)
 
   // Validate message received to queue
-  await pWaitFor(() => queues['buffer'].queuedMessages.length === 1)
+  await pWaitFor(() => queues.buffer.queuedMessages.length === 1)
 
-  const aggregateRef = await aggregateDecode.message(queues['buffer'].queuedMessages[0].Body || '')
+  // New buffer exists
+  const bufferRef = await bufferDecode.message(queues.buffer.queuedMessages[0].Body || '')
+  const getBufferRes = await storeClient.get(
+    `${bufferRef.cid}/${bufferRef.cid}`
+  )
+  t.truthy(getBufferRes.ok)
+  t.falsy(getBufferRes.error)
+})
+
+test('can reduce received buffers by creating an aggregate and remaining buffer', async t => {
+  const { s3, queues } = t.context
+
+  const bucketName = await createBucket(s3)
+  const { buffers, bufferRecords } = await getBuffers(2, {
+    length: 100,
+    size: 128
+  })
+
+  const storeClient = createBucketStoreClient(s3, {
+    name: bucketName,
+    encodeRecord: bufferEncode.storeRecord,
+    decodeRecord: bufferDecode.storeRecord,
+  })
+  const bufferQueueClient = createQueueClient(queues.buffer.sqsClient, {
+    queueUrl: queues.buffer.queueUrl,
+    encodeMessage: bufferEncode.message,
+  })
+  const aggregateQueueClient = createQueueClient(queues.aggregate.sqsClient, {
+    queueUrl: queues.aggregate.queueUrl,
+    encodeMessage: aggregateEncode.message,
+  })
+
+  // Store both buffers in store
+  await Promise.all(
+    buffers.map(b => storeClient.put(b))
+  )
+
+  const reduceBufferResp = await reduceBuffer({
+    storeClient,
+    bufferQueueClient,
+    aggregateQueueClient,
+    bufferRecords,
+    minAggregateSize: 2 ** 13,
+    maxAggregateSize: 2 ** 22
+  })
+
+  t.falsy(reduceBufferResp.error)
+
+  // Validate message received to both queues
+  await pWaitFor(() => queues.aggregate.queuedMessages.length === 1)
+  await pWaitFor(() => queues.buffer.queuedMessages.length === 1)
+
+  // Validate buffer exists
+  const bufferRef = await bufferDecode.message(queues.buffer.queuedMessages[0].Body || '')
+  const getBufferRes = await storeClient.get(
+    `${bufferRef.cid}/${bufferRef.cid}`
+  )
+  t.truthy(getBufferRes.ok)
+  t.falsy(getBufferRes.error)
+
+  // Validate aggregate reference for buffer exists
+  const aggregateRef = await aggregateDecode.message(queues.aggregate.queuedMessages[0].Body || '')
+  const getBufferForAggregateRes = await storeClient.get(
+    `${aggregateRef.buffer}/${aggregateRef.buffer}`
+  )
+  t.truthy(getBufferForAggregateRes.ok)
+  t.falsy(getBufferForAggregateRes.error)
+
+  // Returns total number of pieces added to aggregate
+  t.is(reduceBufferResp.ok, getBufferForAggregateRes.ok?.pieces.length)
+
+  // Validate sum of pieces for aggregate + new buffer are total
+  t.is(
+    (getBufferRes.ok?.pieces.length || 0) + (getBufferForAggregateRes.ok?.pieces.length || 0),
+    buffers.reduce((acc, b) => acc + b.pieces.length, 0)
+  )
+})
+
+test('can reduce received buffers by creating an aggregate without remaining buffer', async t => {
+  const { s3, queues } = t.context
+
+  const bucketName = await createBucket(s3)
+  const { buffers, bufferRecords } = await getBuffers(2, {
+    length: 100,
+    size: 128
+  })
+
+  const storeClient = createBucketStoreClient(s3, {
+    name: bucketName,
+    encodeRecord: bufferEncode.storeRecord,
+    decodeRecord: bufferDecode.storeRecord,
+  })
+  const bufferQueueClient = createQueueClient(queues.buffer.sqsClient, {
+    queueUrl: queues.buffer.queueUrl,
+    encodeMessage: bufferEncode.message,
+  })
+  const aggregateQueueClient = createQueueClient(queues.aggregate.sqsClient, {
+    queueUrl: queues.aggregate.queueUrl,
+    encodeMessage: aggregateEncode.message,
+  })
+
+  // Store both buffers in store
+  await Promise.all(
+    buffers.map(b => storeClient.put(b))
+  )
+
+  const reduceBufferResp = await reduceBuffer({
+    storeClient,
+    bufferQueueClient,
+    aggregateQueueClient,
+    bufferRecords,
+    minAggregateSize: 2 ** 19,
+    maxAggregateSize: 2 ** 35
+  })
+  
+  t.falsy(reduceBufferResp.error)
+
+  // Validate message received to both queues
+  await pWaitFor(() => queues.aggregate.queuedMessages.length === 1)
+  await pWaitFor(() => queues.buffer.queuedMessages.length === 0)
+
+  // Validate aggregate reference for buffer exists
+  const aggregateRef = await aggregateDecode.message(queues.aggregate.queuedMessages[0].Body || '')
   const getBufferRes = await storeClient.get(
     `${aggregateRef.buffer}/${aggregateRef.buffer}`
   )
-  t.falsy(getBufferRes.ok)
-  t.truthy(getBufferRes.error)
+  t.truthy(getBufferRes.ok)
+  t.falsy(getBufferRes.error)
+
+  // Returns total number of pieces added to aggregate
+  t.is(reduceBufferResp.ok, getBufferRes.ok?.pieces.length)
 })
 
 // TODO: merge and remaining
@@ -130,12 +255,12 @@ test('fails reducing received buffers if fails to read them from store', async t
     encodeRecord: bufferEncode.storeRecord,
     decodeRecord: bufferDecode.storeRecord,
   })
-  const bufferQueueClient = createQueueClient(queues['buffer'].sqsClient, {
-    queueUrl: queues['buffer'].queueUrl,
+  const bufferQueueClient = createQueueClient(queues.buffer.sqsClient, {
+    queueUrl: queues.buffer.queueUrl,
     encodeMessage: bufferEncode.message,
   })
-  const aggregateQueueClient = createQueueClient(queues['aggregate'].sqsClient, {
-    queueUrl: queues['aggregate'].queueUrl,
+  const aggregateQueueClient = createQueueClient(queues.aggregate.sqsClient, {
+    queueUrl: queues.aggregate.queueUrl,
     encodeMessage: aggregateEncode.message,
   })
 
@@ -157,7 +282,7 @@ test('fails reducing received buffers if fails to read them from store', async t
 })
 
 test('fails reducing received buffers if fails to queue buffer', async t => {
-  const { s3, queues } = t.context
+  const { s3 } = t.context
 
   const bucketName = await createBucket(s3)
   const { buffers, bufferRecords } = await getBuffers(2)
@@ -205,10 +330,16 @@ test('fails reducing received buffers if fails to queue buffer', async t => {
 
 /**
  * @param {number} length
+ * @param {object} [piecesOptions]
+ * @param {number} [piecesOptions.length]
+ * @param {number} [piecesOptions.size]
  */
-async function getBuffers (length) {
+async function getBuffers (length, piecesOptions = {}) {
+  const piecesLength = piecesOptions.length || 100
+  const piecesSize = piecesOptions.size || 128
+
   const pieceBatches = await Promise.all(
-    Array.from({ length }).map(() => getPieces()
+    Array.from({ length }).map(() => getPieces(piecesLength, piecesSize)
   ))
 
   const buffers = await Promise.all(
@@ -238,8 +369,12 @@ function buildBuffer (pieces) {
   }
 }
 
-async function getPieces () {
-  const pieces = await randomCargo(100, 128)
+/**
+ * @param {number} length 
+ * @param {number} size 
+ */
+async function getPieces (length, size) {
+  const pieces = await randomCargo(length, size)
 
   const pieceRecords = await Promise.all(pieces.map(p => encodePiece(p)))
   return {
