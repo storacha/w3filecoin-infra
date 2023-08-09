@@ -126,8 +126,7 @@ export function ProcessorStack({ stack, app }) {
     cdk: {
       eventSource: {
         // as soon as we have 2, we can act fast and recuce to see if enough bytes
-        batchSize: 2,
-        maxBatchingWindow: Duration.minutes(5)
+        batchSize: 2
       },
     },
   })
@@ -151,8 +150,7 @@ export function ProcessorStack({ stack, app }) {
     cdk: {
       eventSource: {
         // as soon as we have one, we should add it to the dealer
-        batchSize: 1,
-        maxBatchingWindow: Duration.minutes(5)
+        batchSize: 1
       },
     },
   })
