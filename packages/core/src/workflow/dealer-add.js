@@ -40,6 +40,7 @@ export async function dealerAdd ({
   const add = await Dealer.dealAdd(
     invocationConfig,
     aggregate.toInfo().link,
+    // @ts-expect-error needs https://github.com/web3-storage/w3up/pull/850
     bufferReference.ok.pieces.map(p => p.piece),
     bufferReference.ok.storefront,
     'label',

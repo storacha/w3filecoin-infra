@@ -69,7 +69,9 @@ export async function ucanInvocationRouter(request) {
   })
 
   const server = createUcantoServer(serviceSigner, {
+    // @ts-expect-error needs https://github.com/web3-storage/w3up/pull/850
     pieceStore,
+    // @ts-expect-error needs https://github.com/web3-storage/w3up/pull/850
     addQueue,
     id: serviceSigner
   }, {
