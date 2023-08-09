@@ -87,11 +87,11 @@ test('can put and get aggregate record from aggregate store', async t => {
   })
   t.truthy(getRes.ok)
   t.falsy(getRes.error)
-  t.deepEqual({
-    ...aggregateRow,
-    invocation: undefined,
-    task: undefined
-  }, getRes.ok)
+  t.truthy(getRes.ok?.piece.equals(aggregate.link))
+  t.truthy(getRes.ok?.buffer.equals(pieces[0].content))
+  t.is(getRes.ok?.storefront, storefront)
+  t.is(getRes.ok?.group, group)
+  t.is(getRes.ok?.stat, /** @type {import('../../src/data/types.js').AggregateStatus} */ (0))
 })
 
 test('can put and get inclusion record from inclusion store', async t => {
@@ -116,7 +116,6 @@ test('can put and get inclusion record from inclusion store', async t => {
     resolvedAt: Date.now(),
     stat: /** @type {import('../../src/data/types.js').InclusionStatus} */ (0),
   }
-  // @ts-expect-error Legacy
   const putRes = await inclusionStore.put(inclusionRow)
   t.truthy(putRes.ok)
   t.falsy(putRes.error)

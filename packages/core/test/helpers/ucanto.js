@@ -33,6 +33,7 @@ export async function getDealerServiceServer (serviceProvider, options = {}) {
             return {
               error: new OperationFailed(
                 'failed to add to aggregate',
+                // @ts-ignore wrong dep
                 invCap.nb.aggregate
               )
             }

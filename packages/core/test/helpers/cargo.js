@@ -38,15 +38,13 @@ export async function randomAggregate(length, size) {
     pieces,
   })
 
-  
-
   return {
     pieces: pieces.map((p) => ({
       link: p.link,
       height: p.height,
       content: p.content,
     })),
-    aggregate: aggregateBuild.toInfo(),
+    aggregate: aggregateBuild,
   }
 }
 

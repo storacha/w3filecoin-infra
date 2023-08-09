@@ -5,10 +5,10 @@ import { decode as decodeBuffer, encodeBlock } from '../data/buffer.js'
 /**
  * @typedef {import('@web3-storage/data-segment').PieceLink} PieceLink
  * @typedef {import('@web3-storage/data-segment').PieceInfo} PieceInfo
- * @typedef {import('@web3-storage/data-segment').LegacyPieceLink} LegacyPieceLink
+ * @typedef {import('@web3-storage/data-segment').AggregateView} AggregateView
  * @typedef {import('../data/types.js').Buffer<PieceLink>} Buffer
  * @typedef {import('../data/types.js').BufferedPiece<PieceLink>} BufferedPiece
- * @typedef {import('../data/types.js').Aggregate<LegacyPieceLink>} Aggregate
+ * @typedef {import('../data/types.js').Aggregate<PieceLink>} Aggregate
  * @typedef {import('@web3-storage/filecoin-api/types').StoreGetError} StoreGetError
  * @typedef {{ bufferedPieces: BufferedPiece[], storefront: string, group: string }} GetBufferedPieces
  * @typedef {import('../types.js').Result<GetBufferedPieces, StoreGetError>} GetBufferedPiecesResult
@@ -16,7 +16,7 @@ import { decode as decodeBuffer, encodeBlock } from '../data/buffer.js'
  * @typedef {object} AggregateInfo
  * @property {BufferedPiece[]} addedBufferedPieces
  * @property {BufferedPiece[]} remainingBufferedPieces
- * @property {PieceInfo} aggregate
+ * @property {AggregateView} aggregate
  */
 
 /**
@@ -282,7 +282,7 @@ function aggregatePieces (bufferedPieces, sizes) {
   return {
     addedBufferedPieces,
     remainingBufferedPieces,
-    aggregate: aggregate.toInfo()
+    aggregate: aggregate
   }
 }
 
