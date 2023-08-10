@@ -1,3 +1,4 @@
+import { RemovalPolicy } from 'aws-cdk-lib'
 import git from 'git-rev-sync'
 import * as pack from '../package.json'
 
@@ -46,6 +47,43 @@ export function getGitInfo () {
 }
 
 /**
+ * Get nicer bucket names
+ *
+ * @param {string} name
+ * @param {string} stage
+ * @param {number} version
+ */
+export function getBucketName (name, stage, version = 0) {
+  // e.g `carpark-prod-0` or `carpark-pr101-0`
+  return `${name}-${stage}-${version}`
+}
+
+/**
+ * Is an ephemeral build?
+ *
+ * @param {string} stage
+ */
+export function isPrBuild (stage) {
+  if (!stage) throw new Error('stage must be provided')
+  return stage !== 'prod' && stage !== 'staging'
+}
+
+/**
+ * @param {string} name
+ * @param {string} stage
+ * @param {number} version
+ */
+export function getBucketConfig(name, stage, version = 0){
+  return {
+    bucketName: getBucketName(name, stage, version),
+    ...(isPrBuild(stage) && {
+      autoDeleteObjects: true,
+      removalPolicy: RemovalPolicy.DESTROY
+    })
+  }
+}
+
+/**
  * @param {import('sst/constructs').App} app
  * @param {import('sst/constructs').Stack} stack
  */
@@ -67,7 +105,12 @@ export function setupSentry (app, stack) {
  */
 export function getEnv() {
   return {
-    SENTRY_DSN: mustGetEnv('SENTRY_DSN')
+    SENTRY_DSN: mustGetEnv('SENTRY_DSN'),
+    DID: mustGetEnv('DID'),
+    DEALER_DID: mustGetEnv('DEALER_DID'),
+    DEALER_URL: mustGetEnv('DEALER_URL'),
+    MAX_AGGREGATE_SIZE: process.env.MAX_AGGREGATE_SIZE || String(2**35),
+    MIN_AGGREGATE_SIZE: process.env.MIN_AGGREGATE_SIZE || String(2**34),
   }
 }
 

@@ -6,3 +6,17 @@
 
 # uncomment to set SENTRY_DSN
 # SENTRY_DSN = ''
+
+# Aggregator DID
+DID=""
+
+# just for a local test
+PRIVATE_KEY=""
+
+# Dealer service
+DEALER_DID=""
+DEALER_URL=""
+
+# Ucan log
+UCAN_LOG_URL=""
+UCAN_LOG_BASIC_AUTH=""

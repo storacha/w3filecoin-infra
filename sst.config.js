@@ -1,6 +1,7 @@
 import { Tags } from 'aws-cdk-lib';
 
 import { ApiStack } from './stacks/api-stack.js'
+import { DataStack } from './stacks/data-stack.js'
 import { ProcessorStack } from './stacks/processor-stack.js'
 
 export default {
@@ -27,8 +28,9 @@ export default {
     })
 
     app
-      .stack(ApiStack)
+      .stack(DataStack)
       .stack(ProcessorStack)
+      .stack(ApiStack)
     
     // tags let us discover all the aws resource costs incurred by this app
     // see: https://docs.sst.dev/advanced/tagging-resources

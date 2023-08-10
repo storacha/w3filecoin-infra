@@ -140,6 +140,10 @@ interface Piece {
 interface PieceBuffer {
   // Pieces inside the buffer
   pieces: BufferedPiece[]
+  // identifier of storefront `did:web:web3.storage`
+  storefront: string
+  // identifier of group within storefront
+  group: string
 }
 
 interface BufferedPiece {
@@ -172,6 +176,10 @@ interface Aggregate {
   task: Link
   // number of milliseconds elapsed since the epoch when aggregate was submitted
   insertedAt: number
+  // identifier of storefront `did:web:web3.storage`
+  storefront: string
+  // identifier of group within storefront
+  group: string
   // known status of the aggregate (a secondary index)
   stat: AggregateStatus
 }
