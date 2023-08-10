@@ -17,10 +17,10 @@
     "@ucanto/principal": "^8.0.0",
     "@ucanto/server": "^8.0.0",
     "@ucanto/transport": "^8.0.0",
-    "@web3-storage/capabilities": "^8.0.0",
+    "@web3-storage/capabilities": "^9.0.1",
     "@web3-storage/data-segment": "^3.0.1",
-    "@web3-storage/filecoin-api": "^0.0.0",
-    "@web3-storage/filecoin-client": "^0.0.0",
+    "@web3-storage/filecoin-api": "^1.2.1",
+    "@web3-storage/filecoin-client": "^1.2.1",
     "multiformats": "12.0.1",
     "uint8arrays": "^4.0.4",
     "p-retry": "^5.1.2"

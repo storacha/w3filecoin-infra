@@ -282,7 +282,7 @@ function aggregatePieces (bufferedPieces, sizes) {
   return {
     addedBufferedPieces,
     remainingBufferedPieces,
-    aggregate: aggregate
+    aggregate
   }
 }
 

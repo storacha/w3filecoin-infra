@@ -92,9 +92,7 @@ for (const [title, unit] of Object.entries(Aggregator.test)) {
             t.fail(error.message)
           },
         },
-        // @ts-expect-error needs https://github.com/web3-storage/w3up/pull/850
         pieceStore,
-        // @ts-expect-error needs https://github.com/web3-storage/w3up/pull/850
         addQueue,
         queuedMessages
       }
