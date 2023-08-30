@@ -6,12 +6,13 @@ import { parseLink } from '@ucanto/server'
 /**
  * @typedef {import('@web3-storage/data-segment').PieceLink} PieceLink
  * @typedef {import('./types.js').Piece<PieceLink>} Data
+ * @typedef {Omit<import('./types.js').Piece<PieceLink>, "storefront">} MessageRecord
  * @typedef {import('./types.js').Piece<string>} StoreRecord
  * @typedef {Omit<import('./types.js').Piece<string>, "insertedAt" | "group">} StoreKey
  */
 
 /**
- * @type {import('./types').Encoder<Data, StoreRecord, StoreKey>}
+ * @type {import('./types').Encoder<Data, MessageRecord, StoreRecord, StoreKey>}
  */
 export const encode = {
   /**

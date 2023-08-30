@@ -7,7 +7,7 @@ import delay from 'delay'
 import { createQueueClient } from '../src/queue/client.js'
 import { createTableStoreClient } from '../src/store/table-client.js'
 import { pieceStoreTableProps } from '../src/store/index.js'
-import { encode, decode } from '../src/data/piece.js'
+import { encode as pieceEncode, decode as pieceDecode } from '../src/data/piece.js'
 
 import { testService as test } from './helpers/context.js'
 
@@ -69,13 +69,14 @@ for (const [title, unit] of Object.entries(Aggregator.test)) {
     const id = signer.withDID('did:web:test.web3.storage')
     const pieceStore = createTableStoreClient(dynamoClient, {
       tableName,
-      encodeRecord: encode.storeRecord,
-      decodeRecord: decode.storeRecord,
-      encodeKey: encode.storeKey
+      encodeRecord: pieceEncode.storeRecord,
+      decodeRecord: pieceDecode.storeRecord,
+      encodeKey: pieceEncode.storeKey
     })
+
     const addQueue = createQueueClient(sqsClient, {
       queueUrl,
-      encodeMessage: encode.message,
+      encodeMessage: pieceEncode.message,
     })
     await unit(
       {
@@ -92,8 +93,8 @@ for (const [title, unit] of Object.entries(Aggregator.test)) {
             t.fail(error.message)
           },
         },
-        pieceStore,
         addQueue,
+        pieceStore,
         queuedMessages
       }
     )

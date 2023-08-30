@@ -87,10 +87,10 @@ type FAIL = 1
 
 // Data structure encoding/decoding
 
-export interface Encoder <Data, StoreRecord, StoreKey> {
+export interface Encoder <Data, MessageRecord, StoreRecord, StoreKey> {
   storeRecord: (data: Data) => Promise<StoreRecord>
   storeKey: (data: Data) => Promise<StoreKey>
-  message: (data: Data) => Promise<string>
+  message: (data: MessageRecord) => Promise<string>
 }
 
 export interface Decoder <Data, StoreRecord, MessageRecord> {
