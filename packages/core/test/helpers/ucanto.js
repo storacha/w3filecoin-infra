@@ -20,8 +20,8 @@ export async function getDealerServiceServer (serviceProvider, options = {}) {
 
   const service = mockService({
     deal: {
-      add: Server.provideAdvanced({
-        capability: FilecoinCapabilities.dealAdd,
+      queue: Server.provideAdvanced({
+        capability: FilecoinCapabilities.dealQueue,
         handler: async ({ invocation, context }) => {
           const invCap = invocation.capabilities[0]
 
@@ -57,6 +57,35 @@ export async function getDealerServiceServer (serviceProvider, options = {}) {
           onCall(invCap)
 
           return Server.ok(dealAddResponse).join(fx.link())
+        }
+      }),
+      add: Server.provideAdvanced({
+        capability: FilecoinCapabilities.dealAdd,
+        handler: async ({ invocation }) => {
+          const invCap = invocation.capabilities[0]
+
+          if (!invCap.nb) {
+            throw new Error('no nb field received in invocation')
+          }
+
+          if (options.mustFail) {
+            return {
+              error: new OperationFailed(
+                'failed to add to aggregate',
+                // @ts-ignore wrong dep
+                invCap.nb.aggregate
+              )
+            }
+          }
+
+          /** @type {import('@web3-storage/capabilities/types').DealAddSuccess} */
+          const dealAddResponse = {
+            aggregate: invCap.nb.aggregate,
+          }
+
+          onCall(invCap)
+
+          return Server.ok(dealAddResponse)
         }
       })
     }

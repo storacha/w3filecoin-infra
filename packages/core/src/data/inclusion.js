@@ -11,7 +11,7 @@ import { parseLink } from '@ucanto/server'
  */
 
 /**
- * @type {import('./types').Encoder<Data, StoreRecord, StoreKey>}
+ * @type {import('./types').Encoder<Data, Data, StoreRecord, StoreKey>}
  */
 export const encode = {
   /**

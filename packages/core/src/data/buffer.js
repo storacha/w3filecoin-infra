@@ -13,7 +13,7 @@ import { toString } from 'uint8arrays/to-string'
  */
 
 /**
- * @type {import('./types').Encoder<Data, StoreRecord, StoreKey>}
+ * @type {import('./types').Encoder<Data, Data, StoreRecord, StoreKey>}
  */
 export const encode = {
   /**
