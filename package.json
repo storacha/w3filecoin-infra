@@ -14,13 +14,19 @@
     "lint": "tsc && eslint '**/*.js'",
     "clean": "rm -rf dist node_modules ./*/{.cache,dist,node_modules}",
     "test": "npm test -w packages/core -w packages/filecoin-client",
-    "test-integration": "ava --verbose --serial --timeout=300s test/*.test.js"
+    "test-integration": "ava --verbose --serial --timeout=360s test/*.test.js"
   },
   "devDependencies": {
+    "@ipld/dag-ucan": "3.4.0",
     "@sentry/serverless": "^7.52.1",
     "@tsconfig/node16": "^1.0.3",
     "@types/git-rev-sync": "^2.0.0",
     "@types/node": "^18.11.18",
+    "@ucanto/client": "8.0.0",
+    "@ucanto/principal": "8.0.0",
+    "@ucanto/transport": "8.0.0",
+    "@web3-storage/filecoin-api": "^1.4.3",
+    "@web3-storage/filecoin-client": "1.3.0",
     "ava": "^5.3.0",
     "aws-cdk-lib": "^2.84.0",
     "constructs": "10.1.156",
@@ -52,6 +58,7 @@
       "unicorn/filename-case": "off",
       "unicorn/prefer-set-has": "off",
       "unicorn/no-array-callback-reference": "off",
+      "unicorn/no-array-reduce": "off",
       "unicorn/no-await-expression-member": "off",
       "unicorn/no-zero-fractions": "off",
       "no-console": "off",

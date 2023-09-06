@@ -3,7 +3,7 @@ import { Duration } from 'aws-cdk-lib'
 
 import { DataStack } from './data-stack.js'
 import {
-  // setupSentry,
+  setupSentry,
   getEnv,
   getResourceName,
   getCustomDomain
@@ -19,10 +19,10 @@ export function ProcessorStack({ stack, app }) {
     DEALER_URL,
     MAX_AGGREGATE_SIZE,
     MIN_AGGREGATE_SIZE,
-  } = getEnv()
+  } = getEnv(stack)
+
   // Setup app monitoring with Sentry
-  // setupSentry(app, stack)
-  // TODO: enable
+  setupSentry(app, stack)
 
   const privateKey = new Config.Secret(stack, 'PRIVATE_KEY')
   const apiCustomDomain = getCustomDomain(stack.stage, process.env.HOSTED_ZONE)
@@ -119,9 +119,6 @@ export function ProcessorStack({ stack, app }) {
   pieceBufferQueue.addConsumer(stack, {
     function: {
       handler: 'packages/functions/src/processor/piece-buffering.workflow',
-      bind: [
-        bufferStoreBucket
-      ],
       environment: {
         BUFFER_QUEUE_URL: bufferQueue.queueUrl,
         BUFFER_QUEUE_REGION: stack.region,
@@ -135,8 +132,12 @@ export function ProcessorStack({ stack, app }) {
     },
     cdk: {
       eventSource: {
-        batchSize: 10_000,
-        maxBatchingWindow: Duration.minutes(5),
+        batchSize: stack.stage === 'production' ?
+          10_000 // Production max out batch size
+          : 10, // Integration tests
+        maxBatchingWindow: stack.stage === 'production' ?
+          Duration.minutes(5) // Production max out batch write to dynamo
+          : Duration.seconds(5), // Integration tests
         // allow reporting partial failures
         reportBatchItemFailures: true,
       },
@@ -149,22 +150,28 @@ export function ProcessorStack({ stack, app }) {
   bufferQueue.addConsumer(stack, {
     function: {
       handler: 'packages/functions/src/processor/buffer-reducing.workflow',
-      bind: [
-        bufferStoreBucket
-      ],
       environment: {
         BUFFER_QUEUE_URL: bufferQueue.queueUrl,
         BUFFER_QUEUE_REGION: stack.region,
+        BUFFER_STORE_BUCKET_NAME: bufferStoreBucket.bucketName,
+        BUFFER_STORE_REGION: stack.region,
         AGGREGATE_QUEUE_URL: aggregateQueue.queueUrl,
         AGGREGATE_QUEUE_REGION: stack.region,
         MAX_AGGREGATE_SIZE,
         MIN_AGGREGATE_SIZE,
-      }
+      },
+      permissions: [
+        bufferQueue,
+        bufferStoreBucket,
+        aggregateQueue
+      ]
     },
     cdk: {
       eventSource: {
-        // as soon as we have 2, we can act fast and recuce to see if enough bytes
-        batchSize: 2
+        // as soon as we have 2, we can act fast and reduce to see if enough bytes
+        batchSize: 2,
+        // allow reporting partial failures
+        reportBatchItemFailures: true,
       },
     },
   })
@@ -174,21 +181,27 @@ export function ProcessorStack({ stack, app }) {
    */
   aggregateQueue.addConsumer(stack, {
     function: {
-      handler: 'packages/functions/src/processor/dealer-add.workflow',
-      bind: [
-        bufferStoreBucket,
-        aggregateStoreTable
-      ],
+      handler: 'packages/functions/src/processor/dealer-queue.workflow',
       environment: {
+        BUFFER_STORE_BUCKET_NAME: bufferStoreBucket.bucketName,
+        BUFFER_STORE_REGION: stack.region,
         DID,
         DEALER_DID,
         DEALER_URL
-      }
+      },
+      permissions: [
+        bufferStoreBucket,
+      ],
+      bind: [
+        aggregateStoreTable,
+        privateKey,
+      ],
     },
     cdk: {
       eventSource: {
-        // as soon as we have one, we should add it to the dealer
-        batchSize: 1
+        // as soon as we have one, we should queue it to the dealer
+        batchSize: 1,
+        reportBatchItemFailures: true,
       },
     },
   })

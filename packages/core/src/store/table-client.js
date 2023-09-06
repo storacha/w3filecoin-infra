@@ -39,7 +39,6 @@ export function createTableStoreClient (conf, context) {
         }),
       })
 
-      // retry to avoid throttling errors
       try {
         await tableclient.send(putCmd)
       } catch (/** @type {any} */ error) {

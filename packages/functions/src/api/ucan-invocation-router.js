@@ -34,8 +34,8 @@ export async function ucanInvocationRouter(request) {
     ucanLogUrl,
     pieceStoreTableName,
     pieceStoreTableRegion,
-    pieceQueueUrl,
-    pieceQueueRegion,
+    pieceAddQueueUrl,
+    pieceAddQueueRegion,
   } = getLambdaEnv()
 
   if (request.body === undefined) {
@@ -62,9 +62,9 @@ export async function ucanInvocationRouter(request) {
     encodeKey: encode.storeKey
   })
   const addQueue = createQueueClient({
-    region: pieceQueueRegion
+    region: pieceAddQueueRegion
   }, {
-    queueUrl: pieceQueueUrl,
+    queueUrl: pieceAddQueueUrl,
     encodeMessage: encode.message,
   })
 
@@ -114,13 +114,13 @@ export async function ucanInvocationRouter(request) {
 function getLambdaEnv () {
   return {
     did: mustGetEnv('DID'),
-    brokerDid: mustGetEnv('BROKER_DID'),
-    brokerUrl: mustGetEnv('BROKER_URL'),
+    dealerDid: mustGetEnv('DEALER_DID'),
+    dealerUrl: mustGetEnv('DEALER_URL'),
     ucanLogUrl: mustGetEnv('UCAN_LOG_URL'),
     pieceStoreTableName: Table['piece-store'],
     pieceStoreTableRegion: mustGetEnv('AWS_REGION'),
-    pieceQueueUrl: mustGetEnv('PIECE_QUEUE_URL'),
-    pieceQueueRegion: mustGetEnv('PIECE_QUEUE_REGION')
+    pieceAddQueueUrl: mustGetEnv('PIECE_ADD_QUEUE_URL'),
+    pieceAddQueueRegion: mustGetEnv('PIECE_ADD_QUEUE_REGION')
   }
 }
 

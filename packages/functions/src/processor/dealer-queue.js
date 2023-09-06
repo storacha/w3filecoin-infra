@@ -1,5 +1,4 @@
 import * as Sentry from '@sentry/serverless'
-import { Bucket } from 'sst/node/bucket'
 import { Table } from 'sst/node/table'
 import { Config } from 'sst/node/config'
 
@@ -8,7 +7,7 @@ import { createTableStoreClient } from '@w3filecoin/core/src/store/table-client.
 import { createBucketStoreClient } from '@w3filecoin/core/src/store/bucket-client.js'
 import { encode as bufferEncode, decode as bufferDecode } from '@w3filecoin/core/src/data/buffer.js'
 import { encode as aggregateEncode, decode as aggregateDecode } from '@w3filecoin/core/src/data/aggregate.js'
-import { dealerAdd } from '@w3filecoin/core/src/workflow/dealer-add.js'
+import { dealerQueue } from '@w3filecoin/core/src/workflow/dealer-queue.js'
 
 import { mustGetEnv } from '../utils.js'
 
@@ -25,7 +24,7 @@ Sentry.AWSLambda.init({
  *
  * @param {import('aws-lambda').SQSEvent} sqsEvent
  */
-async function dealerAddWorkflow (sqsEvent) {
+async function dealerQueueWorkflow (sqsEvent) {
   if (sqsEvent.Records.length !== 1) {
     return {
       statusCode: 400,
@@ -54,7 +53,7 @@ async function dealerAddWorkflow (sqsEvent) {
     with: issuer.did(),
   }
 
-  const { ok, error } = await dealerAdd({
+  const { ok, error } = await dealerQueue({
     bufferStoreClient,
     aggregateStoreClient,
     aggregateRecord,
@@ -85,7 +84,7 @@ function getProps () {
     bufferStoreClient: createBucketStoreClient({
       region: bufferStoreBucketRegion
     }, {
-      name: bufferStoreBucketName.bucketName,
+      name: bufferStoreBucketName,
       encodeRecord: bufferEncode.storeRecord,
       decodeRecord: bufferDecode.storeRecord,
     }),
@@ -105,8 +104,8 @@ function getProps () {
  */
 function getEnv () {
   return {
-    bufferStoreBucketName: Bucket['buffer-store'],
-    bufferStoreBucketRegion: mustGetEnv('AWS_REGION'),
+    bufferStoreBucketName: mustGetEnv('BUFFER_STORE_BUCKET_NAME'),
+    bufferStoreBucketRegion: mustGetEnv('BUFFER_STORE_REGION'),
     aggregateStoreTableName: Table['aggregate-store'],
     aggregateStoreTableRegion: mustGetEnv('AWS_REGION'),
     did: mustGetEnv('DID'),
@@ -115,4 +114,4 @@ function getEnv () {
   }
 }
 
-export const workflow = Sentry.AWSLambda.wrapHandler(dealerAddWorkflow)
+export const workflow = Sentry.AWSLambda.wrapHandler(dealerQueueWorkflow)

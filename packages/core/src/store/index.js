@@ -55,6 +55,11 @@ export const aggregateStoreTableProps = {
       partitionKey: 'stat',
       sortKey: 'insertedAt',
       projection: 'all'
+    },
+    indexStorefront: {
+      partitionKey: 'storefront',
+      sortKey: 'insertedAt',
+      projection: 'all'
     }
   }
 }

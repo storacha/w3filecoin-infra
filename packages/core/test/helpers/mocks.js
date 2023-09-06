@@ -12,14 +12,14 @@ const notImplemented = () => {
  */
 export function mockService(impl) {
  return {
-  deal: {
-    add: withCallCount(impl.deal?.add ?? notImplemented),
-    queue: withCallCount(impl.deal?.queue ?? notImplemented),
-  },
-  aggregate: {
-   add: withCallCount(impl.aggregate?.add ?? notImplemented),
-   queue: withCallCount(impl.aggregate?.queue ?? notImplemented),
- },
+    deal: {
+      add: withCallCount(impl.deal?.add ?? notImplemented),
+      queue: withCallCount(impl.deal?.queue ?? notImplemented),
+    },
+    aggregate: {
+      add: withCallCount(impl.aggregate?.add ?? notImplemented),
+      queue: withCallCount(impl.aggregate?.queue ?? notImplemented),
+    },
  }
 }
 

@@ -123,8 +123,8 @@ test('can reduce received buffers by creating an aggregate and remaining buffer'
 
   const bucketName = await createBucket(s3)
   const { buffers, bufferRecords } = await getBuffers(2, {
-    length: 100,
-    size: 128
+    length: 10,
+    size: 1024
   })
 
   const storeClient = createBucketStoreClient(s3, {
@@ -152,7 +152,7 @@ test('can reduce received buffers by creating an aggregate and remaining buffer'
     aggregateQueueClient,
     bufferRecords,
     minAggregateSize: 2 ** 13,
-    maxAggregateSize: 2 ** 22
+    maxAggregateSize: 2 ** 15
   })
 
   t.falsy(reduceBufferResp.error)
