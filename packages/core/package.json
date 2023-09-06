@@ -19,7 +19,7 @@
     "@ucanto/transport": "^8.0.0",
     "@web3-storage/capabilities": "^9.2.1",
     "@web3-storage/data-segment": "^3.0.1",
-    "@web3-storage/filecoin-api": "^1.4.0",
+    "@web3-storage/filecoin-api": "^1.4.4",
     "@web3-storage/filecoin-client": "^1.3.0",
     "multiformats": "12.0.1",
     "uint8arrays": "^4.0.4",
@@ -41,6 +41,7 @@
   },
   "eslintConfig": {
     "rules": {
+      "unicorn/no-array-reduce": "off",
       "unicorn/no-for-loop": "off",
       "unicorn/no-null": "off",
       "unicorn/no-useless-promise-resolve-reject": "off",

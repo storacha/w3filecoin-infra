@@ -5,7 +5,8 @@ import { DataStack } from './data-stack.js'
 import {
   // setupSentry,
   getEnv,
-  getResourceName
+  getResourceName,
+  getCustomDomain
 } from './config.js'
 
 /**
@@ -24,19 +25,24 @@ export function ProcessorStack({ stack, app }) {
   // TODO: enable
 
   const privateKey = new Config.Secret(stack, 'PRIVATE_KEY')
+  const apiCustomDomain = getCustomDomain(stack.stage, process.env.HOSTED_ZONE)
 
   const {
     bufferStoreBucket,
     aggregateStoreTable
   } = use(DataStack)
 
-  // TODO: Events from piece table to piece-queue need to be propagated
-
-  /**
-   * 1st processor queue - piece buffering workflow
-   */
-  const pieceQueueName = getResourceName('piece-queue', stack.stage)
-  const pieceQueue = new Queue(stack, pieceQueueName)
+   /**
+    * trigger for processor - piece/add self invocation
+    */
+   const pieceAddQueueName = getResourceName('piece-add-queue', stack.stage)
+   const pieceAddQueue = new Queue(stack, pieceAddQueueName)
+ 
+   /**
+    * 1st processor queue - piece buffering workflow
+    */
+   const pieceBufferQueueName = getResourceName('piece-buffer-queue', stack.stage)
+   const pieceBufferQueue = new Queue(stack, pieceBufferQueueName)
 
   /**
    * 2nd processor queue - buffer reducing workflow
@@ -75,9 +81,42 @@ export function ProcessorStack({ stack, app }) {
   })
 
   /**
+   * Handle queued pieces received from multiple producers by adding them for buffering
+   */
+  pieceAddQueue.addConsumer(stack, {
+    function: {
+      handler: 'packages/functions/src/processor/piece-add.workflow',
+      environment: {
+        AGGREGATOR_DID: process.env.DID ?? '',
+        AGGREGATOR_URL: apiCustomDomain?.domainName ? `https://${apiCustomDomain?.domainName}` : '',
+        PIECE_BUFFER_QUEUE_URL: pieceBufferQueue.queueUrl,
+        PIECE_BUFFER_QUEUE_REGION: stack.region
+      },
+      permissions: [
+        pieceBufferQueue
+      ],
+      bind: [
+        privateKey
+      ]
+    },
+    cdk: {
+      eventSource: {
+        batchSize: stack.stage === 'production' ?
+          25 // Production max out batch write to dynamo
+          : 10, // Integration tests
+        maxBatchingWindow: stack.stage === 'production' ?
+          Duration.minutes(1) // Production max out batch write to dynamo
+          : Duration.seconds(5), // Integration tests
+        // allow reporting partial failures
+        reportBatchItemFailures: true,
+      },
+    },
+  })
+
+  /**
    * Handle queued pieces received from multiple producers by batching them into buffers
    */
-  pieceQueue.addConsumer(stack, {
+  pieceBufferQueue.addConsumer(stack, {
     function: {
       handler: 'packages/functions/src/processor/piece-buffering.workflow',
       bind: [
@@ -85,13 +124,21 @@ export function ProcessorStack({ stack, app }) {
       ],
       environment: {
         BUFFER_QUEUE_URL: bufferQueue.queueUrl,
-        BUFFER_QUEUE_REGION: stack.region
-      }
+        BUFFER_QUEUE_REGION: stack.region,
+        BUFFER_STORE_BUCKET_NAME: bufferStoreBucket.bucketName,
+        BUFFER_STORE_REGION: stack.region,
+      },
+      permissions: [
+        bufferQueue,
+        bufferStoreBucket
+      ],
     },
     cdk: {
       eventSource: {
         batchSize: 10_000,
-        maxBatchingWindow: Duration.minutes(5)
+        maxBatchingWindow: Duration.minutes(5),
+        // allow reporting partial failures
+        reportBatchItemFailures: true,
       },
     },
   })
@@ -147,7 +194,8 @@ export function ProcessorStack({ stack, app }) {
   })
 
   return {
-    pieceQueue,
+    pieceAddQueue,
+    pieceBufferQueue,
     bufferQueue,
     aggregateQueue,
     privateKey

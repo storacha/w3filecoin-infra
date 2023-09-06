@@ -14,7 +14,7 @@ import { createQueueClient } from '../../src/queue/client.js'
 
 import { bufferPieces } from '../../src/workflow/piece-buffering.js'
 
-test.before(async (t) => {
+test.beforeEach(async (t) => {
   const sqs = await createQueue()
 
   /** @type {import('@aws-sdk/client-sqs').Message[]} */
@@ -51,7 +51,7 @@ test.afterEach(async t => {
 test('can buffer received pieces', async t => {
   const { s3, sqsClient, queueUrl, queuedMessages } = t.context
   const bucketName = await createBucket(s3)
-  const { pieces, pieceRecords } = await getPieces()
+  const { pieces, pieceRecords } = await getPieces(100, 128)
 
   const storeClient = createBucketStoreClient(s3, {
     name: bucketName,
@@ -66,11 +66,16 @@ test('can buffer received pieces', async t => {
   const bufferPiecesResp = await bufferPieces({
     storeClient,
     queueClient,
-    pieceRecords,
+    records: pieceRecords.map((pr, index) => ({
+      body: pr,
+      id: `${index}`
+    })),
+    // we cannot get elasticmq to be FIFO with SQS create command
+    disableMessageGroupId: true
   })
   t.truthy(bufferPiecesResp.ok)
   t.falsy(bufferPiecesResp.error)
-  t.is(bufferPiecesResp.ok, pieces.length)
+  t.is(bufferPiecesResp.ok?.countSuccess, pieces.length)
 
   // Validate message received to queue
   await pWaitFor(() => queuedMessages.length === 1)
@@ -89,9 +94,91 @@ test('can buffer received pieces', async t => {
   }
 })
 
+test('can buffer received pieces with different groups', async t => {
+  const { s3, sqsClient, queueUrl, queuedMessages } = t.context
+  const storefronts = [
+    'did:web:web.storage',
+    'did:web:nft.storage'
+  ]
+  const bucketName = await createBucket(s3)
+  const {
+    pieces: piecesStorefrontA,
+    pieceRecords: pieceRecordsStorefrontA, 
+  } = await getPieces(50, 128, {
+    storefront: storefronts[0]
+  })
+  const {
+    pieces: piecesStorefrontB,
+    pieceRecords: pieceRecordsStorefrontB
+  } = await getPieces(50, 128, {
+    storefront: storefronts[1]
+  })
+
+  const storeClient = createBucketStoreClient(s3, {
+    name: bucketName,
+    encodeRecord: bufferEncode.storeRecord,
+    decodeRecord: bufferDecode.storeRecord,
+  })
+  const queueClient = createQueueClient(sqsClient, {
+    queueUrl,
+    encodeMessage: bufferEncode.message,
+  })
+
+  const bufferPiecesResp = await bufferPieces({
+    storeClient,
+    queueClient,
+    records: [...pieceRecordsStorefrontA, ...pieceRecordsStorefrontB].map((pr, index) => ({
+      body: pr,
+      id: `${index}`
+    })),
+    // we cannot get elasticmq to be FIFO with SQS create command
+    disableMessageGroupId: true
+  })
+  t.truthy(bufferPiecesResp.ok)
+  t.falsy(bufferPiecesResp.error)
+  t.is(bufferPiecesResp.ok?.countSuccess, [...piecesStorefrontA, ...piecesStorefrontB].length)
+
+  // Validate message received to queue
+  await pWaitFor(() => queuedMessages.length === 2)
+
+  // Storefront message 0
+  const bufferRef0 = await bufferDecode.message(queuedMessages[0].Body || '')
+  const getBufferRes0 = await storeClient.get(
+    `${bufferRef0.cid}/${bufferRef0.cid}`
+  )
+  t.truthy(getBufferRes0.ok)
+  t.falsy(getBufferRes0.error)
+
+  const piecesStorefrontMessage0 = getBufferRes0.ok?.storefront === storefronts[0] ? piecesStorefrontA : piecesStorefrontB
+  t.is(getBufferRes0.ok?.pieces.length, piecesStorefrontMessage0.length)
+
+  for (const bufferedPiece of getBufferRes0.ok?.pieces || []) {
+    t.truthy(
+      piecesStorefrontMessage0.find(piece => piece.link.equals(bufferedPiece.piece))
+    )
+    t.is(bufferedPiece.policy, 0)
+  }
+
+  // Storefront message 1
+  const bufferRef1 = await bufferDecode.message(queuedMessages[1].Body || '')
+  const getBufferRes1 = await storeClient.get(
+    `${bufferRef1.cid}/${bufferRef1.cid}`
+  )
+  t.truthy(getBufferRes1.ok)
+  t.falsy(getBufferRes1.error)
+
+  const piecesStorefrontMessage1 = getBufferRes1.ok?.storefront === storefronts[0] ? piecesStorefrontA : piecesStorefrontB
+  t.is(getBufferRes1.ok?.pieces.length, piecesStorefrontB.length)
+
+  for (const bufferedPiece of getBufferRes1.ok?.pieces || []) {
+    t.truthy(piecesStorefrontMessage1.find(piece => piece.link.equals(bufferedPiece.piece)))
+    t.is(bufferedPiece.policy, 0)
+  }
+})
+
 test('fails buffering received pieces if fails to store', async t => {
   const { sqsClient, queueUrl } = t.context
-  const { pieceRecords } = await getPieces()
+  const { pieceRecords } = await getPieces(100, 128)
 
   const storeClient = {
     put: () => {
@@ -109,7 +196,11 @@ test('fails buffering received pieces if fails to store', async t => {
     // @ts-expect-error 
     storeClient,
     queueClient,
-    pieceRecords,
+    records: pieceRecords.map((pr, index) => ({
+      body: pr,
+      id: `${index}`
+    })),
+    disableMessageGroupId: true
   })
   t.falsy(bufferPiecesResp.ok)
   t.truthy(bufferPiecesResp.error)
@@ -119,7 +210,7 @@ test('fails buffering received pieces if fails to store', async t => {
 test('fails buffering received pieces if fails to queue', async t => {
   const { s3 } = t.context
   const bucketName = await createBucket(s3)
-  const { pieceRecords } = await getPieces()
+  const { pieceRecords } = await getPieces(100, 128)
 
   const storeClient = createBucketStoreClient(s3, {
     name: bucketName,
@@ -138,17 +229,28 @@ test('fails buffering received pieces if fails to queue', async t => {
     storeClient,
     // @ts-expect-error adapted queue
     queueClient,
-    pieceRecords,
+    records: pieceRecords.map((pr, index) => ({
+      body: pr,
+      id: `${index}`
+    })),
+    disableMessageGroupId: true
   })
   t.falsy(bufferPiecesResp.ok)
   t.truthy(bufferPiecesResp.error)
   t.is(bufferPiecesResp.error?.name, QueueOperationErrorName)
 })
 
-async function getPieces () {
-  const pieces = await randomCargo(100, 128)
+/**
+ * @param {number} length
+ * @param {number} size
+ * @param {object} [opts]
+ * @param {string} [opts.storefront]
+ * @param {string} [opts.group]
+ */
+async function getPieces (length, size, opts = {}) {
+  const pieces = await randomCargo(length, size)
 
-  const pieceRecords = await Promise.all(pieces.map(p => encodePiece(p)))
+  const pieceRecords = await Promise.all(pieces.map(p => encodePiece(p, opts)))
   return {
     pieces,
     pieceRecords
@@ -157,10 +259,13 @@ async function getPieces () {
 
 /**
  * @param {{ link: import("@web3-storage/data-segment").PieceLink }} piece
+ * @param {object} [opts]
+ * @param {string} [opts.storefront]
+ * @param {string} [opts.group]
  */
-async function encodePiece (piece) {
-  const storefront = 'did:web:web3.storage'
-  const group = 'did:web:free.web3.storage'
+async function encodePiece (piece, opts = {}) {
+  const storefront = opts.storefront || 'did:web:web3.storage'
+  const group = opts.group || 'did:web:free.web3.storage'
   const pieceRow = {
     piece: piece.link,
     storefront,

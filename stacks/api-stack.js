@@ -16,7 +16,7 @@ export function ApiStack({ app, stack }) {
   setupSentry(app, stack)
 
   const {
-    pieceQueue,
+    pieceAddQueue,
     privateKey
   } = use(ProcessorStack)
 
@@ -39,12 +39,13 @@ export function ApiStack({ app, stack }) {
           BROKER_DID: process.env.BROKER_DID ?? '',
           BROKER_URL: process.env.BROKER_URL ?? '',
           UCAN_LOG_URL: process.env.UCAN_LOG_URL ?? '',
-          PIECE_QUEUE_URL: pieceQueue.queueUrl,
+          PIECE_QUEUE_URL: pieceAddQueue.queueUrl,
           PIECE_QUEUE_REGION: stack.region
         },
         bind: [
           privateKey,
-          ucanLogBasicAuth
+          ucanLogBasicAuth,
+          pieceAddQueue
         ]
       }
     },
