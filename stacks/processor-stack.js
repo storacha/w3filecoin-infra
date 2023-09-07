@@ -206,6 +206,48 @@ export function ProcessorStack({ stack, app }) {
     },
   })
 
+  // testing grouping
+  const groupingQueueName = getResourceName('grouping-queue', stack.stage)
+  const groupingQueue = new Queue(stack, groupingQueueName, {
+    cdk: {
+      queue: {
+        // Guarantee exactly-once processing
+        // (Note: maximum 10 batch)
+        fifo: true,
+        // During the deduplication interval (5 minutes), Amazon SQS treats
+        // messages that are sent with identical body content
+        contentBasedDeduplication: true,
+        queueName: `${groupingQueueName}.fifo`,
+        receiveMessageWaitTime: Duration.seconds(20),
+      }
+    }
+  })
+
+  /**
+   * Handle queued aggregates to be sent to dealer
+   */
+  groupingQueue.addConsumer(stack, {
+    function: {
+      handler: 'packages/functions/src/processor/grouping.workflow',
+      environment: {},
+    },
+    cdk: {
+      eventSource: {
+        // as soon as we have one, we should queue it to the dealer
+        batchSize: 3,
+        reportBatchItemFailures: true,
+        // maxConcurrency: 1
+        // maxBatchingWindow: Duration.seconds(30)
+      },
+    },
+  })
+
+  stack.addOutputs({
+    groupingQueueUrl: groupingQueue.queueUrl,
+    groupingQueueRegion: stack.region,
+    groupingQueueName: groupingQueueName,
+  })
+
   return {
     pieceAddQueue,
     pieceBufferQueue,
