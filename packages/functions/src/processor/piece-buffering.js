@@ -23,15 +23,14 @@ Sentry.AWSLambda.init({
  */
 async function pieceBufferringWorkflow (sqsEvent) {
   const { storeClient, queueClient } = getProps()
-  const records = sqsEvent.Records.map(r => ({
-    body: r.body,
-    id: r.messageId
-  }))
+  const pieceRecords = sqsEvent.Records.map(r => r.body)
+  const groupId = sqsEvent.Records[0].attributes.MessageGroupId || 'did:web:web3.storage'
 
   const { ok, error } = await bufferPieces({
     storeClient,
     queueClient,
-    records
+    pieceRecords,
+    groupId
   })
 
   if (error) {
