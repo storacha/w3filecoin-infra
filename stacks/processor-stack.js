@@ -30,13 +30,45 @@ export function ProcessorStack({ stack, app }) {
     aggregateStoreTable
   } = use(DataStack)
 
+  // TODO: We need to wire up alerting to DLQs
+  // TODO: Redrive - move messages back from DLQ to origin
+
+  // Standard DLQ - needs to match type of SQS that depends on it
+  const dlqQueueStandardName = getResourceName('processor-standard-dlq', stack.stage)
+  const dlqStandard = new Queue(stack, dlqQueueStandardName, {
+    cdk: {
+      queue: {
+        visibilityTimeout: Duration.hours(12),
+      }
+    }
+  })
+  // Fifo DLQ - needs to match type of SQS that depends on it
+  const dlqQueueFifoName = getResourceName('processor-fifo-dlq', stack.stage)
+  const dlqFifo = new Queue(stack, dlqQueueFifoName, {
+    cdk: {
+      queue: {
+        visibilityTimeout: Duration.hours(12),
+      }
+    }
+  })
+
   // TODO: Events from piece table to piece-queue need to be propagated
 
   /**
    * 1st processor queue - piece buffering workflow
    */
   const pieceQueueName = getResourceName('piece-queue', stack.stage)
-  const pieceQueue = new Queue(stack, pieceQueueName)
+  const pieceQueue = new Queue(stack, pieceQueueName, {
+    cdk: {
+      queue: {
+        deadLetterQueue: {
+          queue: dlqStandard.cdk.queue,
+          // if the message is not consumed successfully after 5 attempts, send it to DLQ
+          maxReceiveCount: 5,
+        }
+      }
+    }
+  })
 
   /**
    * 2nd processor queue - buffer reducing workflow
@@ -51,7 +83,12 @@ export function ProcessorStack({ stack, app }) {
         // During the deduplication interval (5 minutes), Amazon SQS treats
         // messages that are sent with identical body content
         contentBasedDeduplication: true,
-        queueName: `${bufferQueueName}.fifo`
+        queueName: `${bufferQueueName}.fifo`,
+        deadLetterQueue: {
+          queue: dlqFifo.cdk.queue,
+          // if the message is not consumed successfully after 5 attempts, send it to DLQ
+          maxReceiveCount: 5,
+        }
       }
     }
   })
@@ -69,7 +106,12 @@ export function ProcessorStack({ stack, app }) {
         // During the deduplication interval (5 minutes), Amazon SQS treats
         // messages that are sent with identical body content
         contentBasedDeduplication: true,
-        queueName: `${aggregateQueueName}.fifo`
+        queueName: `${aggregateQueueName}.fifo`,
+        deadLetterQueue: {
+          queue: dlqFifo.cdk.queue,
+          // if the message is not consumed successfully after 5 attempts, send it to DLQ
+          maxReceiveCount: 5,
+        }
       }
     }
   })
