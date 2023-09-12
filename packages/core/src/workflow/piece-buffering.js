@@ -10,7 +10,7 @@ import { decode as decodePiece } from '../data/piece.js'
  * @param {object} props
  * @param {import('@web3-storage/filecoin-api/types').Store<Data>} props.storeClient 
  * @param {import('@web3-storage/filecoin-api/types').Queue<Data>} props.queueClient
- * @param {string[]} props.pieceRecords 
+ * @param {string[]} props.pieceRecords
  * @param {string} [props.groupId]
  */
 export async function bufferPieces ({
@@ -32,8 +32,7 @@ export async function bufferPieces ({
         // set policy as insertion
         policy: /** @type {PiecePolicy} */ (0)
       }
-      // TODO: we need to sort by size
-    }))).sort(),
+    }))),
     storefront,
     group
   }

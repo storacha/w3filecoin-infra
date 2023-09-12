@@ -1,5 +1,4 @@
 import * as Sentry from '@sentry/serverless'
-import { Bucket } from 'sst/node/bucket'
 
 import { createQueueClient } from '@w3filecoin/core/src/queue/client'
 import { createBucketStoreClient } from '@w3filecoin/core/src/store/bucket-client.js'
@@ -25,9 +24,7 @@ Sentry.AWSLambda.init({
 async function pieceBufferringWorkflow (sqsEvent) {
   const { storeClient, queueClient } = getProps()
   const pieceRecords = sqsEvent.Records.map(r => r.body)
-
-  // TODO: confirm group ID uniqueness
-  const groupId = sqsEvent.Records[0].attributes.MessageGroupId
+  const groupId = sqsEvent.Records[0].attributes.MessageGroupId || 'did:web:web3.storage'
 
   const { ok, error } = await bufferPieces({
     storeClient,
@@ -59,7 +56,7 @@ function getProps () {
     storeClient: createBucketStoreClient({
       region: bufferStoreBucketRegion
     }, {
-      name: bufferStoreBucketName.bucketName,
+      name: bufferStoreBucketName,
       encodeRecord: encode.storeRecord,
       decodeRecord: decode.storeRecord
     }),
@@ -77,8 +74,8 @@ function getProps () {
  */
 function getEnv () {
   return {
-    bufferStoreBucketName: Bucket['buffer-store'],
-    bufferStoreBucketRegion: mustGetEnv('AWS_REGION'),
+    bufferStoreBucketName: mustGetEnv('BUFFER_STORE_BUCKET_NAME'),
+    bufferStoreBucketRegion: mustGetEnv('BUFFER_STORE_REGION'),
     bufferQueueUrl: mustGetEnv('BUFFER_QUEUE_URL'),
     bufferQueueRegion: mustGetEnv('BUFFER_QUEUE_REGION'),
   }
