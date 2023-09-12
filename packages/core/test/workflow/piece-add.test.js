@@ -74,8 +74,6 @@ test('can add received pieces', async t => {
 
   t.truthy(aggregatorAddResp.ok)
   t.falsy(aggregatorAddResp.error)
-  t.is(aggregatorAddResp.ok?.countSuccess, pieces.length)
-  t.deepEqual(aggregatorAddResp.ok?.batchItemFailures, [])
 
   // Validate messages received to queue
   await pWaitFor(() => queuedMessages.length === pieces.length)
@@ -127,8 +125,6 @@ test('handles partial fails when received same pieces and fails to add them', as
 
   t.truthy(aggregatorQueueRespA.ok)
   t.falsy(aggregatorQueueRespA.error)
-  t.is(aggregatorQueueRespA.ok?.countSuccess, pieceRecordsA.length)
-  t.deepEqual(aggregatorQueueRespA.ok?.batchItemFailures, [])
 
   // Validate messages received to queue
   await pWaitFor(() => queuedMessages.length === pieceRecordsA.length)
@@ -148,12 +144,11 @@ test('handles partial fails when received same pieces and fails to add them', as
     }))
   })
 
-  t.truthy(aggregatorQueueRespB.ok)
-  t.falsy(aggregatorQueueRespB.error)
-  t.is(aggregatorQueueRespB.ok?.countSuccess, pieces.length - pieceRecordsA.length)
-  t.is(aggregatorQueueRespB.ok?.batchItemFailures.length, (pieceRecordsB.length + pieceRecordsA.length) - pieces.length)
+  t.falsy(aggregatorQueueRespB.ok)
+  t.truthy(aggregatorQueueRespB.error)
+  t.is(aggregatorQueueRespB.error?.length, (pieceRecordsB.length + pieceRecordsA.length) - pieces.length)
   t.deepEqual(
-    aggregatorQueueRespB.ok?.batchItemFailures,
+    aggregatorQueueRespB.error?.map(e => e?.id),
     Array.from({ length: (pieceRecordsB.length + pieceRecordsA.length) - pieces.length }, (_, i) => `${i}`)
   )
 
@@ -189,12 +184,11 @@ test('handles failures when received same pieces and fails to queue them for buf
     }))
   })
 
-  t.truthy(aggregatorQueueResp.ok)
-  t.falsy(aggregatorQueueResp.error)
-  t.is(aggregatorQueueResp.ok?.countSuccess, 0)
-  t.is(aggregatorQueueResp.ok?.batchItemFailures.length, pieces.length)
+  t.falsy(aggregatorQueueResp.ok)
+  t.truthy(aggregatorQueueResp.error)
+  t.is(aggregatorQueueResp.error?.length, pieces.length)
   t.deepEqual(
-    aggregatorQueueResp.ok?.batchItemFailures,
+    aggregatorQueueResp.error?.map(e => e?.id),
     Array.from({ length: pieces.length }, (_, i) => `${i}`)
   )
 })

@@ -46,25 +46,27 @@ async function pieceAddWorkflow (sqsEvent) {
     id: r.messageId
   }))
 
-  const { ok, error } = await addPieces({
-    queueClient,
-    aggregatorServiceConnection,
-    invocationConfig,
-    records,
-  })
-
-  if (error) {
+  try {
+    const { error } = await addPieces({
+      queueClient,
+      aggregatorServiceConnection,
+      invocationConfig,
+      records,
+    })
+  
+    return {
+      // 200 status code also applies when partial batch response
+      // Read more: https://docs.aws.amazon.com/prescriptive-guidance/latest/lambda-event-filtering-partial-batch-responses-for-sqs/welcome.html
+      statusCode: 200,
+      body: records.length - (error?.length || 0),
+      // to retry failed items from batch
+      batchItemFailures: error?.map(e => e?.id)
+    }
+  } catch (/** @type {any} */ error) {
     return {
       statusCode: 500,
-      body: error.message
+      body: error.message || 'failed to add aggregate'
     }
-  }
-
-  return {
-    statusCode: 200,
-    body: ok.countSuccess,
-    // to retry failed items from batch
-    batchItemFailures: ok.batchItemFailures
   }
 }
 

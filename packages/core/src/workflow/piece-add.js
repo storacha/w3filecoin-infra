@@ -1,5 +1,4 @@
 import { Aggregator } from '@web3-storage/filecoin-client'
-import * as Server from '@ucanto/server'
 import { decode as decodePiece } from '../data/piece.js'
 
 /**
@@ -39,37 +38,24 @@ export async function addPieces ({
     }))
   )
 
-  let responses
-  try {
-    responses = await Promise.all(
-      decodedRecords.map(record => addPiece({
-        queueClient,
-        invocationConfig,
-        aggregatorServiceConnection,
-        record
-      }))
-    )
-  } catch {
+  const responses = await Promise.all(
+    decodedRecords.map(record => addPiece({
+      queueClient,
+      invocationConfig,
+      aggregatorServiceConnection,
+      record
+    }))
+  )
+
+  const failedResponses = responses.filter(r => Boolean(r.error))
+  if (failedResponses.length) {
     return {
-      error: new AggregateAddFailed('failed to add pieces')
+      error: failedResponses.map(r => r.error)
     }
   }
 
   return {
-    ok: {
-      // number of successful handled pieces
-      countSuccess: responses.reduce((acc, value) => {
-        return value.ok ? acc + 1 : acc
-      }, 0),
-      // failed pieces that can be re-queued
-      batchItemFailures: responses.reduce((filtered, value) => {
-        if (value.error) {
-          filtered.push(value.id)
-        }
-
-        return filtered
-      }, /** @type {string[]} */ ([]))
-    }
+    ok: {}
   }
 }
 
@@ -95,34 +81,24 @@ async function addPiece ({
   )
   if (aggregateAddResponse.out.error) {
     return {
-      id: record.id,
-      error: aggregateAddResponse.out.error
+      error: {
+        cause: aggregateAddResponse.out.error,
+        id: record.id,
+      }
     }
   }
 
   const queueAddResponse = await queueClient.add(record.piece)
   if (queueAddResponse.error) {
     return {
-      id: record.id,
-      error: queueAddResponse.error
+      error: {
+        cause: queueAddResponse.error,
+        id: record.id,
+      }
     }
   }
 
   return {
-    id: record.id,
-    ok: {}
-  }
-}
-
-export const AggregateAddErrorName = /** @type {const} */ (
-  'AggregateAddFailed'
-)
-export class AggregateAddFailed extends Server.Failure {
-  get reason() {
-    return this.message
-  }
-
-  get name() {
-    return AggregateAddErrorName
+    ok: {  id: record.id }
   }
 }
