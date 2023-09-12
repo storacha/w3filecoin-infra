@@ -1,5 +1,6 @@
 import { Api, Config, use } from 'sst/constructs'
 
+import { DataStack } from './data-stack.js'
 import { ProcessorStack } from './processor-stack.js'
 import {
   getApiPackageJson,
@@ -15,10 +16,8 @@ export function ApiStack({ app, stack }) {
   // Setup app monitoring with Sentry
   setupSentry(app, stack)
 
-  const {
-    pieceAddQueue,
-    privateKey
-  } = use(ProcessorStack)
+  const { pieceStoreTable } = use(DataStack)
+  const { pieceAddQueue, privateKey } = use(ProcessorStack)
 
   // Setup API
   const customDomain = getCustomDomain(stack.stage, process.env.HOSTED_ZONE)
@@ -36,15 +35,16 @@ export function ApiStack({ app, stack }) {
           COMMIT: git.commit,
           STAGE: stack.stage,
           DID: process.env.DID ?? '',
-          BROKER_DID: process.env.BROKER_DID ?? '',
-          BROKER_URL: process.env.BROKER_URL ?? '',
+          DEALER_DID: process.env.DEALER_DID ?? '',
+          DEALER_URL: process.env.DEALER_URL ?? '',
           UCAN_LOG_URL: process.env.UCAN_LOG_URL ?? '',
-          PIECE_QUEUE_URL: pieceAddQueue.queueUrl,
-          PIECE_QUEUE_REGION: stack.region
+          PIECE_ADD_QUEUE_URL: pieceAddQueue.queueUrl,
+          PIECE_ADD_QUEUE_REGION: stack.region
         },
         bind: [
           privateKey,
           ucanLogBasicAuth,
+          pieceStoreTable,
           pieceAddQueue
         ]
       }

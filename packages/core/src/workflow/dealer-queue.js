@@ -16,7 +16,7 @@ import { decode as aggregateDecode } from '../data/aggregate.js'
  * @param {import('@web3-storage/filecoin-client/types').InvocationConfig} props.invocationConfig
  * @param {import('@ucanto/principal/ed25519').ConnectionView<any>} props.dealerServiceConnection
  */
-export async function dealerAdd ({
+export async function dealerQueue ({
   bufferStoreClient,
   aggregateStoreClient,
   aggregateRecord,
@@ -36,7 +36,7 @@ export async function dealerAdd ({
   })
 
   // Add aggregate to dealer
-  const add = await Dealer.dealAdd(
+  const dealQueue = await Dealer.dealQueue(
     invocationConfig,
     aggregate.link,
     bufferReference.ok.pieces.map(p => p.piece),
@@ -45,9 +45,9 @@ export async function dealerAdd ({
     { connection: dealerServiceConnection }
   )
 
-  if (add.out.error) {
+  if (dealQueue.out.error) {
     return {
-      error: add.out.error
+      error: dealQueue.out.error
     }
   }
 
@@ -55,19 +55,19 @@ export async function dealerAdd ({
   const aggregateStored = await aggregateStoreClient.put({
     piece: aggregate.link,
     buffer: bufferRef.buffer,
-    task: add.ran.link(),
-    invocation: add.ran.link(),
+    task: dealQueue.ran.link(),
+    invocation: dealQueue.ran.link(),
     insertedAt: Date.now(),
     storefront: bufferReference.ok.storefront,
     group: bufferReference.ok.group,
     stat: 0
   })
+
   if (aggregateStored.error) {
     return {
       error: aggregateStored.error
     }
   }
-
   return {
     ok: 1
   }
