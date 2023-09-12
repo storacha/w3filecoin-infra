@@ -93,7 +93,7 @@ export function setupSentry (app, stack) {
     return
   }
 
-  const { SENTRY_DSN } = getEnv()
+  const { SENTRY_DSN } = getEnv(stack)
 
   stack.addDefaultFunctionEnv({
     SENTRY_DSN,
@@ -102,15 +102,21 @@ export function setupSentry (app, stack) {
 
 /**
  * Get Env validating it is set.
+ * 
+ * @param {import('sst/constructs').Stack} stack 
  */
-export function getEnv() {
+export function getEnv(stack) {
+  const defaultMaxAggregateSize = String(2**35)
+  // testing value aligned with integration test fixtures
+  const defaultMinAggregateSize = stack.stage === 'production' ? String(2**34) : String(2 ** 13)
+
   return {
     SENTRY_DSN: mustGetEnv('SENTRY_DSN'),
     DID: mustGetEnv('DID'),
     DEALER_DID: mustGetEnv('DEALER_DID'),
     DEALER_URL: mustGetEnv('DEALER_URL'),
-    MAX_AGGREGATE_SIZE: process.env.MAX_AGGREGATE_SIZE || String(2**35),
-    MIN_AGGREGATE_SIZE: process.env.MIN_AGGREGATE_SIZE || String(2**34),
+    MAX_AGGREGATE_SIZE: process.env.MAX_AGGREGATE_SIZE || defaultMaxAggregateSize,
+    MIN_AGGREGATE_SIZE: process.env.MIN_AGGREGATE_SIZE || defaultMinAggregateSize,
   }
 }
 

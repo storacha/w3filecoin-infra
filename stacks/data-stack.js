@@ -38,19 +38,34 @@ export function DataStack({ stack, app }) {
    * Piece store used to guarantee write uniqueness for first workflow (`piece-queue`).
    * It records all items that get into the workflow pipeline.
    */
-  const pieceStoreTable = new Table(stack, 'piece-store', pieceStoreTableProps)
+  const pieceStoreTableName = 'piece-store'
+  const pieceStoreTable = new Table(stack, pieceStoreTableName, {
+    // TODO: Expire testing table entries
+    // https://dynobase.dev/dynamodb-ttl/
+    // https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_dynamodb.Table.html#timetoliveattribute
+    ...pieceStoreTableProps
+  })
 
   /**
    * Aggregate store used by the third workflow (`aggregate-queue`).
    * It records all aggregate items offered to broker.
    */
-  const aggregateStoreTable = new Table(stack, 'aggregate-store', aggregateStoreTableProps)
+  const aggregateStoreTableName = 'aggregate-store'
+  const aggregateStoreTable = new Table(stack, aggregateStoreTableName, aggregateStoreTableProps)
 
   /**
    * Inclusion stored used by cron workflow (`deal-tracker`).
    * It records all inclusion records when we have a resolved deal for an aggregate.
    */
-  const inclusionStoreTable = new Table(stack, 'inclusion-store', inclusionStoreTableProps)
+  const inclusionStoreTableName = 'inclusion-store'
+  const inclusionStoreTable = new Table(stack, inclusionStoreTableName, inclusionStoreTableProps)
+
+  stack.addOutputs({
+    BufferBucketName: bucket.bucketName,
+    PieceTableName: pieceStoreTableName,
+    AggregateTableName: aggregateStoreTableName,
+    InclusionTableName: inclusionStoreTableName,
+  })
 
   return {
     bufferStoreBucket,

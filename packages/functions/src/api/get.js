@@ -1,4 +1,6 @@
+import { Config } from 'sst/node/config'
 import * as Sentry from '@sentry/serverless'
+import { getServiceSigner } from '@w3filecoin/core/src/service.js'
 
 import { mustGetEnv } from '../utils.js'
 
@@ -14,13 +16,18 @@ const repo = 'https://github.com/web3-storage/w3filecoin'
  * AWS HTTP Gateway handler for GET /version
  */
 export async function versionGet () {
-  const { name , version, commit, stage } = getLambdaEnv()
+  const { PRIVATE_KEY: privateKey } = Config
+  const { did, name, version, commit, stage } = getLambdaEnv()
+  const serviceSigner = getServiceSigner({ did, privateKey })
+  const serviceDid = serviceSigner.did()
+  const publicKey = serviceSigner.toDIDKey()
+
   return {
     statusCode: 200,
     headers: {
       'Content-Type': `application/json`
     },
-    body: JSON.stringify({ name, version, repo, commit, env: stage })
+    body: JSON.stringify({ name, version, did: serviceDid, publicKey, repo, commit, env: stage })
   }
 }
 
@@ -54,6 +61,7 @@ export const error = Sentry.AWSLambda.wrapHandler(errorGet)
 
 function getLambdaEnv () {
   return {
+    did: mustGetEnv('DID'),
     name: mustGetEnv('NAME'),
     version: mustGetEnv('VERSION'),
     commit: mustGetEnv('COMMIT'),

@@ -19,7 +19,7 @@ import { createTableStoreClient } from '../../src/store/table-client.js'
 import { createBucketStoreClient } from '../../src/store/bucket-client.js'
 import { aggregateStoreTableProps } from '../../src/store/index.js'
 
-import { dealerAdd } from '../../src/workflow/dealer-add.js'
+import { dealerQueue } from '../../src/workflow/dealer-queue.js'
 
 /**
  * @typedef {import('../../src/data/types.js').PiecePolicy} PiecePolicy
@@ -44,11 +44,11 @@ test('can add produced aggregate', async t => {
   // Store buffer used for aggregate
   await bufferStoreClient.put(buffer)
 
-  const dealAddCall = pDefer()
+  const dealerQueueCall = pDefer()
   const { invocationConfig, dealerService } = await getService({
-    onCall: dealAddCall
+    onCall: dealerQueueCall
   })
-  const dealerAddResp = await dealerAdd({
+  const dealerQueueResp = await dealerQueue({
     bufferStoreClient,
     aggregateStoreClient,
     aggregateRecord: await aggregateEncode.message(aggregateRecord),
@@ -56,14 +56,14 @@ test('can add produced aggregate', async t => {
     dealerServiceConnection: dealerService.connection
   })
 
-  t.truthy(dealerAddResp.ok)
-  t.falsy(dealerAddResp.error)
-  t.is(dealerAddResp.ok, 1)
+  t.truthy(dealerQueueResp.ok)
+  t.falsy(dealerQueueResp.error)
+  t.is(dealerQueueResp.ok, 1)
 
   // Validate ucanto server call
-  t.is(dealerService.service.deal.add.callCount, 1)
-  const invCap = await dealAddCall.promise
-  t.is(invCap.can, 'deal/add')
+  t.is(dealerService.service.deal.queue.callCount, 1)
+  const invCap = await dealerQueueCall.promise
+  t.is(invCap.can, 'deal/queue')
 
   // TODO: validate CID of piece invCap.nb.piece
   // TODO: validate deal content invCap.nb.deal
@@ -77,11 +77,11 @@ test('fails adding aggregate if fails to read from store', async t => {
     aggregateStoreClient
   } = await getContext(t.context)
 
-  const dealAddCall = pDefer()
+  const dealerQueueCall = pDefer()
   const { invocationConfig, dealerService } = await getService({
-    onCall: dealAddCall
+    onCall: dealerQueueCall
   })
-  const dealerAddResp = await dealerAdd({
+  const dealerQueueResp = await dealerQueue({
     bufferStoreClient,
     aggregateStoreClient,
     aggregateRecord: await aggregateEncode.message(aggregateRecord),
@@ -89,12 +89,12 @@ test('fails adding aggregate if fails to read from store', async t => {
     dealerServiceConnection: dealerService.connection
   })
 
-  t.falsy(dealerAddResp.ok)
-  t.truthy(dealerAddResp.error)
-  t.is(dealerAddResp.error?.name, StoreOperationErrorName)
+  t.falsy(dealerQueueResp.ok)
+  t.truthy(dealerQueueResp.error)
+  t.is(dealerQueueResp.error?.name, StoreOperationErrorName)
 
   // Validate ucanto server call
-  t.is(dealerService.service.deal.add.callCount, 0)
+  t.is(dealerService.service.deal.queue.callCount, 0)
 })
 
 test('fails adding aggregate if fails to add to dealer', async t => {
@@ -108,12 +108,12 @@ test('fails adding aggregate if fails to add to dealer', async t => {
   // Store buffer used for aggregate
   await bufferStoreClient.put(buffer)
 
-  const dealAddCall = pDefer()
+  const dealerQueueCall = pDefer()
   const { invocationConfig, dealerService } = await getService({
-    onCall: dealAddCall,
+    onCall: dealerQueueCall,
     mustFail: true
   })
-  const dealerAddResp = await dealerAdd({
+  const dealerQueueResp = await dealerQueue({
     bufferStoreClient,
     aggregateStoreClient,
     aggregateRecord: await aggregateEncode.message(aggregateRecord),
@@ -121,12 +121,12 @@ test('fails adding aggregate if fails to add to dealer', async t => {
     dealerServiceConnection: dealerService.connection
   })
 
-  t.falsy(dealerAddResp.ok)
-  t.truthy(dealerAddResp.error)
-  t.is(dealerAddResp.error?.name, OperationErrorName)
+  t.falsy(dealerQueueResp.ok)
+  t.truthy(dealerQueueResp.error)
+  t.is(dealerQueueResp.error?.name, OperationErrorName)
 
   // Validate ucanto server call
-  t.is(dealerService.service.deal.add.callCount, 1)
+  t.is(dealerService.service.deal.queue.callCount, 1)
 })
 
 /**

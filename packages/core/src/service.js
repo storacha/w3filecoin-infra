@@ -4,7 +4,6 @@ import * as DID from '@ipld/dag-ucan/did'
 import { CAR, HTTP } from '@ucanto/transport'
 import { connect } from '@ucanto/client'
 
-
 import { createService } from '@web3-storage/filecoin-api/aggregator'
 
 /**

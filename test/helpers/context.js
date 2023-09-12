@@ -6,8 +6,22 @@ dotenv.config({
 })
 
 /**
+ * @typedef {object} Dynamo
+ * @property {import('@aws-sdk/client-dynamodb').DynamoDBClient} client
+ * @property {string} endpoint
+ * @property {string} region
+ * @property {string} tableName
+ * 
+ * @typedef {object} Bucket
+ * @property {import('@aws-sdk/client-s3').S3Client} client
+ * @property {string} region
+ * @property {string} bucket
+ *
  * @typedef {object} Context
  * @property {string} apiEndpoint
+ * @property {Dynamo} pieceStoreDynamo
+ * @property {Dynamo} aggregateStoreDynamo
+ * @property {Bucket} bufferStoreBucket
  *
  * @typedef {import('ava').TestFn<Awaited<Context>>} TestContextFn
  */
