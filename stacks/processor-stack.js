@@ -19,6 +19,7 @@ export function ProcessorStack({ stack, app }) {
     DEALER_URL,
     MAX_AGGREGATE_SIZE,
     MIN_AGGREGATE_SIZE,
+    MIN_UTILIZATION_FACTOR
   } = getEnv(stack)
 
   // Setup app monitoring with Sentry
@@ -159,6 +160,7 @@ export function ProcessorStack({ stack, app }) {
         AGGREGATE_QUEUE_REGION: stack.region,
         MAX_AGGREGATE_SIZE,
         MIN_AGGREGATE_SIZE,
+        MIN_UTILIZATION_FACTOR,
       },
       permissions: [
         bufferQueue,

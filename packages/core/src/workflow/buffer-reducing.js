@@ -27,6 +27,7 @@ import { decode as decodeBuffer, encodeBlock } from '../data/buffer.js'
  * @param {string[]} props.bufferRecords
  * @param {number} props.maxAggregateSize
  * @param {number} props.minAggregateSize
+ * @param {number} props.minUtilizationFactor
  * @param {string} [props.groupId]
  */
 export async function reduceBuffer ({
@@ -36,6 +37,7 @@ export async function reduceBuffer ({
   bufferRecords,
   maxAggregateSize,
   minAggregateSize,
+  minUtilizationFactor,
   groupId
 }) {
   // Get reduced buffered pieces
@@ -53,7 +55,8 @@ export async function reduceBuffer ({
   // so that they can be propagated to respective stores/queues.
   const aggregateInfo = aggregatePieces(bufferedPieces, {
     maxAggregateSize,
-    minAggregateSize
+    minAggregateSize,
+    minUtilizationFactor
   })
 
   // Store buffered pieces if not enough to do aggregate and re-queue them
@@ -248,8 +251,19 @@ async function storeBufferedPieces (buffer, storeClient) {
  * @param {object} sizes
  * @param {number} sizes.maxAggregateSize
  * @param {number} sizes.minAggregateSize
+ * @param {number} sizes.minUtilizationFactor
  */
 function aggregatePieces (bufferedPieces, sizes) {
+  // Guarantee buffered pieces total size is bigger than the minimum utilization
+  const bufferUtilizationSize = bufferedPieces.reduce((total, p) => {
+    const piece = Piece.fromLink(p.piece)
+    total += piece.size
+    return total
+  }, 0n)
+  if (bufferUtilizationSize < (sizes.maxAggregateSize / sizes.minUtilizationFactor)) {
+    return
+  }
+
   // Create builder with maximum size and try to fill it up
   const builder = Aggregate.createBuilder({
     size: Piece.PaddedSize.from(sizes.maxAggregateSize)

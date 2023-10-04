@@ -100,6 +100,7 @@ test('can reduce received buffers without creating an aggregate if not enough si
     aggregateQueueClient,
     bufferRecords,
     minAggregateSize: 2 ** 34,
+    minUtilizationFactor: 4,
     maxAggregateSize: 2 ** 35
   })
 
@@ -110,6 +111,65 @@ test('can reduce received buffers without creating an aggregate if not enough si
   await pWaitFor(() => queues.buffer.queuedMessages.length === 1)
 
   // New buffer exists
+  const bufferRef = await bufferDecode.message(queues.buffer.queuedMessages[0].Body || '')
+  const getBufferRes = await storeClient.get(
+    `${bufferRef.cid}/${bufferRef.cid}`
+  )
+  t.truthy(getBufferRes.ok)
+  t.falsy(getBufferRes.error)
+})
+
+test('does not create aggregate from reducing received buffers if does not have minimum utilization', async t => {
+  const { s3, queues } = t.context
+
+  const bucketName = await createBucket(s3)
+  const { buffers, bufferRecords } = await getBuffers(2, {
+    length: 10,
+    size: 1024
+  })
+
+  const storeClient = createBucketStoreClient(s3, {
+    name: bucketName,
+    encodeRecord: bufferEncode.storeRecord,
+    decodeRecord: bufferDecode.storeRecord,
+  })
+  const bufferQueueClient = createQueueClient(queues.buffer.sqsClient, {
+    queueUrl: queues.buffer.queueUrl,
+    encodeMessage: bufferEncode.message,
+  })
+  const aggregateQueueClient = createQueueClient(queues.aggregate.sqsClient, {
+    queueUrl: queues.aggregate.queueUrl,
+    encodeMessage: aggregateEncode.message,
+  })
+
+  // Store both buffers in store
+  await Promise.all(
+    buffers.map(b => storeClient.put(b))
+  )
+
+  const reduceBufferResp = await reduceBuffer({
+    storeClient,
+    bufferQueueClient,
+    aggregateQueueClient,
+    bufferRecords,
+    minAggregateSize: 2 ** 13,
+    minUtilizationFactor: 1,
+    maxAggregateSize: 2 ** 18
+  })
+
+  console.log('reduce 1', reduceBufferResp.ok)
+
+  t.falsy(reduceBufferResp.error)
+  t.is(reduceBufferResp.ok, 0)
+
+  console.log('reduce 2')
+
+  // Validate message received only to buffer queue
+  await pWaitFor(() => queues.buffer.queuedMessages.length === 1)
+  console.log('reduce 3')
+  // await pWaitFor(() => queues.aggregate.queuedMessages.length === 0)
+
+  // Validate buffer exists
   const bufferRef = await bufferDecode.message(queues.buffer.queuedMessages[0].Body || '')
   const getBufferRes = await storeClient.get(
     `${bufferRef.cid}/${bufferRef.cid}`
@@ -152,6 +212,7 @@ test('can reduce received buffers by creating an aggregate and remaining buffer'
     aggregateQueueClient,
     bufferRecords,
     minAggregateSize: 2 ** 13,
+    minUtilizationFactor: 10,
     maxAggregateSize: 2 ** 15
   })
 
@@ -221,6 +282,7 @@ test('can reduce received buffers by creating an aggregate without remaining buf
     aggregateQueueClient,
     bufferRecords,
     minAggregateSize: 2 ** 19,
+    minUtilizationFactor: 10e5,
     maxAggregateSize: 2 ** 35
   })
   
@@ -272,6 +334,7 @@ test('fails reducing received buffers if fails to read them from store', async t
     bufferQueueClient,
     aggregateQueueClient,
     bufferRecords,
+    minUtilizationFactor: 4,
     minAggregateSize: 128 * 10,
     maxAggregateSize: 2 ** 35
   })
