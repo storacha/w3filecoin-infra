@@ -22,7 +22,8 @@ export async function randomCargo(length, size) {
       link: piece.link,
       height: piece.height,
       root: piece.root,
-      content: car.cid
+      content: car.cid,
+      padding: piece.padding
     }
   })
 }

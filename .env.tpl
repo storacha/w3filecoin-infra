@@ -4,11 +4,18 @@
 # the value should match a hosted zone configured in route53 that your aws account has access to.
 # HOSTED_ZONE=filecoin.web3.storage
 
+# uncomment to try out deploying the `deal-tracker-api` under a custom domain.
+# the value should match a hosted zone configured in route53 that your aws account has access to.
+# DEAL_TRACKER_API_HOSTED_ZONE=tracker.web3.storage
+
 # uncomment to set SENTRY_DSN
 # SENTRY_DSN = ''
 
 # Aggregator DID
 DID=""
+
+# Deal tracker DID
+DEAL_TRACKER_DID=""
 
 # just for a local test
 PRIVATE_KEY=""

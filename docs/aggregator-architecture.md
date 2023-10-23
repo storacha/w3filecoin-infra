@@ -1,34 +1,15 @@
-# Architecture
+# Aggregator Architecture
 
-> The w3filecoin pipeline architecture.
-
-## Background
-
-[web3.storage](http://web3.storage) is a Storefront providing APIs to enable users to easily upload CAR files, while getting them available on the IPFS Network and stored in multiple locations via Filecoin Storage Providers. It relies on Spade as a broker to get their user data into Filecoin Storage Providers. Currently, Spade requires a Filecoin Piece with size between 16GiB and 32GiB to create deals with Filecoin Storage Providers. Moreover, the closer a Filecoin Piece is closer to the upper bound, the most optimal are the associated storage costs.
-
-Taking into account that [web3.storage](http://web3.storage) onboards any type of content (up to a maximum of 4GiB-padded shards to have better utilization of Fil sector space), multiple CAR files uploaded need to be aggregated into a bigger Piece that can be offered to Filecoin Storage Providers. w3filecoin pipeline keeps track of queued CARs (cargo) to be included in Storage Provider deals.
-
-After CAR file is added to web3.storage's bucket, its piece is computed and sent into the w3filecoin processing pipeline. This pipeline is composed of multiple processing queues that accumulate pieces into aggregates and submit them into a Filecoin deal queue.
-
-## High Level design
-
-The high level flow for the w3filecoin Pipeline is:
+The high level flow for the Aggregator is:
 
 - **piece inclusion request** is received by an authorized Storefront with `pieceCid`
 - **piece queued** to be aggregated
 - **aggregate buffering** until a buffer has enough pieces to become an aggregate offer
 - **aggregate submission** to Storage Provider broker
-- **deal tracking** and **deal recording** once fulfilled
 
 ![Pipeline processes](./w3-aggregation.svg)
 
-The w3filecoin pipeline is modeled into 3 different SST Stacks that will have their infrastructure provisioned in AWS via AWS CloudFormation. These are:
-
-- API Stack
-- Processor Stack
-- Data Stack
-
-![Architecture](./architecture.png)
+![Architecture](./aggregator-architecture.png)
 
 ## API Stack
 

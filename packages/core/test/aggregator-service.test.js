@@ -1,4 +1,4 @@
-import { Aggregator } from '@web3-storage/filecoin-api/test'
+import { Aggregator } from '@web3-storage/filecoin-api-legacy/test'
 import { ed25519 } from '@ucanto/principal'
 import { Consumer } from 'sqs-consumer'
 import pWaitFor from 'p-wait-for'

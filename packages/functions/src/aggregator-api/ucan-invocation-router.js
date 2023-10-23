@@ -4,12 +4,13 @@ import { Table } from 'sst/node/table'
 // eslint-disable-next-line no-unused-vars
 import { API } from '@ucanto/core'
 import * as CAR from '@ucanto/transport/car'
-import * as Server from '@ucanto/server'
+import * as Server from '@ucanto/server-legacy'
 
 import { connect as ucanLogConnect } from '@w3filecoin/core/src/ucan-log.js'
 import { createTableStoreClient } from '@w3filecoin/core/src/store/table-client.js'
 import { createQueueClient } from '@w3filecoin/core/src/queue/client.js'
-import { createUcantoServer, getServiceSigner } from '@w3filecoin/core/src/service.js'
+import { getServiceSigner } from '@w3filecoin/core/src/service.js'
+import { createServer } from '@web3-storage/filecoin-api-legacy/aggregator'
 import { encode, decode } from '@w3filecoin/core/src/data/piece.js'
 
 import { mustGetEnv } from '../utils.js'
@@ -68,14 +69,15 @@ export async function ucanInvocationRouter(request) {
     encodeMessage: encode.message,
   })
 
-  const server = createUcantoServer(serviceSigner, {
+  const server = createServer({
     pieceStore,
     addQueue,
-    id: serviceSigner
-  }, {
-    catch: (/** @type {string | Error} */ err) => {
-      console.warn(err)
-      Sentry.AWSLambda.captureException(err)
+    id: serviceSigner,
+    errorReporter: {
+      catch: (/** @type {string | Error} */ err) => {
+        console.warn(err)
+        Sentry.AWSLambda.captureException(err)
+      }
     }
   })
 

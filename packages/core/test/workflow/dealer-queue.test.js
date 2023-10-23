@@ -9,7 +9,7 @@ import { randomAggregate } from '../helpers/cargo.js'
 import { getDealerServiceServer, getDealerServiceCtx } from '../helpers/ucanto.js'
 import { OperationErrorName } from '../helpers/errors.js'
 
-import { StoreOperationErrorName } from '@web3-storage/filecoin-api/errors'
+import { StoreOperationErrorName } from '@web3-storage/filecoin-api-legacy/errors'
 import pDefer from 'p-defer'
 
 import { getServiceSigner } from '../../src/service.js'

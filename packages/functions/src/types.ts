@@ -24,6 +24,9 @@ declare module 'sst/node/table' {
     'inclusion-store': {
       tableName: string;
     };
+    'deal-store': {
+      tableName: string;
+    };
   }
 }
 

@@ -3,7 +3,7 @@ import {
   GetObjectCommand
 } from '@aws-sdk/client-s3'
 import pRetry from 'p-retry'
-import { StoreOperationFailed, StoreNotFound, EncodeRecordFailed } from '@web3-storage/filecoin-api/errors'
+import { StoreOperationFailed, StoreNotFound, EncodeRecordFailed } from '@web3-storage/filecoin-api-legacy/errors'
 
 import { connectBucket } from './index.js'
 
@@ -20,7 +20,7 @@ import { connectBucket } from './index.js'
  * @param {string} context.name
  * @param {(data: Data) => Promise<StoreRecord>} context.encodeRecord
  * @param {(item: StoreRecord) => Promise<Data>} context.decodeRecord
- * @returns {import('@web3-storage/filecoin-api/types').Store<Data>}
+ * @returns {import('@web3-storage/filecoin-api-legacy/types').Store<Data>}
  */
 export function createBucketStoreClient (conf, context) {
   const bucketClient = connectBucket(conf)

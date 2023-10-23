@@ -137,6 +137,7 @@ export async function getAggregatorServiceServer (serviceProvider, options = {})
 
   const service = mockService({
     aggregate: {
+      // @ts-expect-error todo
       queue: Server.provideAdvanced({
         capability: FilecoinCapabilities.aggregateQueue,
         handler: async ({ invocation, context }) => {
@@ -180,6 +181,7 @@ export async function getAggregatorServiceServer (serviceProvider, options = {})
           return Server.ok(pieceAddResponse).join(fx.link())
         }
       }),
+      // @ts-expect-error todo
       add: Server.provideAdvanced({
         capability: FilecoinCapabilities.aggregateAdd,
         handler: async ({ invocation }) => {

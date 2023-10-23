@@ -7,7 +7,7 @@ import { Consumer } from 'sqs-consumer'
 import pWaitFor from 'p-wait-for'
 import delay from 'delay'
 import pDefer from 'p-defer'
-import { QueueOperationFailed } from '@web3-storage/filecoin-api/errors'
+import { QueueOperationFailed } from '@web3-storage/filecoin-api-legacy/errors'
 
 import { getServiceSigner } from '../../src/service.js'
 import { encode as pieceEncode } from '../../src/data/piece.js'

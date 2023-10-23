@@ -61,6 +61,21 @@ export interface Inclusion <Piece = PieceLink> {
   failedReason?: string
 }
 
+export interface Deal <Piece = PieceLink> {
+  // PieceCid of an Aggregate `bagy...aggregate`
+  piece: Piece
+  // address of the Filecoin storage provider storing deal
+  providerId: string
+  // deal identifier
+  dealId: number
+  // epoch of deal expiration
+  expirationEpoch: number
+  // source of the deal information
+  source: string
+  // number of milliseconds elapsed since the epoch when deal was added
+  insertedAt: number
+}
+
 // Enums
 export type PiecePolicy =
   | NORMAL

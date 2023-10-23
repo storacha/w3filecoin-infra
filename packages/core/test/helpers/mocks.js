@@ -6,8 +6,8 @@ const notImplemented = () => {
 
 /**
  * @param {Partial<
- * import('@web3-storage/filecoin-client/types').AggregatorService &
- * import('@web3-storage/filecoin-client/types').DealerService
+ * import('@web3-storage/filecoin-client-legacy/types').AggregatorService &
+ * import('@web3-storage/filecoin-client-legacy/types').DealerService
  * >} impl
  */
 export function mockService(impl) {

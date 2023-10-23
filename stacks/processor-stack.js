@@ -1,10 +1,10 @@
-import { Queue, Config, use } from 'sst/constructs'
+import { Queue, use } from 'sst/constructs'
 import { Duration } from 'aws-cdk-lib'
 
 import { DataStack } from './data-stack.js'
 import {
   setupSentry,
-  getEnv,
+  getAggregatorEnv,
   getResourceName,
   getCustomDomain
 } from './config.js'
@@ -20,17 +20,17 @@ export function ProcessorStack({ stack, app }) {
     MAX_AGGREGATE_SIZE,
     MIN_AGGREGATE_SIZE,
     MIN_UTILIZATION_FACTOR
-  } = getEnv(stack)
+  } = getAggregatorEnv(stack)
 
   // Setup app monitoring with Sentry
   setupSentry(app, stack)
 
-  const privateKey = new Config.Secret(stack, 'PRIVATE_KEY')
   const apiCustomDomain = getCustomDomain(stack.stage, process.env.HOSTED_ZONE)
 
   const {
     bufferStoreBucket,
-    aggregateStoreTable
+    aggregateStoreTable,
+    privateKey
   } = use(DataStack)
 
    /**
@@ -212,7 +212,6 @@ export function ProcessorStack({ stack, app }) {
     pieceAddQueue,
     pieceBufferQueue,
     bufferQueue,
-    aggregateQueue,
-    privateKey
+    aggregateQueue
   }
 }

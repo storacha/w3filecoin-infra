@@ -93,7 +93,7 @@ export function setupSentry (app, stack) {
     return
   }
 
-  const { SENTRY_DSN } = getEnv(stack)
+  const { SENTRY_DSN } = getEnv()
 
   stack.addDefaultFunctionEnv({
     SENTRY_DSN,
@@ -102,23 +102,43 @@ export function setupSentry (app, stack) {
 
 /**
  * Get Env validating it is set.
+ */
+export function getEnv() {
+  return {
+    SENTRY_DSN: mustGetEnv('SENTRY_DSN'),
+    UCAN_LOG_URL: mustGetEnv('UCAN_LOG_URL')
+  }
+}
+
+/**
+ * Get Env validating it is set.
  * 
  * @param {import('sst/constructs').Stack} stack 
  */
-export function getEnv(stack) {
+export function getAggregatorEnv(stack) {
   const defaultMaxAggregateSize = String(2**35)
   // testing value aligned with integration test fixtures
   const defaultMinAggregateSize = stack.stage === 'production' ? String(2**34) : String(2 ** 13)
   const defaultMinUtilizationFactor = stack.stage === 'production' ? String(4) : String(10e9)
 
   return {
-    SENTRY_DSN: mustGetEnv('SENTRY_DSN'),
+    ...getEnv(),
+    HOSTED_ZONE: process.env.HOSTED_ZONE,
     DID: mustGetEnv('DID'),
     DEALER_DID: mustGetEnv('DEALER_DID'),
     DEALER_URL: mustGetEnv('DEALER_URL'),
     MAX_AGGREGATE_SIZE: process.env.MAX_AGGREGATE_SIZE || defaultMaxAggregateSize,
     MIN_AGGREGATE_SIZE: process.env.MIN_AGGREGATE_SIZE || defaultMinAggregateSize,
-    MIN_UTILIZATION_FACTOR: process.env.MIN_UTILIZATION_FACTOR || defaultMinUtilizationFactor
+    MIN_UTILIZATION_FACTOR: process.env.MIN_UTILIZATION_FACTOR || defaultMinUtilizationFactor,
+  }
+}
+
+export function getDealTrackerEnv () {
+  return {
+    ...getEnv(),
+    DEAL_TRACKER_API_HOSTED_ZONE: process.env.DEAL_TRACKER_API_HOSTED_ZONE,
+    DEAL_TRACKER_DID: mustGetEnv('DEAL_TRACKER_DID'),
+    SPADE_ORACLE_URL: mustGetEnv('SPADE_ORACLE_URL'),
   }
 }
 
