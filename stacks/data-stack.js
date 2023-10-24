@@ -75,7 +75,7 @@ export function DataStack({ stack, app }) {
   const spaceOracleStoreBucket = new Bucket(stack, spaceOracleBucket.bucketName, {
     cors: true,
     cdk: {
-      bucket
+      bucket: spaceOracleBucket
     }
   })
 
