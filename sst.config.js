@@ -3,7 +3,6 @@ import { Tags } from 'aws-cdk-lib';
 import { ApiStack } from './stacks/api-stack.js'
 import { DataStack } from './stacks/data-stack.js'
 import { ProcessorStack } from './stacks/processor-stack.js'
-import { DealTrackerStack } from './stacks/deal-tracker-stack.js'
 
 export default {
   config() {
@@ -31,7 +30,6 @@ export default {
     app
       .stack(DataStack)
       .stack(ProcessorStack)
-      .stack(DealTrackerStack)
       .stack(ApiStack)
     
     // tags let us discover all the aws resource costs incurred by this app
