@@ -1,5 +1,3 @@
-// Store Record
-
 // Connectors
 
 export interface BucketConnect {
