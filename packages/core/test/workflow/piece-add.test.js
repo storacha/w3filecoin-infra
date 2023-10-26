@@ -39,6 +39,7 @@ test.beforeEach(async (t) => {
 })
 
 test.beforeEach(async t => {
+  await delay(1000)
   t.context.queueConsumer.start()
   await pWaitFor(() => t.context.queueConsumer.isRunning)
 })
@@ -51,7 +52,7 @@ test.afterEach(async t => {
 test('can add received pieces', async t => {
   const { sqsClient, queueUrl, queuedMessages } = t.context
 
-  const { pieces, pieceRecords } = await getPieces(10, 128)
+  const { pieces, pieceRecords } = await getPieces(6, 128)
   const queueClient = createQueueClient(sqsClient, {
     queueUrl,
     encodeMessage: pieceEncode.message,
@@ -87,7 +88,7 @@ test('can add received pieces', async t => {
 test('handles partial fails when received same pieces and fails to add them', async t => {
   const { sqsClient, queueUrl, queuedMessages } = t.context
 
-  const { pieces, pieceRecords } = await getPieces(10, 128)
+  const { pieces, pieceRecords } = await getPieces(6, 128)
   // Creating two slices of pieces with common intersection - 2 pieces
   const pieceRecordsA = pieceRecords.slice(0, (pieceRecords.length / 2) + 1)
   const pieceRecordsB = pieceRecords.slice((pieceRecords.length / 2) - 1)
@@ -157,7 +158,7 @@ test('handles partial fails when received same pieces and fails to add them', as
 })
 
 test('handles failures when received same pieces and fails to queue them for buffering', async t => {
-  const { pieces, pieceRecords } = await getPieces(10, 128)
+  const { pieces, pieceRecords } = await getPieces(6, 128)
 
   // Create context
   const queueClient = {

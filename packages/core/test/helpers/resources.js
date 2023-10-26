@@ -149,7 +149,7 @@ export async function createS3(opts = {}) {
 export async function createBucket(s3) {
   const id = customAlphabet('1234567890abcdefghijklmnopqrstuvwxyz', 10)
   const Bucket = id()
-  await s3.send(new CreateBucketCommand({ Bucket }))
+  await pRetry(() => s3.send(new CreateBucketCommand({ Bucket })))
   return Bucket
 }
 
@@ -177,9 +177,11 @@ export async function createQueue(opts = {}) {
   const id = customAlphabet('1234567890abcdefghijklmnopqrstuvwxyz', 10)
   const QueueName = id()
 
-  await client.send(new CreateQueueCommand({
-    QueueName,
-  }))
+  await pRetry(() =>
+    client.send(new CreateQueueCommand({
+      QueueName,
+    }))
+  )
 
   return {
     client,

@@ -39,6 +39,7 @@ test.before(async (t) => {
 })
 
 test.beforeEach(async t => {
+  await delay(1000)
   t.context.queueConsumer.start()
   await pWaitFor(() => t.context.queueConsumer.isRunning)
 })

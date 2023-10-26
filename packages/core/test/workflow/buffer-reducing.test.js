@@ -56,6 +56,7 @@ test.beforeEach(async (t) => {
 })
 
 test.beforeEach(async t => {
+  await delay(1000)
   for (const [, q] of Object.entries(t.context.queues)) {
     q.queueConsumer.start()
     await pWaitFor(() => q.queueConsumer.isRunning)
