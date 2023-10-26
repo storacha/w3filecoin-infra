@@ -275,8 +275,7 @@ export function createClient (conf, context) {
         }
       }
 
-      // TODO: handle pulling the entire list. currently we only support 2 providers so
-      // this list should not be longer than the default page size so this is not terribly urgent.
+      // TODO: handle pulling the entire list. Even with renewals we are far away from this being needed
       return {
         ok: res.Items ? res.Items.map(item => decodeRecord(
           /** @type {DealerAggregateStoreRecord} */ (unmarshall(item))
