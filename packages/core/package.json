@@ -3,7 +3,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "test": "ava --serial --no-worker-threads --verbose --timeout=60s test/{*.test.js,**/*.test.js}"
+    "mock:spade-oracle-server": "node test/helpers/spade-oracle-server.js",
+    "mock": "run-p mock:*",
+    "test": "PORT=9200 npm-run-all -p -r mock test:all",
+    "test:all": "ava --serial --no-worker-threads --verbose --timeout=60s test/{*.test.js,**/*.test.js}"
   },
   "dependencies": {
     "@serverless-stack/node": "^1.18.4",
@@ -11,6 +14,7 @@
     "@aws-sdk/client-sqs": "^3.363.0",
     "@aws-sdk/client-s3": "^3.363.0",
     "@aws-sdk/util-dynamodb": "3.363.0",
+    "@ipld/dag-json": "10.1.5",
     "@ipld/dag-ucan": "^3.3.2",
     "@ucanto/client": "^8.0.0",
     "@ucanto/interface": "^8.0.0",
@@ -26,13 +30,16 @@
     "@web3-storage/filecoin-client": "^3.0.0",
     "multiformats": "12.0.1",
     "uint8arrays": "^4.0.4",
-    "p-retry": "^5.1.2"
+    "p-retry": "^5.1.2",
+    "simple-zstd": "^1.4.2",
+    "stream-read-all": "^4.0.0"
   },
   "devDependencies": {
     "@ipld/car": "5.1.1",
     "@web-std/blob": "3.0.4",
     "ava": "^5.3.0",
     "nanoid": "^4.0.0",
+    "npm-run-all": "^4.1.5",
     "delay": "^6.0.0",
     "p-defer": "^4.0.0",
     "p-wait-for": "^5.0.2",

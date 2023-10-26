@@ -50,8 +50,3 @@ export type Variant<U extends Record<string, unknown>> = {
     [K in Key]: U[Key]
   }
 }[keyof U]
-
-// -----
-export interface DealTrackerServiceContext {
-  dealStore: any
-}

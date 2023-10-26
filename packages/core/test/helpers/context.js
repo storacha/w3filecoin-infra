@@ -23,6 +23,7 @@ import anyTest from 'ava'
  * @typedef {import('ava').TestFn<BucketContext & DbContext>} TestStore
  * @typedef {import('ava').TestFn<QueueContext>} TestQueue
  * @typedef {import('ava').TestFn<BucketContext & DbContext & QueueContext>} TestWorkflow
+ * @typedef {import('ava').TestFn<BucketContext & DbContext>} TestDealTracker
  * @typedef {import('ava').TestFn<BucketContext & DbContext & MultipleQueueContext>} TestWorkflowWithMultipleQueues
  */
 
@@ -40,6 +41,9 @@ export const testService = /** @type {TestService} */ (anyTest)
 
 // eslint-disable-next-line unicorn/prefer-export-from
 export const tesWorkflow = /** @type {TestWorkflow} */ (anyTest)
+
+// eslint-disable-next-line unicorn/prefer-export-from
+export const testDealTracker = /** @type {TestDealTracker} */ (anyTest)
 
 // eslint-disable-next-line unicorn/prefer-export-from
 export const tesWorkflowWithMultipleQueues = /** @type {TestWorkflowWithMultipleQueues} */ (anyTest)
