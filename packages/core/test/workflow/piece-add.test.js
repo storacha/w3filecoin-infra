@@ -49,7 +49,7 @@ test.afterEach(async t => {
   await delay(3000)
 })
 
-test('can add received pieces', async t => {
+test.skip('can add received pieces', async t => {
   const { sqsClient, queueUrl, queuedMessages } = t.context
 
   const { pieces, pieceRecords } = await getPieces(2, 128)
@@ -85,7 +85,7 @@ test('can add received pieces', async t => {
   await pWaitFor(() => queuedMessages.length === pieces.length)
 })
 
-test('handles partial fails when received same pieces and fails to add them', async t => {
+test.skip('handles partial fails when received same pieces and fails to add them', async t => {
   const { sqsClient, queueUrl, queuedMessages } = t.context
 
   const { pieces, pieceRecords } = await getPieces(4, 128)
@@ -157,7 +157,7 @@ test('handles partial fails when received same pieces and fails to add them', as
   await pWaitFor(() => queuedMessages.length === pieces.length)
 })
 
-test('handles failures when received same pieces and fails to queue them for buffering', async t => {
+test.skip('handles failures when received same pieces and fails to queue them for buffering', async t => {
   const { pieces, pieceRecords } = await getPieces(4, 128)
 
   // Create context

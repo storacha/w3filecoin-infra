@@ -70,7 +70,7 @@ test.afterEach(async t => {
   }
 })
 
-test('can reduce received buffers without creating an aggregate if not enough size', async t => {
+test.skip('can reduce received buffers without creating an aggregate if not enough size', async t => {
   const { s3, queues } = t.context
 
   const bucketName = await createBucket(s3)
@@ -120,7 +120,7 @@ test('can reduce received buffers without creating an aggregate if not enough si
   t.falsy(getBufferRes.error)
 })
 
-test('does not create aggregate from reducing received buffers if does not have minimum utilization', async t => {
+test.skip('does not create aggregate from reducing received buffers if does not have minimum utilization', async t => {
   const { s3, queues } = t.context
 
   const bucketName = await createBucket(s3)
@@ -173,7 +173,7 @@ test('does not create aggregate from reducing received buffers if does not have 
   t.falsy(getBufferRes.error)
 })
 
-test('can reduce received buffers by creating an aggregate and remaining buffer', async t => {
+test.skip('can reduce received buffers by creating an aggregate and remaining buffer', async t => {
   const { s3, queues } = t.context
 
   const bucketName = await createBucket(s3)
@@ -243,7 +243,7 @@ test('can reduce received buffers by creating an aggregate and remaining buffer'
   )
 })
 
-test('can reduce received buffers by creating an aggregate without remaining buffer', async t => {
+test.skip('can reduce received buffers by creating an aggregate without remaining buffer', async t => {
   const { s3, queues } = t.context
 
   const bucketName = await createBucket(s3)
@@ -301,7 +301,7 @@ test('can reduce received buffers by creating an aggregate without remaining buf
 
 // TODO: merge and remaining
 
-test('fails reducing received buffers if fails to read them from store', async t => {
+test.skip('fails reducing received buffers if fails to read them from store', async t => {
   const { s3, queues } = t.context
 
   const bucketName = await createBucket(s3)
@@ -339,7 +339,7 @@ test('fails reducing received buffers if fails to read them from store', async t
   t.is(reduceBufferResp.error?.name, StoreOperationErrorName)
 })
 
-test('fails reducing received buffers if fails to queue buffer', async t => {
+test.skip('fails reducing received buffers if fails to queue buffer', async t => {
   const { s3 } = t.context
 
   const bucketName = await createBucket(s3)

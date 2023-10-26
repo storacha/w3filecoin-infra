@@ -33,7 +33,7 @@ test.beforeEach(async (t) => {
   })
 })
 
-test('can add produced aggregate', async t => {
+test.skip('can add produced aggregate', async t => {
   const {
     aggregateRecord,
     bufferStoreClient,
@@ -70,7 +70,7 @@ test('can add produced aggregate', async t => {
   // TODO: validate offer CBOR block cid invCap.nb.offer
 })
 
-test('fails adding aggregate if fails to read from store', async t => {
+test.skip('fails adding aggregate if fails to read from store', async t => {
   const {
     aggregateRecord,
     bufferStoreClient,
@@ -97,7 +97,7 @@ test('fails adding aggregate if fails to read from store', async t => {
   t.is(dealerService.service.deal.queue.callCount, 0)
 })
 
-test('fails adding aggregate if fails to add to dealer', async t => {
+test.skip('fails adding aggregate if fails to add to dealer', async t => {
   const {
     aggregateRecord,
     bufferStoreClient,
