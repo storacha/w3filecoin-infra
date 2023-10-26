@@ -9,21 +9,9 @@ export interface TableConnect {
 }
 
 // Store records
-
-export interface DealStoreRecord {
-  // PieceCid of an Aggregate `bagy...aggregate`
-  piece: string
-  // address of the Filecoin storage provider storing deal
-  provider: string
-  // deal identifier
-  dealId: number
-  // epoch of deal expiration
-  expirationEpoch: number
-  // source of the deal information
-  source: string
-  // Date when deal was added as ISO string
-  insertedAt: string
+export type InferStoreRecord<T> = {
+  [Property in keyof T]: T[Property] extends Number ? T[Property] : string
 }
 
-export interface DealStoreRecordKey extends Pick<DealStoreRecord, 'piece' | 'dealId'> {}
-export interface DealStoreRecordQueryByPiece extends Pick<DealStoreRecord, 'piece'> {}
+/** A record that is of suitable type to be put in DynamoDB. */
+export type StoreRecord = Record<string, string|number>

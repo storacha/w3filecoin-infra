@@ -9,14 +9,14 @@ import { connectTable } from './index.js'
  * @typedef {import('@web3-storage/filecoin-api/deal-tracker/api').DealRecord} DealRecord
  * @typedef {import('@web3-storage/filecoin-api/deal-tracker/api').DealRecordKey} DealRecordKey
  * @typedef {import('@web3-storage/filecoin-api/deal-tracker/api').DealRecordQueryByPiece} DealRecordQueryByPiece
- * @typedef {import('./types').DealStoreRecord} DealStoreRecord
- * @typedef {import('./types').DealStoreRecordKey} DealStoreRecordKey
- * @typedef {import('./types').DealStoreRecordQueryByPiece} DealStoreRecordQueryByPiece
+ * @typedef {import('./types').InferStoreRecord<DealRecord>} InferStoreRecord
+ * @typedef {Pick<InferStoreRecord, 'piece' | 'dealId'>} DealStoreRecordKey
+ * @typedef {Pick<InferStoreRecord, 'piece'>} DealStoreRecordQueryByPiece
  */
 
 /**
  * @param {DealRecord} record 
- * @returns {DealStoreRecord} 
+ * @returns {InferStoreRecord} 
  */
 const encodeRecord = (record) => {
   return {
@@ -48,7 +48,7 @@ const encodeQueryByPiece = (recordKey) => {
 }
 
 /**
- * @param {DealStoreRecord} encodedRecord 
+ * @param {InferStoreRecord} encodedRecord 
  * @returns {DealRecord}
  */
 const decodeRecord = (encodedRecord) => {
@@ -111,7 +111,7 @@ export function createClient (conf, context) {
 
       return {
         ok: decodeRecord(
-          /** @type {DealStoreRecord} */ (unmarshall(res.Item))
+          /** @type {InferStoreRecord} */ (unmarshall(res.Item))
         )
       }
     },
@@ -132,7 +132,7 @@ export function createClient (conf, context) {
       // not found error
       if (!res.Item) {
         return {
-          error: new RecordNotFound('item not found in store')
+          ok: false
         }
       }
 
@@ -166,7 +166,7 @@ export function createClient (conf, context) {
       // this list should not be longer than the default page size so this is not terribly urgent.
       return {
         ok: res.Items ? res.Items.map(item => decodeRecord(
-          /** @type {DealStoreRecord} */ (unmarshall(item))
+          /** @type {InferStoreRecord} */ (unmarshall(item))
         )) : []
       }
     }
