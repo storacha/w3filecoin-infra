@@ -38,6 +38,12 @@ declare module 'sst/node/config' {
     PRIVATE_KEY: {
       value: string
     },
+    DEALER_PRIVATE_KEY: {
+      value: string
+    },
+    DEAL_TRACKER_PRIVATE_KEY: {
+      value: string
+    },
     UCAN_LOG_BASIC_AUTH: {
       value: string
     }

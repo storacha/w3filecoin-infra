@@ -1,6 +1,8 @@
 import {
   PutObjectCommand,
-  GetObjectCommand
+  GetObjectCommand,
+  HeadObjectCommand,
+  DeleteObjectCommand
 } from '@aws-sdk/client-s3'
 import pRetry from 'p-retry'
 import { RecordNotFound, StoreOperationFailed } from '@web3-storage/filecoin-api/errors'
@@ -102,7 +104,7 @@ export function createClient (conf, context) {
       }
     },
     has: async (key) => {
-      const getCmd = new GetObjectCommand({
+      const getCmd = new HeadObjectCommand({
         Bucket: context.name,
         Key: key
       })
@@ -161,6 +163,20 @@ export function createClient (conf, context) {
       // retry to avoid throttling errors
       try {
         await pRetry(() => bucketClient.send(putCmd))
+      } catch (/** @type {any} */ error) {
+        return {
+          error: new StoreOperationFailed(error.message)
+        }
+      }
+
+      // Should delete old record when copied
+      const deleteCmd = new DeleteObjectCommand({
+        Bucket: context.name,
+        Key: key
+      })
+
+      try {
+        await pRetry(() => bucketClient.send(deleteCmd))
       } catch (/** @type {any} */ error) {
         return {
           error: new StoreOperationFailed(error.message)

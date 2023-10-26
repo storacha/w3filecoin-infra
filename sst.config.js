@@ -4,6 +4,7 @@ import { ApiStack } from './stacks/api-stack.js'
 import { DataStack } from './stacks/data-stack.js'
 import { ProcessorStack } from './stacks/processor-stack.js'
 import { DealTrackerStack } from './stacks/deal-tracker-stack.js'
+import { DealerStack } from './stacks/dealer-stack.js'
 
 export default {
   config() {
@@ -33,6 +34,7 @@ export default {
       .stack(ProcessorStack)
       .stack(DealTrackerStack)
       .stack(ApiStack)
+      .stack(DealerStack)
     
     // tags let us discover all the aws resource costs incurred by this app
     // see: https://docs.sst.dev/advanced/tagging-resources

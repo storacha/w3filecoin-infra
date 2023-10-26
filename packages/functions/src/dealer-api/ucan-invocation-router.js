@@ -42,7 +42,7 @@ export async function ucanInvocationRouter(request) {
     }
   }
 
-  const { PRIVATE_KEY: privateKey, UCAN_LOG_BASIC_AUTH } = Config
+  const { DEALER_PRIVATE_KEY: privateKey, UCAN_LOG_BASIC_AUTH } = Config
   const ucanLog = ucanLogConnect({
     url: new URL(ucanLogUrl),
     auth: UCAN_LOG_BASIC_AUTH

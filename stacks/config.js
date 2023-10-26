@@ -137,6 +137,8 @@ export function getDealerEnv () {
   return {
     ...getEnv(),
     DEAL_API_HOSTED_ZONE: process.env.DEALER_API_HOSTED_ZONE,
+    DEALER_DID: mustGetEnv('DEALER_DID'),
+    DEALER_PROOF: process.env.DEALER_PROOF ?? '',
   }
 }
 
@@ -145,6 +147,7 @@ export function getDealTrackerEnv () {
     ...getEnv(),
     DEAL_TRACKER_API_HOSTED_ZONE: process.env.DEAL_TRACKER_API_HOSTED_ZONE,
     DEAL_TRACKER_DID: mustGetEnv('DEAL_TRACKER_DID'),
+    DEAL_TRACKER_PROOF: process.env.DEAL_TRACKER_PROOF ?? '',
     SPADE_ORACLE_URL: mustGetEnv('SPADE_ORACLE_URL'),
   }
 }

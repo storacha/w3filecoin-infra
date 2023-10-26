@@ -82,7 +82,11 @@ export function DataStack({ stack, app }) {
   })
 
   const dealerAggregateStoreTableName = 'dealer-aggregate-store'
-  const dealerAggregateStoreTable = new Table(stack, dealerAggregateStoreTableName, dealerAggregateStoreTableProps)
+  const dealerAggregateStoreTable = new Table(stack, dealerAggregateStoreTableName, {
+    ...dealerAggregateStoreTableProps,
+    // information that will be written to the stream
+    stream: 'new_and_old_images'
+  })
 
   // --------------------------------- Deal Tracker ---------------------------------
   /**
@@ -100,7 +104,11 @@ export function DataStack({ stack, app }) {
    * Deal store used to store deal information 
    */
   const dealTrackerDealStoreTableName = 'deal-tracker-deal-store'
-  const dealTrackerDealStoreTable = new Table(stack, dealTrackerDealStoreTableName, dealStoreTableProps)
+  const dealTrackerDealStoreTable = new Table(stack, dealTrackerDealStoreTableName, {
+    ...dealStoreTableProps,
+    // information that will be written to the stream
+    stream: 'new_and_old_images'
+  })
 
   stack.addOutputs({
     // Aggregator

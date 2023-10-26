@@ -3,8 +3,8 @@ import { test } from './helpers/context.js'
 import git from 'git-rev-sync'
 import pRetry from 'p-retry'
 import delay from 'delay'
-import { randomCargo } from '@web3-storage/filecoin-api/test'
-import { Aggregator } from '@web3-storage/filecoin-client'
+import { randomCargo } from '@web3-storage/filecoin-api-legacy/test'
+import { Aggregator } from '@web3-storage/filecoin-client-legacy'
 
 import { decode as bufferDecode } from '../packages/core/src/data/buffer.js'
 
@@ -54,6 +54,7 @@ test('POST /', async t => {
       invocationConfig,
       p.link, // put one piece
       storefront,
+      // @ts-expect-error multiple versions of ucanto, will change once we drop old aggregator code
       { connection }
     ))
   )

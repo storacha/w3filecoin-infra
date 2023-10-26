@@ -18,7 +18,6 @@ import {
 export function ApiStack({ app, stack }) {
   const {
     DID,
-    DEALER_DID,
     DEALER_URL,
     UCAN_LOG_URL,
     HOSTED_ZONE
@@ -28,6 +27,7 @@ export function ApiStack({ app, stack }) {
     DEAL_TRACKER_DID
   } = getDealTrackerEnv()
   const {
+    DEALER_DID,
     DEAL_API_HOSTED_ZONE
   } = getDealerEnv()
 
@@ -150,4 +150,10 @@ export function ApiStack({ app, stack }) {
     DealerApiEndpoint: dealerApi.url,
     DealerApiCustomDomain: dealerApiCustomDomain ? `https://${dealerApiCustomDomain.domainName}` : 'Set HOSTED_ZONE in env to deploy to a custom domain',
   })
+
+  return {
+    aggregateApiEndpoint: api.url,
+    dealTrackerApiEndpoint: dealTrackerApi.url,
+    dealerApiEndpoint: dealerApi.url,
+  }
 }

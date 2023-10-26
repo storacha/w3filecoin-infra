@@ -1,4 +1,4 @@
-import { PutItemCommand, GetItemCommand, UpdateItemCommand, QueryCommand } from '@aws-sdk/client-dynamodb'
+import { PutItemCommand, GetItemCommand, BatchWriteItemCommand, QueryCommand } from '@aws-sdk/client-dynamodb'
 import { marshall, unmarshall } from '@aws-sdk/util-dynamodb'
 import { RecordNotFound, StoreOperationFailed } from '@web3-storage/filecoin-api/errors'
 import { parseLink } from '@ucanto/server'
@@ -40,13 +40,12 @@ const encodeRecord = (record) => {
  */
 const encodePartialRecord = (record) => {
   return {
-    ...record,
-    aggregate: record.aggregate?.toString(),
-    pieces: record.pieces?.toString(),
+    ...(record.aggregate && { aggregate: record.aggregate?.toString() }),
+    ...(record.pieces && { pieces: record.pieces?.toString() }),
+    ...(record.status && { stat: encodeStatus(record.status) }),
     // fallback to -1 given is key
     dealMetadataDealId: record.deal?.dataSource.dealID ? Number(record.deal?.dataSource.dealID) : 0,
     dealMetadataDataType: record.deal?.dataType !== undefined ? Number(record.deal?.dataType) : undefined,
-    stat: record.status && encodeStatus(record.status)
   }
 }
 
@@ -55,11 +54,11 @@ const encodePartialRecord = (record) => {
  */
 const encodeStatus = (status) => {
   if (status === 'offered') {
-    return 0
+    return Status.OFFERED
   } else if (status === 'accepted') {
-    return 1
+    return Status.ACCEPTED
   }
-  return 2
+  return Status.INVALID
 }
 
 /**
@@ -68,7 +67,6 @@ const encodeStatus = (status) => {
  */
 const encodeKey = (recordKey) => {
   return {
-    ...recordKey,
     aggregate: recordKey.aggregate.toString(),
     // fallback to -1 given is key
     dealMetadataDealId: recordKey.deal?.dataSource.dealID ? Number(recordKey.deal?.dataSource.dealID) : -1,
@@ -81,9 +79,9 @@ const encodeKey = (recordKey) => {
 const encodeQueryProps = (recordKey) => {
   if (recordKey.status) {
     return {
-      IndexName: 'piece',
+      IndexName: 'stat',
       KeyConditions: {
-        piece: {
+        stat: {
           ComparisonOperator: 'EQ',
           AttributeValueList: [{ N: `${encodeStatus(recordKey.status)}` }]
         }
@@ -106,7 +104,7 @@ const encodeQueryProps = (recordKey) => {
  * @param {DealerAggregateStoreRecord} encodedRecord 
  * @returns {AggregateRecord}
  */
-const decodeRecord = (encodedRecord) => {
+export const decodeRecord = (encodedRecord) => {
   return {
     aggregate: parseLink(encodedRecord.aggregate),
     pieces: parseLink(encodedRecord.pieces),
@@ -124,9 +122,9 @@ const decodeRecord = (encodedRecord) => {
  * @returns {"offered" | "accepted" | "invalid"}
  */
 const decodeStatus = (status) => {
-  if (status === 0) {
+  if (status === Status.OFFERED) {
     return 'offered'
-  } else if (status === 1) {
+  } else if (status === Status.ACCEPTED) {
     return 'accepted'
   }
   return 'invalid'
@@ -215,41 +213,69 @@ export function createClient (conf, context) {
       }
     },
     update: async (key, record) => {
-      const encodedRecord = encodePartialRecord(record)
-      const ExpressionAttributeValues = {
-        ':ua': { S: encodedRecord.updatedAt || (new Date()).toISOString() },
-        ...(encodedRecord.stat && {':st': { N: `${encodedRecord.stat}` }})
-      }
-      const stateUpdateExpression = encodedRecord.stat ? ', stat = "st' : ''
-      const UpdateExpression = `SET updatedAt = :ua ${stateUpdateExpression}`
+      // Encode partial value with new properties
+      const updatedValueDiff = encodePartialRecord(record)
 
-      const updateCmd = new UpdateItemCommand({
+      // Get current value
+      const getCmd = new GetItemCommand({
         TableName: context.tableName,
         Key: marshall(encodeKey(key)),
-        UpdateExpression,
-        ExpressionAttributeValues,
-        ReturnValues: 'ALL',
+      })
+      let getRes
+      try {
+        getRes = await tableclient.send(getCmd)
+      } catch (/** @type {any} */ error) {
+        return {
+          error: new StoreOperationFailed(error.message)
+        }
+      }
+      // not found error
+      if (!getRes.Item) {
+        return {
+          error: new RecordNotFound('item to update not found in store')
+        }
+      }
+
+      // Create new value
+      const currentValue = /** @type {DealerAggregateStoreRecord} */ (unmarshall(getRes.Item))
+      const newValue = {
+        ...currentValue,
+        updatedAt: (new Date()).toISOString(),
+        // overwrite new columns
+        ...updatedValueDiff,
+      }
+
+      // DynamoDB does not allow update a key, so we need to put and delete record
+      // so that we can guarantee uniqueness of aggregate, deal pairs
+      const batchCommand = new BatchWriteItemCommand({
+        RequestItems: {
+          [context.tableName]: [
+            {
+              PutRequest: {
+                Item: marshall(newValue, {
+                  removeUndefinedValues: true
+                }),
+              }
+            },
+            {
+              DeleteRequest: {
+                Key: marshall(encodeKey(key)),
+              }
+            }
+          ]
+        }
       })
 
-      let res
       try {
-        res = await tableclient.send(updateCmd)
+        await tableclient.send(batchCommand)
       } catch (/** @type {any} */ error) {
         return {
           error: new StoreOperationFailed(error.message)
         }
       }
 
-      if (!res.Attributes) {
-        return {
-          error: new StoreOperationFailed('Missing `Attributes` property on DyanmoDB response')
-        }
-      }
-
       return {
-        ok: decodeRecord(
-          /** @type {DealerAggregateStoreRecord} */ (unmarshall(res.Attributes))
-        )
+        ok: decodeRecord(newValue)
       }
     },
     query: async (search) => {
@@ -283,4 +309,10 @@ export function createClient (conf, context) {
       }
     },
   }
+}
+
+export const Status = {
+  OFFERED: 0,
+  ACCEPTED: 1,
+  INVALID: 2
 }
