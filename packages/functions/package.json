@@ -10,7 +10,7 @@
     "@ucanto/server-legacy": "npm:@ucanto/server@8.0.0",
     "@ucanto/transport": "^8.0.0",
     "@web3-storage/filecoin-api-legacy": "npm:@web3-storage/filecoin-api@^1.4.0",
-    "@web3-storage/filecoin-api": "^3.0.1",
+    "@web3-storage/filecoin-api": "^3.0.2",
     "@w3filecoin/core": "*"
   },
   "devDependencies": {

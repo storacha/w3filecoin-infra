@@ -8,6 +8,10 @@
 # the value should match a hosted zone configured in route53 that your aws account has access to.
 # DEAL_TRACKER_API_HOSTED_ZONE=tracker.web3.storage
 
+# uncomment to try out deploying the `dealer-api` under a custom domain.
+# the value should match a hosted zone configured in route53 that your aws account has access to.
+# DEALER_API_HOSTED_ZONE=dealer.web3.storage
+
 # uncomment to set SENTRY_DSN
 # SENTRY_DSN = ''
 

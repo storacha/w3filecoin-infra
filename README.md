@@ -58,6 +58,10 @@ The root domain to deploy the aggregator API to. e.g `filecoin.web3.storage`. Th
 
 The root domain to deploy the deal tracker API to. e.g `tracker.web3.storage`. The value should match a hosted zone configured in route53 that your aws account has access to.
 
+#### `DEALER_API_HOSTED_ZONE`
+
+The root domain to deploy the dealer API to. e.g `dealer.web3.storage`. The value should match a hosted zone configured in route53 that your aws account has access to.
+
 #### `DID`
 
 [DID](https://www.w3.org/TR/did-core/) of the ucanto server running for the Aggregator service. e.g. `did:key:abc..`. Optional: if omitted, a `did:key` will be derrived from `PRIVATE_KEY`

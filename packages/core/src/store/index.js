@@ -85,6 +85,36 @@ export const inclusionStoreTableProps = {
     }
   }
 }
+/** ------------------- Dealer ------------------- */
+
+/** @type TableProps */
+export const dealerAggregateStoreTableProps = {
+  fields: {
+    aggregate: 'string',            // `bagy...aggregate` as PieceCid of an Aggregate (primary index, partition key)
+    pieces: 'string',               // `bafy...cbor` as CID of dag-cbor block
+    dealMetadataDataType: 'number', // '0' always 0 for now
+    dealMetadataDealId: 'number',   // '1123' Deal identifier on the Filecoin chain
+    stat: 'number',                 // `0` as 'OFFERED' | `1` as 'APPROVED' | `2` as 'REJECTED'
+    insertedAt: 'string',           // Insertion date as ISO string
+    updatedAt: 'string',            // Updated date as ISO string
+  },
+  // aggregate+dealMetadataDealId must be unique to satisfy index constraint
+  primaryIndex: { partitionKey: 'aggregate', sortKey: 'dealMetadataDealId' },
+  globalIndexes: {
+    stat: {
+      partitionKey: 'stat',
+      sortKey: 'insertedAt',
+      projection: 'all'
+    },
+    aggregate: {
+      partitionKey: 'aggregate',
+      sortKey: 'insertedAt',
+      projection: 'all'
+    },
+  }
+}
+
+/** ------------------- Deal Tracker ------------------- */
 
 /** @type TableProps */
 export const dealStoreTableProps = {
@@ -94,7 +124,7 @@ export const dealStoreTableProps = {
     dealId: 'number',           // '111' deal identifier
     expirationEpoch: 'number',  // '4482396' epoch of deal expiration
     source: 'string',           // 'cargo.dag.haus' source of the deal information
-    insertedAt: 'number',       // Insertion date as ISO string
+    insertedAt: 'string',       // Insertion date as ISO string
   },
   primaryIndex: { partitionKey: 'piece', sortKey: 'dealId' },
   globalIndexes: {
