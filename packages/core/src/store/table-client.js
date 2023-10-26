@@ -1,7 +1,7 @@
 import { PutItemCommand, GetItemCommand } from '@aws-sdk/client-dynamodb'
 import { marshall, unmarshall } from '@aws-sdk/util-dynamodb'
 
-import { StoreOperationFailed, StoreNotFound, EncodeRecordFailed } from '@web3-storage/filecoin-api/errors'
+import { StoreOperationFailed, StoreNotFound, EncodeRecordFailed } from '@web3-storage/filecoin-api-legacy/errors'
 
 import { connectTable } from './index.js'
 
@@ -16,7 +16,7 @@ import { connectTable } from './index.js'
  * @param {(data: Data) => Promise<StoreRecord>} context.encodeRecord
  * @param {(item: StoreRecord) => Promise<Data>} context.decodeRecord
  * @param {(data: Data) => Promise<StoreKey>} context.encodeKey
- * @returns {import('@web3-storage/filecoin-api/types').Store<Data>}
+ * @returns {import('@web3-storage/filecoin-api-legacy/types').Store<Data>}
  */
 export function createTableStoreClient (conf, context) {
   const tableclient = connectTable(conf)

@@ -5,7 +5,7 @@ import { randomCargo, randomAggregate } from './helpers/cargo.js'
 import { Consumer } from 'sqs-consumer'
 import pWaitFor from 'p-wait-for'
 import delay from 'delay'
-import { EncodeRecordErrorName } from '@web3-storage/filecoin-api/errors'
+import { EncodeRecordErrorName } from '@web3-storage/filecoin-api-legacy/errors'
 
 import { encode as pieceEncode, decode as pieceDecode } from '../src/data/piece.js'
 import { encode as bufferEncode, decode as bufferDecode } from '../src/data/buffer.js'

@@ -1,4 +1,4 @@
-import { Aggregator } from '@web3-storage/filecoin-client'
+import { Aggregator } from '@web3-storage/filecoin-client-legacy'
 import { decode as decodePiece } from '../data/piece.js'
 
 /**
@@ -20,8 +20,8 @@ import { decode as decodePiece } from '../data/piece.js'
  * When only a subset of the pieces succeed, a `batchItemFailures` is returned so that these items can be re-queued.
  *
  * @param {object} props
- * @param {import('@web3-storage/filecoin-api/types').Queue<Piece>} props.queueClient
- * @param {import('@web3-storage/filecoin-client/types').InvocationConfig} props.invocationConfig
+ * @param {import('@web3-storage/filecoin-api-legacy/types').Queue<Piece>} props.queueClient
+ * @param {import('@web3-storage/filecoin-client-legacy/types').InvocationConfig} props.invocationConfig
  * @param {import('@ucanto/principal/ed25519').ConnectionView<any>} props.aggregatorServiceConnection
  * @param {EncodedRecord[]} props.records - message encoded piece records
  */
@@ -61,8 +61,8 @@ export async function addPieces ({
 
 /**
  * @param {object} props
- * @param {import('@web3-storage/filecoin-api/types').Queue<Piece>} props.queueClient
- * @param {import('@web3-storage/filecoin-client/types').InvocationConfig} props.invocationConfig
+ * @param {import('@web3-storage/filecoin-api-legacy/types').Queue<Piece>} props.queueClient
+ * @param {import('@web3-storage/filecoin-client-legacy/types').InvocationConfig} props.invocationConfig
  * @param {import('@ucanto/principal/ed25519').ConnectionView<any>} props.aggregatorServiceConnection
  * @param {Record} props.record 
  */
@@ -77,6 +77,7 @@ async function addPiece ({
     record.piece.piece,
     record.piece.storefront,
     record.piece.group,
+    // @ts-expect-error different ucanto versions
     { connection: aggregatorServiceConnection }
   )
   if (aggregateAddResponse.out.error) {

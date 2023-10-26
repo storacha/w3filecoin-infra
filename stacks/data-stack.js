@@ -1,12 +1,14 @@
 import {
   Bucket,
+  Config,
   Table
 } from 'sst/constructs'
 
 import {
   pieceStoreTableProps,
   aggregateStoreTableProps,
-  inclusionStoreTableProps
+  inclusionStoreTableProps,
+  dealStoreTableProps
 } from '../packages/core/src/store/index.js'
 
 import {
@@ -21,6 +23,11 @@ export function DataStack({ stack, app }) {
   // Setup app monitoring with Sentry
   setupSentry(app, stack)
 
+  // Secrets
+  const privateKey = new Config.Secret(stack, 'PRIVATE_KEY')
+  const dealTrackerPrivateKey = new Config.Secret(stack, 'DEAL_TRACKER_PRIVATE_KEY')
+
+  // --------------------------------- Aggregator ---------------------------------
   /**
    * Buffer store used to buffer multiple pieces consumed from first workflow (`piece-queue`),
    * concatenating them on the second workflow (`buffer-queue`) until a buffer can be used
@@ -60,17 +67,46 @@ export function DataStack({ stack, app }) {
   const inclusionStoreTableName = 'inclusion-store'
   const inclusionStoreTable = new Table(stack, inclusionStoreTableName, inclusionStoreTableProps)
 
+  // --------------------------------- Deal Tracker ---------------------------------
+  /**
+   * Spade oracle store used to store active replicas reported by Spade.
+   */
+  const dealTrackerSpaceOracleBucket = getBucketConfig('deal-tracker-spade-oracle-store', stack.stage)
+  const dealTrackerSpaceOracleStoreBucket = new Bucket(stack, dealTrackerSpaceOracleBucket.bucketName, {
+    cors: true,
+    cdk: {
+      bucket: dealTrackerSpaceOracleBucket
+    }
+  })
+
+  /**
+   * Deal store used to store deal information 
+   */
+  const dealTrackerDealStoreTableName = 'deal-tracker-deal-store'
+  const dealTrackerDealStoreTable = new Table(stack, dealTrackerDealStoreTableName, dealStoreTableProps)
+
   stack.addOutputs({
+    // Aggregator
     BufferBucketName: bucket.bucketName,
     PieceTableName: pieceStoreTableName,
     AggregateTableName: aggregateStoreTableName,
     InclusionTableName: inclusionStoreTableName,
+    // Deal Tracker
+    SpadeOracleBucketName: dealTrackerSpaceOracleStoreBucket.bucketName,
+    DealTrackerDealStoreTableName: dealTrackerDealStoreTableName
   })
 
   return {
+    // secrets
+    privateKey,
+    dealTrackerPrivateKey,
+    // aggregator stores
     bufferStoreBucket,
     pieceStoreTable,
     aggregateStoreTable,
-    inclusionStoreTable
+    inclusionStoreTable,
+    // deal tracker stores
+    dealTrackerSpaceOracleStoreBucket,
+    dealTrackerDealStoreTable
   }
 }

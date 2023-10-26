@@ -4,14 +4,14 @@ import * as DID from '@ipld/dag-ucan/did'
 import { CAR, HTTP } from '@ucanto/transport'
 import { connect } from '@ucanto/client'
 
-import { createService } from '@web3-storage/filecoin-api/aggregator'
+import { createService } from '@web3-storage/filecoin-api-legacy/aggregator'
 
 /**
  * @param {import('@ucanto/interface').Signer} servicePrincipal
- * @param {import('@web3-storage/filecoin-api/types').AggregatorServiceContext} context
+ * @param {import('@web3-storage/filecoin-api-legacy/types').AggregatorServiceContext} context
  * @param {import('./types').ErrorReporter} errorReporter
  */
-export const createUcantoServer = (servicePrincipal, context, errorReporter) =>
+export const createAggregatorServer = (servicePrincipal, context, errorReporter) =>
   Server.create({
     id: servicePrincipal,
     codec: CAR.inbound,

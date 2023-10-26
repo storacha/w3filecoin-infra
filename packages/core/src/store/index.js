@@ -85,3 +85,22 @@ export const inclusionStoreTableProps = {
     }
   }
 }
+
+/** @type TableProps */
+export const dealStoreTableProps = {
+  fields: {
+    piece: 'string',            // `bagy...aggregate` as PieceCid of an Aggregate (primary index, partition key)
+    provider: 'string',         // `f020378` address of the Filecoin storage provider storing deal
+    dealId: 'number',           // '111' deal identifier
+    expirationEpoch: 'number',  // '4482396' epoch of deal expiration
+    source: 'string',           // 'cargo.dag.haus' source of the deal information
+    insertedAt: 'number',       // Insertion date as ISO string
+  },
+  primaryIndex: { partitionKey: 'piece', sortKey: 'dealId' },
+  globalIndexes: {
+    piece: {
+      partitionKey: 'piece',
+      projection: 'all'
+    }
+  }
+}

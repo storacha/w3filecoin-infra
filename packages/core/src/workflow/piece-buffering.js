@@ -8,8 +8,8 @@ import { decode as decodePiece } from '../data/piece.js'
 
 /**
  * @param {object} props
- * @param {import('@web3-storage/filecoin-api/types').Store<Data>} props.storeClient 
- * @param {import('@web3-storage/filecoin-api/types').Queue<Data>} props.queueClient
+ * @param {import('@web3-storage/filecoin-api-legacy/types').Store<Data>} props.storeClient 
+ * @param {import('@web3-storage/filecoin-api-legacy/types').Queue<Data>} props.queueClient
  * @param {string[]} props.pieceRecords
  * @param {string} [props.groupId]
  */

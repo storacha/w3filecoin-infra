@@ -1,5 +1,5 @@
 import { Aggregate, Piece } from '@web3-storage/data-segment'
-import { Dealer } from '@web3-storage/filecoin-client'
+import { Dealer } from '@web3-storage/filecoin-client-legacy'
 import { decode as aggregateDecode } from '../data/aggregate.js'
 
 /**
@@ -10,10 +10,10 @@ import { decode as aggregateDecode } from '../data/aggregate.js'
 
 /**
  * @param {object} props
- * @param {import('@web3-storage/filecoin-api/types').Store<Buffer>} props.bufferStoreClient
- * @param {import('@web3-storage/filecoin-api/types').Store<Aggregate>} props.aggregateStoreClient
+ * @param {import('@web3-storage/filecoin-api-legacy/types').Store<Buffer>} props.bufferStoreClient
+ * @param {import('@web3-storage/filecoin-api-legacy/types').Store<Aggregate>} props.aggregateStoreClient
  * @param {string} props.aggregateRecord
- * @param {import('@web3-storage/filecoin-client/types').InvocationConfig} props.invocationConfig
+ * @param {import('@web3-storage/filecoin-client-legacy/types').InvocationConfig} props.invocationConfig
  * @param {import('@ucanto/principal/ed25519').ConnectionView<any>} props.dealerServiceConnection
  */
 export async function dealerQueue ({
@@ -42,6 +42,7 @@ export async function dealerQueue ({
     bufferReference.ok.pieces.map(p => p.piece),
     bufferReference.ok.storefront,
     'label',
+    // @ts-expect-error different ucanto versions
     { connection: dealerServiceConnection }
   )
 
@@ -75,7 +76,7 @@ export async function dealerQueue ({
 
 /**
  * @param {{ piece?: import("@web3-storage/data-segment").PieceLink; buffer: any; invocation?: import("multiformats").UnknownLink | undefined; task?: import("multiformats").UnknownLink | undefined; insertedAt?: number; stat?: import("../data/types.js").AggregateStatus; }} bufferRef
- * @param {import('@web3-storage/filecoin-api/types').Store<Buffer>} storeClient
+ * @param {import('@web3-storage/filecoin-api-legacy/types').Store<Buffer>} storeClient
  */
 async function getAggregateBuffer (bufferRef, storeClient) {
   const getBufferRes = await storeClient.get(

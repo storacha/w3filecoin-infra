@@ -1,5 +1,5 @@
 import { SendMessageCommand } from '@aws-sdk/client-sqs'
-import { QueueOperationFailed, EncodeRecordFailed } from '@web3-storage/filecoin-api/errors'
+import { QueueOperationFailed, EncodeRecordFailed } from '@web3-storage/filecoin-api-legacy/errors'
 
 import { connectQueue } from './index.js'
 
@@ -10,7 +10,7 @@ import { connectQueue } from './index.js'
  * @param {object} context
  * @param {string} context.queueUrl
  * @param {(item: Data) => Promise<string>} context.encodeMessage
- * @returns {import('@web3-storage/filecoin-api/types').Queue<Data>}
+ * @returns {import('@web3-storage/filecoin-api-legacy/types').Queue<Data>}
  */
 export function createQueueClient (conf, context) {
   const queueClient = connectQueue(conf)

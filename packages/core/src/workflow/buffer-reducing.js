@@ -9,7 +9,7 @@ import { decode as decodeBuffer, encodeBlock } from '../data/buffer.js'
  * @typedef {import('../data/types.js').Buffer<PieceLink>} Buffer
  * @typedef {import('../data/types.js').BufferedPiece<PieceLink>} BufferedPiece
  * @typedef {import('../data/types.js').Aggregate<PieceLink>} Aggregate
- * @typedef {import('@web3-storage/filecoin-api/types').StoreGetError} StoreGetError
+ * @typedef {import('@web3-storage/filecoin-api-legacy/types').StoreGetError} StoreGetError
  * @typedef {{ bufferedPieces: BufferedPiece[], storefront: string, group: string }} GetBufferedPieces
  * @typedef {import('../types.js').Result<GetBufferedPieces, StoreGetError>} GetBufferedPiecesResult
  * 
@@ -21,9 +21,9 @@ import { decode as decodeBuffer, encodeBlock } from '../data/buffer.js'
 
 /**
  * @param {object} props
- * @param {import('@web3-storage/filecoin-api/types').Store<Buffer>} props.storeClient 
- * @param {import('@web3-storage/filecoin-api/types').Queue<Buffer>} props.bufferQueueClient
- * @param {import('@web3-storage/filecoin-api/types').Queue<Aggregate>} props.aggregateQueueClient
+ * @param {import('@web3-storage/filecoin-api-legacy/types').Store<Buffer>} props.storeClient 
+ * @param {import('@web3-storage/filecoin-api-legacy/types').Queue<Buffer>} props.bufferQueueClient
+ * @param {import('@web3-storage/filecoin-api-legacy/types').Queue<Aggregate>} props.aggregateQueueClient
  * @param {string[]} props.bufferRecords
  * @param {number} props.maxAggregateSize
  * @param {number} props.minAggregateSize
@@ -107,9 +107,9 @@ export async function reduceBuffer ({
 /**
  * @param {object} props
  * @param {AggregateInfo} props.aggregateInfo
- * @param {import('@web3-storage/filecoin-api/types').Store<Buffer>} props.storeClient
- * @param {import('@web3-storage/filecoin-api/types').Queue<Aggregate>} props.aggregateQueueClient
- * @param {import('@web3-storage/filecoin-api/types').Queue<Buffer>} props.bufferQueueClient
+ * @param {import('@web3-storage/filecoin-api-legacy/types').Store<Buffer>} props.storeClient
+ * @param {import('@web3-storage/filecoin-api-legacy/types').Queue<Aggregate>} props.aggregateQueueClient
+ * @param {import('@web3-storage/filecoin-api-legacy/types').Queue<Buffer>} props.bufferQueueClient
  * @param {string} props.storefront
  * @param {string} props.group
  * @param {string} [props.groupId]
@@ -196,8 +196,8 @@ async function handleBufferReducingWithAggregate ({
  *
  * @param {object} props
  * @param {Buffer} props.buffer 
- * @param {import('@web3-storage/filecoin-api/types').Store<Buffer>} props.storeClient 
- * @param {import('@web3-storage/filecoin-api/types').Queue<Buffer>} props.bufferQueueClient 
+ * @param {import('@web3-storage/filecoin-api-legacy/types').Store<Buffer>} props.storeClient 
+ * @param {import('@web3-storage/filecoin-api-legacy/types').Queue<Buffer>} props.bufferQueueClient 
  * @param {string} [props.groupId]
  */
 async function handleBufferReducingWithoutAggregate ({
@@ -228,7 +228,7 @@ async function handleBufferReducingWithoutAggregate ({
 
 /**
  * @param {Buffer} buffer
- * @param {import('@web3-storage/filecoin-api/types').Store<Buffer>} storeClient
+ * @param {import('@web3-storage/filecoin-api-legacy/types').Store<Buffer>} storeClient
  */
 async function storeBufferedPieces (buffer, storeClient) {
   const bufferStored = await storeClient.put(buffer)
@@ -266,7 +266,7 @@ function aggregatePieces (bufferedPieces, sizes) {
 
   // Create builder with maximum size and try to fill it up
   const builder = Aggregate.createBuilder({
-    size: Piece.PaddedSize.from(sizes.maxAggregateSize)
+    size: Aggregate.Size.from(sizes.maxAggregateSize)
   })
 
   // add pieces to an aggregate until there is no more space, or no more pieces
@@ -304,7 +304,7 @@ function aggregatePieces (bufferedPieces, sizes) {
  * Get buffered pieces from queue buffer records.
  *
  * @param {string[]} bufferRecords
- * @param {import('@web3-storage/filecoin-api/types').Store<Buffer>} storeClient
+ * @param {import('@web3-storage/filecoin-api-legacy/types').Store<Buffer>} storeClient
  * @returns {Promise<GetBufferedPiecesResult>}
  */
 async function getBufferedPieces (bufferRecords, storeClient) {
@@ -345,7 +345,7 @@ async function getBufferedPieces (bufferRecords, storeClient) {
  * Get buffer from queue message.
  *
  * @param {string} messageBody
- * @param {import('@web3-storage/filecoin-api/types').Store<Buffer>} storeClient
+ * @param {import('@web3-storage/filecoin-api-legacy/types').Store<Buffer>} storeClient
  */
 async function getBuffer (messageBody, storeClient) {
   const bufferRef = await decodeBuffer.message(messageBody)
