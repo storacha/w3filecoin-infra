@@ -1,7 +1,7 @@
 import * as Sentry from '@sentry/serverless'
 import { Table } from 'sst/node/table'
 
-import { createClient as createSpadeOracleStoreClient } from '@w3filecoin/core/src/store/spade-oracle-store.js'
+import { createClient as createDealArchiveStoreClient } from '@w3filecoin/core/src/store/deal-archive-store.js'
 import { createClient as createDealStoreClient } from '@w3filecoin/core/src/store/deal-store.js'
 import { spadeOracleSyncTick } from '@w3filecoin/core/src/deal-tracker/spade-oracle-sync-tick.js'
 
@@ -16,17 +16,17 @@ Sentry.AWSLambda.init({
 export async function main() {
   // Construct context
   const {
-    spadeOracleStoreBucketName,
-    spadeOracleStoreBucketRegion,
+    dealArchiveStoreBucketName,
+    dealArchiveStoreBucketRegion,
     dealStoreTableName,
     dealStoreTableRegion,
     spadeOracleUrl
   } = getLambdaEnv()
 
-  const spadeOracleStore = createSpadeOracleStoreClient({
-    region: spadeOracleStoreBucketRegion
+  const dealArchiveStore = createDealArchiveStoreClient({
+    region: dealArchiveStoreBucketRegion
   }, {
-    name: spadeOracleStoreBucketName
+    name: dealArchiveStoreBucketName
   })
   const dealStore = createDealStoreClient({
     region: dealStoreTableRegion
@@ -36,7 +36,7 @@ export async function main() {
 
   const { ok, error } = await spadeOracleSyncTick({
     dealStore,
-    spadeOracleStore,
+    dealArchiveStore,
     spadeOracleUrl: new URL(spadeOracleUrl)
   })
 
@@ -58,8 +58,8 @@ export async function main() {
  */
 function getLambdaEnv () {
   return {
-    spadeOracleStoreBucketName: mustGetEnv('SPADE_ORACLE_STORE_BUCKET_NAME'),
-    spadeOracleStoreBucketRegion: mustGetEnv('SPADE_ORACLE_STORE_REGION'),
+    dealArchiveStoreBucketName: mustGetEnv('DEAL_ARCHIVE_STORE_BUCKET_NAME'),
+    dealArchiveStoreBucketRegion: mustGetEnv('DEAL_ARCHIVE_STORE_REGION'),
     dealStoreTableName: Table['deal-tracker-deal-store'],
     dealStoreTableRegion: mustGetEnv('AWS_REGION'),
     spadeOracleUrl: mustGetEnv('SPADE_ORACLE_URL'),

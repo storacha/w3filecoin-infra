@@ -20,7 +20,7 @@ export function DealTrackerStack({ stack, app }) {
 
   const {
     dealTrackerDealStoreTable,
-    dealTrackerSpaceOracleStoreBucket
+    dealTrackerDealArchiveStoreBucket
   } = use(DataStack)
 
   /**
@@ -36,14 +36,14 @@ export function DealTrackerStack({ stack, app }) {
         memorySize: '1 GB',
         environment: {
           SPADE_ORACLE_URL,
-          SPADE_ORACLE_STORE_BUCKET_NAME: dealTrackerSpaceOracleStoreBucket.bucketName,
-          SPADE_ORACLE_STORE_REGION: stack.region,
+          DEAL_ARCHIVE_STORE_BUCKET_NAME: dealTrackerDealArchiveStoreBucket.bucketName,
+          DEAL_ARCHIVE_STORE_REGION: stack.region,
         },
         bind: [
           dealTrackerDealStoreTable
         ],
         permissions: [
-          dealTrackerSpaceOracleStoreBucket
+          dealTrackerDealArchiveStoreBucket
         ]
       }
     }

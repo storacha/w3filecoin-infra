@@ -3,7 +3,6 @@ import { ZSTDDecompress } from 'simple-zstd'
 import { Readable } from 'stream'
 // @ts-expect-error no types available
 import streamReadAll from 'stream-read-all'
-import { toString } from 'uint8arrays/to-string'
 import { encode, decode } from '@ipld/dag-json'
 import { RecordNotFoundErrorName } from '@web3-storage/filecoin-api/errors'
 import { parse as parseLink } from 'multiformats/link'
@@ -11,65 +10,71 @@ import { Piece } from '@web3-storage/data-segment'
 
 /**
  * @typedef {import('@web3-storage/filecoin-api/deal-tracker/api').DealStore} DealStore
- * @typedef {import('./types').OracleContracts} OracleContracts
- * @typedef {import('./types').SpadeOracle} SpadeOracle
- * @typedef {import('../store/types').SpadeOracleStore} SpadeOracleStore
+ * @typedef {import('./types').PieceContracts} PieceContracts
+ * @typedef {import('./types').DealArchive} DealArchive
+ * @typedef {import('../store/types').DealArchiveStore} DealArchiveStore
  */
 
 /**
  * On CRON tick, this function syncs deal store entries with the most up to date information stored
  * in Spade's Oracle:
- * - The previous oracle state known is fetched, as well as the latest state from Spade endpoint.
+ * - The current oracle state known is fetched, as well as the latest state from Spade endpoint.
  * - Once both states are in memory, they are compared and a diff is generated.
  * - Diff is stored in deal store
  * - Handled new state of oracle is stored for comparison in next tick.
  * 
  * @param {object} context
  * @param {DealStore} context.dealStore
- * @param {SpadeOracleStore} context.spadeOracleStore
+ * @param {DealArchiveStore} context.dealArchiveStore
  * @param {URL} context.spadeOracleUrl
  */
 export async function spadeOracleSyncTick ({
   dealStore,
-  spadeOracleStore,
+  dealArchiveStore,
   spadeOracleUrl
 }) {
-  // Get previous recorded spade oracle contracts
-  const getPreviousSpadeOracle = await getSpadeOracleState({
-    spadeOracleStore,
-    spadeOracleId: spadeOracleUrl.toString(),
-  })
-  if (getPreviousSpadeOracle.error && getPreviousSpadeOracle.error.name !== RecordNotFoundErrorName) {
-    return getPreviousSpadeOracle
+  // Get latest deal archive
+  const fetchLatestDealArchiveRes = await fetchLatestDealArchive(spadeOracleUrl)
+  if (fetchLatestDealArchiveRes.error) {
+    return fetchLatestDealArchiveRes
   }
 
-  // Get updated spade oracle contracts
-  const getUpdatedSpadeOracle = await getSpadeOracleCurrentState(spadeOracleUrl)
-  if (getUpdatedSpadeOracle.error) {
-    return getUpdatedSpadeOracle
+  // Get current recorded spade oracle contracts
+  const getCurrentDealArchiveRes = await getCurrentDealArchive({
+    dealArchiveStore,
+    spadeOracleId: spadeOracleUrl.toString(),
+  })
+  if (getCurrentDealArchiveRes.error && getCurrentDealArchiveRes.error.name !== RecordNotFoundErrorName) {
+    return getCurrentDealArchiveRes
   }
 
   // Get diff of contracts
-  const diffOracleContracts = computeDiffOracleState({
-    // fallsback to empty map if not found
-    previousOracleContracts: getPreviousSpadeOracle.ok || new Map(),
-    updatedOracleContracts: getUpdatedSpadeOracle.ok
-  })
+  /** @type {PieceContracts} */
+  let diffPieceContracts
+  if (!getCurrentDealArchiveRes.ok) {
+    diffPieceContracts = fetchLatestDealArchiveRes.ok
+  } else {
+    diffPieceContracts = computeDiff({
+      // falls back to empty map if not found
+      currentPieceContracts: getCurrentDealArchiveRes.ok,
+      updatedPieceContracts: fetchLatestDealArchiveRes.ok
+    })
+  }
 
   // Store diff of contracts
   const putDiff = await putDiffToDealStore({
     dealStore,
-    diffOracleContracts
+    diffPieceContracts
   })
   if (putDiff.error) {
     return putDiff
   }
 
   // Record spade oracle contracts handled
-  const putUpdatedSpadeOracle = await putUpdatedSpadeOracleState({
-    spadeOracleStore,
+  const putUpdatedSpadeOracle = await putLatestDealArchive({
+    dealArchiveStore,
     spadeOracleId: spadeOracleUrl.toString(),
-    oracleContracts: getUpdatedSpadeOracle.ok
+    oracleContracts: fetchLatestDealArchiveRes.ok
   })
   if (putUpdatedSpadeOracle.error) {
     return putUpdatedSpadeOracle
@@ -84,12 +89,12 @@ export async function spadeOracleSyncTick ({
 /**
  * @param {object} context
  * @param {DealStore} context.dealStore
- * @param {OracleContracts} context.diffOracleContracts
+ * @param {PieceContracts} context.diffPieceContracts
  * @returns {Promise<import('../types').Result<{}, import('@web3-storage/filecoin-api/types').StorePutError>>}
  */
-export async function putDiffToDealStore ({ dealStore, diffOracleContracts }) {
+export async function putDiffToDealStore ({ dealStore, diffPieceContracts }) {
   const res = await Promise.all(
-    Array.from(diffOracleContracts, ([key, value]) => {
+    Array.from(diffPieceContracts, ([key, value]) => {
       return Promise.all(value.map(contract => {
         /** @type {import('@web3-storage/data-segment').LegacyPieceLink} */
         const legacyPieceCid = parseLink(key)
@@ -99,7 +104,8 @@ export async function putDiffToDealStore ({ dealStore, diffOracleContracts }) {
           // @ts-expect-error not PieceCIDv2
           piece: legacyPieceCid,
           provider: `${contract.provider}`,
-          insertedAt: (new Date()).toISOString()
+          insertedAt: (new Date()).toISOString(),
+          updatedAt: (new Date()).toISOString()
         })
       }))
     })
@@ -118,21 +124,21 @@ export async function putDiffToDealStore ({ dealStore, diffOracleContracts }) {
 
 /**
  * @param {object} context
- * @param {OracleContracts} context.previousOracleContracts 
- * @param {OracleContracts} context.updatedOracleContracts 
+ * @param {PieceContracts} context.currentPieceContracts 
+ * @param {PieceContracts} context.updatedPieceContracts 
  */
-export function computeDiffOracleState ({ previousOracleContracts, updatedOracleContracts }) {
-  /** @type {OracleContracts} */
+export function computeDiff ({ currentPieceContracts, updatedPieceContracts }) {
+  /** @type {PieceContracts} */
   const diff = new Map()
 
-  for (const [pieceCid, contracts] of updatedOracleContracts.entries() ) {
-    const previousContracts = previousOracleContracts.get(pieceCid) || []
+  for (const [pieceCid, contracts] of updatedPieceContracts.entries() ) {
+    const currentContracts = currentPieceContracts.get(pieceCid) || []
     // Find diff when different length
-    if (contracts.length !== previousContracts.length) {
+    if (contracts.length !== currentContracts.length) {
       const diffContracts = []
       // Get contracts for PieceCID still not recorded
       for (const c of contracts) {
-        if (!previousContracts.find(pc => pc.dealId === c.dealId)) {
+        if (!currentContracts.find(pc => pc.dealId === c.dealId)) {
           diffContracts.push(c)
         }
       }
@@ -145,12 +151,12 @@ export function computeDiffOracleState ({ previousOracleContracts, updatedOracle
 
 /**
  * @param {object} context
- * @param {SpadeOracleStore} context.spadeOracleStore
+ * @param {DealArchiveStore} context.dealArchiveStore
  * @param {string} context.spadeOracleId
- * @returns {Promise<import('../types').Result<OracleContracts, Error>>}
+ * @returns {Promise<import('../types').Result<PieceContracts, Error>>}
  */
-export async function getSpadeOracleState ({ spadeOracleStore, spadeOracleId }) {
-  const getRes = await spadeOracleStore.get(spadeOracleId)
+export async function getCurrentDealArchive ({ dealArchiveStore, spadeOracleId }) {
+  const getRes = await dealArchiveStore.get(spadeOracleId)
   if (getRes.error) {
     return getRes
   }
@@ -162,12 +168,12 @@ export async function getSpadeOracleState ({ spadeOracleStore, spadeOracleId }) 
 
 /**
  * @param {object} context
- * @param {SpadeOracleStore} context.spadeOracleStore
+ * @param {DealArchiveStore} context.dealArchiveStore
  * @param {string} context.spadeOracleId
- * @param {OracleContracts} context.oracleContracts 
+ * @param {PieceContracts} context.oracleContracts 
  */
-async function putUpdatedSpadeOracleState ({ spadeOracleStore, spadeOracleId, oracleContracts }) {
-  const putRes = await spadeOracleStore.put({
+async function putLatestDealArchive ({ dealArchiveStore, spadeOracleId, oracleContracts }) {
+  const putRes = await dealArchiveStore.put({
     key: spadeOracleId,
     value: encode(Object.fromEntries(oracleContracts))
   })
@@ -177,10 +183,10 @@ async function putUpdatedSpadeOracleState ({ spadeOracleStore, spadeOracleId, or
 
 /**
  * @param {URL} spadeOracleUrl
- * @returns {Promise<import('../types').Result<OracleContracts, Error>>}
+ * @returns {Promise<import('../types').Result<PieceContracts, Error>>}
  */
-async function getSpadeOracleCurrentState (spadeOracleUrl) {
-  /** @type {OracleContracts} */
+async function fetchLatestDealArchive (spadeOracleUrl) {
+  /** @type {PieceContracts} */
   const dealMap = new Map()
   const res = await fetch(spadeOracleUrl)
   if (!res.ok) {
@@ -195,9 +201,9 @@ async function getSpadeOracleCurrentState (spadeOracleUrl) {
     Readable.fromWeb(res.body)
       .pipe(ZSTDDecompress())
   )
-  /** @type {SpadeOracle} */
-  const SpadeOracle = JSON.parse(toString(resDecompressed))
-  for (const replica of SpadeOracle.active_replicas) {
+  /** @type {DealArchive} */
+  const dealArchive = JSON.parse(resDecompressed.toString())
+  for (const replica of dealArchive.active_replicas) {
     // Convert PieceCidV1 to PieceCidV2
     const piecCid = convertPieceCidV1toPieceCidV2(
       parseLink(replica.piece_cid),

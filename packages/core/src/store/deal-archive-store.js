@@ -1,4 +1,4 @@
-import { PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3'
+import { PutObjectCommand, GetObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3'
 import pRetry from 'p-retry'
 import { StoreOperationFailed, RecordNotFound } from '@web3-storage/filecoin-api/errors'
 
@@ -11,7 +11,7 @@ import { connectBucket } from './index.js'
  * @param {import('./types.js').BucketConnect | import('@aws-sdk/client-s3').S3Client} conf
  * @param {object} context
  * @param {string} context.name
- * @returns {import('./types.js').SpadeOracleStore}
+ * @returns {import('./types.js').DealArchiveStore}
  */
 export function createClient (conf, context) {
   const bucketClient = connectBucket(conf)
@@ -72,23 +72,21 @@ export function createClient (conf, context) {
       }
     },
     has: async (key) => {
-      const putCmd = new GetObjectCommand({
+      const putCmd = new HeadObjectCommand({
         Bucket: context.name,
         Key: encodeURIComponent(key)
       })
 
-      let res
       try {
-        res = await bucketClient.send(putCmd)
+        await bucketClient.send(putCmd)
       } catch (/** @type {any} */ error) {
+        if (error?.$metadata.httpStatusCode === 404) {
+          return {
+            ok: false
+          }
+        }
         return {
           error: new StoreOperationFailed(error.message)
-        }
-      }
-
-      if (!res || !res.Body) {
-        return {
-          error: new RecordNotFound('item not found in store')
         }
       }
 

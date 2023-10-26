@@ -71,11 +71,11 @@ export interface DealerOfferStoreRecordValue {
 }
 
 /** ---------------------- Deal Tracker ---------------------- */
-export interface SpadeOracleRecord {
+export interface DealArchiveRecord {
   key: string
   value: ByteView<{
     [k: string]: Contract[];
   }>
 }
 
-export type SpadeOracleStore = Store<string, SpadeOracleRecord>
+export type DealArchiveStore = Store<string, DealArchiveRecord>

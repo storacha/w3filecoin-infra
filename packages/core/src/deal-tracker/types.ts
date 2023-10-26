@@ -1,5 +1,4 @@
-
-export type OracleContracts = Map<string, Contract[]>
+export type PieceContracts = Map<string, Contract[]>
 
 export interface Contract {
   provider: number
@@ -8,21 +7,20 @@ export interface Contract {
   source: string
 }
 
-// Spade types
-
-export interface SpadeContract {
+// Spade Oracle types
+export interface DealContract {
   provider_id: number
   legacy_market_id: number
   legacy_market_end_epoch: number
 }
 
-export interface SpadeReplica {
-  contracts: SpadeContract[]
+export interface DealReplica {
+  contracts: DealContract[]
   piece_cid: string
   piece_log2_size: number
 }
 
-export interface SpadeOracle {
+export interface DealArchive {
   state_epoch: number
-  active_replicas: SpadeReplica[]
+  active_replicas: DealReplica[]
 }

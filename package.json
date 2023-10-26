@@ -59,6 +59,7 @@
       "unicorn/prefer-set-has": "off",
       "unicorn/prefer-spread": "off",
       "unicorn/prefer-array-some": "off",
+      "unicorn/prefer-ternary": "off",
       "unicorn/no-array-callback-reference": "off",
       "unicorn/no-array-reduce": "off",
       "unicorn/no-await-expression-member": "off",

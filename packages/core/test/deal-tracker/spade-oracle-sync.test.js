@@ -6,7 +6,7 @@ import { encode, decode } from '@ipld/dag-json'
 
 import { dealStoreTableProps } from '../../src/store/index.js'
 import { createClient as createDealStoreClient } from '../../src/store/deal-store.js'
-import { createClient as createSpadeOracleStoreClient } from '../../src/store/spade-oracle-store.js'
+import { createClient as createDealArchiveStoreClient } from '../../src/store/deal-archive-store.js'
 import * as spadeOracleSyncTick from '../../src/deal-tracker/spade-oracle-sync-tick.js'
 import { RecordNotFoundErrorName } from '@web3-storage/filecoin-api/errors'
 
@@ -21,26 +21,26 @@ test.beforeEach(async (t) => {
 test('downloads spade oracle replicas file from http server', async t => {
   const {
     dealStore,
-    spadeOracleStore,
+    dealArchiveStore,
     spadeOracleUrl
   } = await getContext(t.context)
 
   const spadeOracleSyncTickHandle = await spadeOracleSyncTick.spadeOracleSyncTick({
     dealStore,
-    spadeOracleStore,
+    dealArchiveStore,
     spadeOracleUrl
   })
   t.truthy(spadeOracleSyncTickHandle.ok)
   t.falsy(spadeOracleSyncTickHandle.error)
 
   // Verify spade oracle was stored for future check
-  const getSpadeOracle = await spadeOracleStore.get(spadeOracleUrl.toString())
+  const getSpadeOracle = await dealArchiveStore.get(spadeOracleUrl.toString())
   if (getSpadeOracle.error) { 
     throw new Error('could get get spade oracle stored')
   }
   t.truthy(getSpadeOracle.ok)
 
-  /** @type {import('../../src/deal-tracker/types.js').OracleContracts} */
+  /** @type {import('../../src/deal-tracker/types.js').PieceContracts} */
   const oracleState = new Map(Object.entries(decode(getSpadeOracle.ok.value)))
   t.is(oracleState.size, 2)
 
@@ -69,9 +69,9 @@ test('downloads spade oracle replicas file from http server', async t => {
   }
 })
 
-test('gets previous spade oracle state if available', async t => {
+test('gets current spade oracle state if available', async t => {
   const {
-    spadeOracleStore,
+    dealArchiveStore,
     spadeOracleUrl
   } = await getContext(t.context)
   const spadeOracleId = spadeOracleUrl.toString()
@@ -79,8 +79,8 @@ test('gets previous spade oracle state if available', async t => {
   const oracleContracts = getOracleContracts(source)
 
   // Try to get init state
-  const getSpadeOracleStateInit = await spadeOracleSyncTick.getSpadeOracleState({
-    spadeOracleStore,
+  const getSpadeOracleStateInit = await spadeOracleSyncTick.getCurrentDealArchive({
+    dealArchiveStore,
     spadeOracleId,
   })
   t.falsy(getSpadeOracleStateInit.ok)
@@ -88,15 +88,15 @@ test('gets previous spade oracle state if available', async t => {
   t.is(getSpadeOracleStateInit.error?.name, RecordNotFoundErrorName)
 
   // Populate store with first diff
-  const putSpadeOracleState = await spadeOracleStore.put({
+  const putSpadeOracleState = await dealArchiveStore.put({
     key: spadeOracleId,
     value: encode(Object.fromEntries(oracleContracts))
   })
   t.truthy(putSpadeOracleState.ok)
 
   // Get state and validate
-  const getSpadeOracleState = await spadeOracleSyncTick.getSpadeOracleState({
-    spadeOracleStore,
+  const getSpadeOracleState = await spadeOracleSyncTick.getCurrentDealArchive({
+    dealArchiveStore,
     spadeOracleId,
   })
   if (getSpadeOracleState.error) { 
@@ -117,14 +117,14 @@ test('computes diff', async t => {
     spadeOracleUrl
   } = await getContext(t.context)
 
-  // Get previous oracle contracts
+  // Get current oracle contracts
   const source = encodeURIComponent(spadeOracleUrl.toString())
-  const previousOracleContracts = getOracleContracts(source)
+  const currentPieceContracts = getOracleContracts(source)
 
-  // Store diff as previous oracle contracts
+  // Store diff as current oracle contracts
   const putDiffInit = await spadeOracleSyncTick.putDiffToDealStore({
     dealStore,
-    diffOracleContracts: previousOracleContracts
+    diffPieceContracts: currentPieceContracts
   })
   t.truthy(putDiffInit.ok)
 
@@ -144,19 +144,19 @@ test('computes diff', async t => {
   t.is(queryInitNew.ok?.length, 0)
 
   // Create updated oracle
-  const updatedOracleContracts = getOracleContracts(source)
+  const updatedPieceContracts = getOracleContracts(source)
   // Add one more contract to one existing item
-  const itemToAddContract = updatedOracleContracts.get(alreadyExistingPieceCid) || []
+  const itemToAddContract = updatedPieceContracts.get(alreadyExistingPieceCid) || []
   itemToAddContract?.push({
     provider: 2095199,
     dealId: 40745773,
     expirationEpoch: 4477915,
     source
   })
-  updatedOracleContracts.set(alreadyExistingPieceCid, itemToAddContract)
+  updatedPieceContracts.set(alreadyExistingPieceCid, itemToAddContract)
 
   // Add new piece contracts
-  updatedOracleContracts.set(
+  updatedPieceContracts.set(
     newPieceCid,
     [
       {
@@ -168,19 +168,19 @@ test('computes diff', async t => {
     ]
   )
 
-  const diffOracleContracts = spadeOracleSyncTick.computeDiffOracleState({
-    previousOracleContracts,
-    updatedOracleContracts
+  const diffPieceContracts = spadeOracleSyncTick.computeDiff({
+    currentPieceContracts,
+    updatedPieceContracts
   })
-  t.is(diffOracleContracts.size, 2)
+  t.is(diffPieceContracts.size, 2)
   // 1 new item in each to update
-  t.truthy(diffOracleContracts.get(alreadyExistingPieceCid)?.length === 1)
-  t.truthy(diffOracleContracts.get(newPieceCid)?.length === 1)
+  t.truthy(diffPieceContracts.get(alreadyExistingPieceCid)?.length === 1)
+  t.truthy(diffPieceContracts.get(newPieceCid)?.length === 1)
 
   // Store diff
   const putDiffResult = await spadeOracleSyncTick.putDiffToDealStore({
     dealStore,
-    diffOracleContracts
+    diffPieceContracts
   })
   t.truthy(putDiffResult.ok)
 
@@ -210,7 +210,7 @@ test('converts PieceCidV1 to PieceCidV2', t => {
  * @param {string} source 
  */
 function getOracleContracts (source) {
-  /** @type {import('../../src/deal-tracker/types.js').OracleContracts} */
+  /** @type {import('../../src/deal-tracker/types.js').PieceContracts} */
   const oracleContracts = new Map()
   oracleContracts.set(
     'baga6ea4seaqhmw7z7q3jypdr54xaluhzdn6syn7ovovvjpaqul2qqenhmg43wii',
@@ -261,13 +261,13 @@ async function getContext (context) {
   const dealStore = createDealStoreClient(dynamoClient, {
     tableName
   })
-  const spadeOracleStore = createSpadeOracleStoreClient(s3, {
+  const dealArchiveStore = createDealArchiveStoreClient(s3, {
     name: bucketName
   })
 
   return {
     dealStore,
-    spadeOracleStore,
+    dealArchiveStore,
     spadeOracleUrl: new URL(`http://127.0.0.1:${process.env.PORT || 9000}`)
   }
 }
