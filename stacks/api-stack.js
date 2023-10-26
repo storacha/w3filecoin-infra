@@ -7,6 +7,7 @@ import {
   getGitInfo,
   getCustomDomain,
   getAggregatorEnv,
+  getDealerEnv,
   getDealTrackerEnv,
   setupSentry
 } from './config.js'
@@ -26,6 +27,9 @@ export function ApiStack({ app, stack }) {
     DEAL_TRACKER_API_HOSTED_ZONE,
     DEAL_TRACKER_DID
   } = getDealTrackerEnv()
+  const {
+    DEAL_API_HOSTED_ZONE
+  } = getDealerEnv()
 
   // Setup app monitoring with Sentry
   setupSentry(app, stack)
@@ -79,7 +83,7 @@ export function ApiStack({ app, stack }) {
   })
 
   // Setup `dealer-api`
-  const dealerApiCustomDomain = getCustomDomain(stack.stage, DEAL_TRACKER_API_HOSTED_ZONE)
+  const dealerApiCustomDomain = getCustomDomain(stack.stage, DEAL_API_HOSTED_ZONE)
   const dealerApi = new Api(stack, 'dealer-api', {
     customDomain: dealerApiCustomDomain,
     defaults: {

@@ -133,6 +133,13 @@ export function getAggregatorEnv(stack) {
   }
 }
 
+export function getDealerEnv () {
+  return {
+    ...getEnv(),
+    DEAL_API_HOSTED_ZONE: process.env.DEALER_API_HOSTED_ZONE,
+  }
+}
+
 export function getDealTrackerEnv () {
   return {
     ...getEnv(),
