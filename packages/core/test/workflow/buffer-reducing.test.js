@@ -158,17 +158,11 @@ test('does not create aggregate from reducing received buffers if does not have 
     maxAggregateSize: 2 ** 18
   })
 
-  console.log('reduce 1', reduceBufferResp.ok)
-
   t.falsy(reduceBufferResp.error)
   t.is(reduceBufferResp.ok, 0)
 
-  console.log('reduce 2')
-
   // Validate message received only to buffer queue
   await pWaitFor(() => queues.buffer.queuedMessages.length === 1)
-  console.log('reduce 3')
-  // await pWaitFor(() => queues.aggregate.queuedMessages.length === 0)
 
   // Validate buffer exists
   const bufferRef = await bufferDecode.message(queues.buffer.queuedMessages[0].Body || '')

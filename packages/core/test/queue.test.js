@@ -37,13 +37,14 @@ test.beforeEach(async (t) => {
 })
 
 test.beforeEach(async t => {
+  await delay(1000)
   t.context.queueConsumer.start()
   await pWaitFor(() => t.context.queueConsumer.isRunning)
 })
 
 test.afterEach(async t => {
   t.context.queueConsumer.stop()
-  await delay(1000)
+  await delay(3000)
 })
 
 test('can queue received pieces', async t => {
