@@ -227,9 +227,11 @@ async function fetchLatestDealArchive (spadeOracleUrl) {
  * @param {number} height
  */
 export function convertPieceCidV1toPieceCidV2 (link, height) {
-  const piece = Piece.fromInfo({
-    link,
-    size: Piece.Size.fromHeight(height)
+  const piece = Piece.toView({
+    root: link.multihash.digest,
+    height,
+    // Aggregates do not have padding
+    padding: 0n
   })
 
   return piece.link

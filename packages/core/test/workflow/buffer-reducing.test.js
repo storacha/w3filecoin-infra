@@ -65,7 +65,7 @@ test.beforeEach(async t => {
 test.afterEach(async t => {
   for (const [, q] of Object.entries(t.context.queues)) {
     q.queueConsumer.stop()
-    await delay(1000)
+    await delay(3000)
   }
 })
 

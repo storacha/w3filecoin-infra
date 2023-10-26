@@ -45,7 +45,7 @@ test.beforeEach(async t => {
 
 test.afterEach(async t => {
   t.context.queueConsumer.stop()
-  await delay(1000)
+  await delay(3000)
 })
 
 test('can buffer received pieces', async t => {
