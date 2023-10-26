@@ -30,7 +30,15 @@ export function ApiStack({ app, stack }) {
   // Setup app monitoring with Sentry
   setupSentry(app, stack)
 
-  const { pieceStoreTable, dealTrackerDealStoreTable, privateKey, dealTrackerPrivateKey } = use(DataStack)
+  const {
+    pieceStoreTable,
+    dealTrackerDealStoreTable,
+    privateKey,
+    dealTrackerPrivateKey,
+    dealerPrivateKey,
+    dealerAggregateStoreTable,
+    dealerOfferStoreBucket
+  } = use(DataStack)
   const { pieceAddQueue } = use(ProcessorStack)
   const pkg = getApiPackageJson()
   const git = getGitInfo()
@@ -70,6 +78,37 @@ export function ApiStack({ app, stack }) {
     },
   })
 
+  // Setup `dealer-api`
+  const dealerApiCustomDomain = getCustomDomain(stack.stage, DEAL_TRACKER_API_HOSTED_ZONE)
+  const dealerApi = new Api(stack, 'dealer-api', {
+    customDomain: dealerApiCustomDomain,
+    defaults: {
+      function: {
+        environment: {
+          NAME: pkg.name,
+          VERSION: pkg.version,
+          COMMIT: git.commit,
+          STAGE: stack.stage,
+          DID: DEALER_DID,
+          UCAN_LOG_URL,
+          OFFER_STORE_BUCKET_NAME: dealerOfferStoreBucket.bucketName,
+          OFFER_STORE_BUCKET_REGION: stack.region,
+        },
+        bind: [
+          dealerPrivateKey,
+          dealerAggregateStoreTable,
+          ucanLogBasicAuth,
+        ]
+      }
+    },
+    routes: {
+      'GET /':        'packages/functions/src/dealer-api/get.home',
+      'GET /error':   'packages/functions/src/dealer-api/get.error',
+      'GET /version': 'packages/functions/src/dealer-api/get.version',
+      'POST /':       'packages/functions/src/dealer-api/ucan-invocation-router.handler',
+    },
+  })
+
   // Setup `deal-tracker-api`
   const dealTrackerApiCustomDomain = getCustomDomain(stack.stage, DEAL_TRACKER_API_HOSTED_ZONE)
   const dealTrackerApi = new Api(stack, 'deal-tracker-api', {
@@ -104,5 +143,7 @@ export function ApiStack({ app, stack }) {
     AggregateApiCustomDomain: aggregatorApiCustomDomain ? `https://${aggregatorApiCustomDomain.domainName}` : 'Set HOSTED_ZONE in env to deploy to a custom domain',
     DealTrackerApiEndpoint: dealTrackerApi.url,
     DealTrackerApiCustomDomain: dealTrackerApiCustomDomain ? `https://${dealTrackerApiCustomDomain.domainName}` : 'Set HOSTED_ZONE in env to deploy to a custom domain',
+    DealerApiEndpoint: dealerApi.url,
+    DealerApiCustomDomain: dealerApiCustomDomain ? `https://${dealerApiCustomDomain.domainName}` : 'Set HOSTED_ZONE in env to deploy to a custom domain',
   })
 }

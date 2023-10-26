@@ -5,9 +5,13 @@ import {
 } from 'sst/constructs'
 
 import {
+  // aggregator
   pieceStoreTableProps,
   aggregateStoreTableProps,
   inclusionStoreTableProps,
+  // dealer
+  dealerAggregateStoreTableProps,
+  // deal-tracker
   dealStoreTableProps
 } from '../packages/core/src/store/index.js'
 
@@ -25,6 +29,7 @@ export function DataStack({ stack, app }) {
 
   // Secrets
   const privateKey = new Config.Secret(stack, 'PRIVATE_KEY')
+  const dealerPrivateKey = new Config.Secret(stack, 'DEALER_PRIVATE_KEY')
   const dealTrackerPrivateKey = new Config.Secret(stack, 'DEAL_TRACKER_PRIVATE_KEY')
 
   // --------------------------------- Aggregator ---------------------------------
@@ -67,6 +72,18 @@ export function DataStack({ stack, app }) {
   const inclusionStoreTableName = 'inclusion-store'
   const inclusionStoreTable = new Table(stack, inclusionStoreTableName, inclusionStoreTableProps)
 
+  // --------------------------------- Dealer ---------------------------------
+  const offerBucket = getBucketConfig('dealer-offer-store', stack.stage)
+  const dealerOfferStoreBucket = new Bucket(stack, offerBucket.bucketName, {
+    cors: true,
+    cdk: {
+      bucket: offerBucket
+    }
+  })
+
+  const dealerAggregateStoreTableName = 'dealer-aggregate-store'
+  const dealerAggregateStoreTable = new Table(stack, dealerAggregateStoreTableName, dealerAggregateStoreTableProps)
+
   // --------------------------------- Deal Tracker ---------------------------------
   /**
    * Spade oracle store used to store active replicas reported by Spade.
@@ -99,12 +116,16 @@ export function DataStack({ stack, app }) {
   return {
     // secrets
     privateKey,
+    dealerPrivateKey,
     dealTrackerPrivateKey,
     // aggregator stores
     bufferStoreBucket,
     pieceStoreTable,
     aggregateStoreTable,
     inclusionStoreTable,
+    // dealer stores
+    dealerOfferStoreBucket,
+    dealerAggregateStoreTable,
     // deal tracker stores
     dealTrackerSpaceOracleStoreBucket,
     dealTrackerDealStoreTable
