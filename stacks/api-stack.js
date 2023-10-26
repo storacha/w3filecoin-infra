@@ -30,7 +30,7 @@ export function ApiStack({ app, stack }) {
   // Setup app monitoring with Sentry
   setupSentry(app, stack)
 
-  const { pieceStoreTable, dealStoreTable, privateKey, dealTrackerPrivateKey } = use(DataStack)
+  const { pieceStoreTable, dealTrackerDealStoreTable, privateKey, dealTrackerPrivateKey } = use(DataStack)
   const { pieceAddQueue } = use(ProcessorStack)
   const pkg = getApiPackageJson()
   const git = getGitInfo()
@@ -86,7 +86,7 @@ export function ApiStack({ app, stack }) {
         },
         bind: [
           dealTrackerPrivateKey,
-          dealStoreTable,
+          dealTrackerDealStoreTable,
           ucanLogBasicAuth,
         ]
       }

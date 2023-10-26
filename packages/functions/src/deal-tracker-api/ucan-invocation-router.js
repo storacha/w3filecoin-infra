@@ -102,7 +102,7 @@ function getLambdaEnv () {
   return {
     did: mustGetEnv('DID'),
     ucanLogUrl: mustGetEnv('UCAN_LOG_URL'),
-    dealStoreTableName: Table['deal-store'],
+    dealStoreTableName: Table['deal-tracker-deal-store'],
     dealStoreTableRegion: mustGetEnv('AWS_REGION'),
   }
 }
