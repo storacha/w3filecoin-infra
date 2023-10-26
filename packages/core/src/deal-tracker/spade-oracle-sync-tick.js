@@ -7,6 +7,7 @@ import { toString } from 'uint8arrays/to-string'
 import { encode, decode } from '@ipld/dag-json'
 import { RecordNotFoundErrorName } from '@web3-storage/filecoin-api/errors'
 import { parse as parseLink } from 'multiformats/link'
+import { Piece } from '@web3-storage/data-segment'
 
 /**
  * @typedef {import('@web3-storage/filecoin-api/deal-tracker/api').DealStore} DealStore
@@ -197,8 +198,12 @@ async function getSpadeOracleCurrentState (spadeOracleUrl) {
   /** @type {SpadeOracle} */
   const SpadeOracle = JSON.parse(toString(resDecompressed))
   for (const replica of SpadeOracle.active_replicas) {
-    // TODO: convert pieceCid to v2 (piece_cid) + (piece_log2_size)
-    dealMap.set(replica.piece_cid, replica.contracts.map(c => ({
+    // Convert PieceCidV1 to PieceCidV2
+    const piecCid = convertPieceCidV1toPieceCidV2(
+      parseLink(replica.piece_cid),
+      replica.piece_log2_size
+    )
+    dealMap.set(piecCid.toString(), replica.contracts.map(c => ({
       provider: c.provider_id,
       dealId: c.legacy_market_id,
       expirationEpoch: c.legacy_market_end_epoch,
@@ -209,4 +214,17 @@ async function getSpadeOracleCurrentState (spadeOracleUrl) {
   return {
     ok: dealMap
   }
+}
+
+/**
+ * @param {import('@web3-storage/data-segment').LegacyPieceLink} link
+ * @param {number} height
+ */
+export function convertPieceCidV1toPieceCidV2 (link, height) {
+  const piece = Piece.fromInfo({
+    link,
+    size: Piece.Size.fromHeight(height)
+  })
+
+  return piece.link
 }

@@ -197,6 +197,15 @@ test('computes diff', async t => {
   t.is(queryAfterDiffNew.ok?.length, 1)
 })
 
+test('converts PieceCidV1 to PieceCidV2', t => {
+  /** @type {import('@web3-storage/data-segment').LegacyPieceLink} */
+  const pieceCidV1 = parseLink('baga6ea4seaqhmw7z7q3jypdr54xaluhzdn6syn7ovovvjpaqul2qqenhmg43wii')
+  const height = 35
+
+  const pieceCidV2 = spadeOracleSyncTick.convertPieceCidV1toPieceCidV2(pieceCidV1, height)
+  t.falsy(pieceCidV1.equals(pieceCidV2))
+})
+
 /**
  * @param {string} source 
  */
