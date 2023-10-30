@@ -76,7 +76,7 @@ async function handleEvent (event) {
 
   // @ts-expect-error weirdness type error for ucanto/interface until we get rid of legacy deps
   // Types of parameters 'request' and 'request' are incompatible.
-  const { ok, error } = await dealerEvents.handleAggregatUpdatedStatus(context, record)
+  const { ok, error } = await dealerEvents.handleAggregateUpdatedStatus(context, record)
   if (error) {
     return {
       statusCode: 500,

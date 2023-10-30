@@ -41,11 +41,11 @@ for (const [title, unit] of Object.entries(filecoinApiTest.events.dealer)) {
       name: bucketName
     })
     const service = getMockService()
-      const dealerConnection = getConnection(dealerSigner, service).connection
-      const dealTrackerConnection = getConnection(
-        dealTrackerSigner,
-        service
-      ).connection
+    const dealerConnection = getConnection(dealerSigner, service).connection
+    const dealTrackerConnection = getConnection(
+      dealTrackerSigner,
+      service
+    ).connection
 
     await unit(
       {

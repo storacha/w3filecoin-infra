@@ -66,7 +66,7 @@ async function handleEvent () {
   if (error) {
     return {
       statusCode: 500,
-      body: error.message || 'failed to handle aggregate insert'
+      body: error.message || 'failed to handle cron tick'
     }
   }
 

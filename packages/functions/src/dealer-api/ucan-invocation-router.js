@@ -1,13 +1,16 @@
 import * as Sentry from '@sentry/serverless'
 import { Config } from 'sst/node/config'
 import { Table } from 'sst/node/table'
+import * as Delegation from '@ucanto/core/delegation'
+import { fromString } from 'uint8arrays/from-string'
+import * as DID from '@ipld/dag-ucan/did'
 import * as CAR from '@ucanto/transport/car'
 import * as Server from '@ucanto/server'
 
 import { connect as ucanLogConnect } from '@w3filecoin/core/src/ucan-log.js'
 import { createClient as createAggregateStoreClient } from '@w3filecoin/core/src/store/dealer-aggregate-store.js'
 import { createClient as createOfferStoreClient } from '@w3filecoin/core/src/store/dealer-offer-store.js'
-import { getServiceSigner } from '@w3filecoin/core/src/service.js'
+import { getServiceConnection, getServiceSigner } from '@w3filecoin/core/src/service.js'
 import { createServer } from '@web3-storage/filecoin-api/dealer/service'
 
 import { mustGetEnv } from '../utils.js'
@@ -29,6 +32,9 @@ Sentry.AWSLambda.init({
 export async function ucanInvocationRouter(request) {
   const {
     did,
+    serviceDid,
+    serviceUrl,
+    delegatedProof,
     ucanLogUrl,
     aggregateStoreTableName,
     aggregateStoreTableRegion,
@@ -49,7 +55,9 @@ export async function ucanInvocationRouter(request) {
   })
 
   // Context
-  const serviceSigner = getServiceSigner({ did, privateKey })
+  let issuer = getServiceSigner({
+    privateKey
+  })
   const aggregateStore = createAggregateStoreClient({
     region: aggregateStoreTableRegion
   }, {
@@ -60,11 +68,34 @@ export async function ucanInvocationRouter(request) {
   }, {
     name: offerStoreBucketName
   })
+  const connection = getServiceConnection({
+    did: serviceDid,
+    url: serviceUrl
+  })
+  const proofs = []
+  if (delegatedProof) {
+    const proof = await Delegation.extract(fromString(delegatedProof, 'base64pad'))
+      if (!proof.ok) throw new Error('failed to extract proof', { cause: proof.error })
+      proofs.push(proof.ok)
+  } else {
+    // if no proofs, we must be using the service private key to sign
+    issuer = issuer.withDID(DID.parse(did).did())
+  }
 
   const server = createServer({
-    id: serviceSigner,
+    id: issuer,
     aggregateStore,
     offerStore,
+    dealTrackerService: {
+      // @ts-expect-error weirdness type error for ucanto/interface until we get rid of legacy deps
+      // Types of parameters 'request' and 'request' are incompatible.
+      connection,
+      invocationConfig: {
+        issuer,
+        audience: connection.id,
+        with: issuer.did()
+      }
+    },
     errorReporter: {
       catch: (/** @type {string | Error} */ err) => {
         console.warn(err)
@@ -110,6 +141,9 @@ export async function ucanInvocationRouter(request) {
 function getLambdaEnv () {
   return {
     did: mustGetEnv('DID'),
+    serviceDid: mustGetEnv('SERVICE_DID'),
+    serviceUrl: mustGetEnv('SERVICE_URL'),
+    delegatedProof: mustGetEnv('PROOF'),
     ucanLogUrl: mustGetEnv('UCAN_LOG_URL'),
     aggregateStoreTableName: Table['dealer-aggregate-store'],
     aggregateStoreTableRegion: mustGetEnv('AWS_REGION'),

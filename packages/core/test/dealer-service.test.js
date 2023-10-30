@@ -1,11 +1,12 @@
 import { test as filecoinApiTest } from '@web3-storage/filecoin-api/test'
-import { ed25519 } from '@ucanto/principal'
+import * as Signer from '@ucanto/principal/ed25519'
 
 import { createClient as createAggregateStoreClient } from '../src/store/dealer-aggregate-store.js'
 import { createClient as createOfferStoreClient } from '../src/store/dealer-offer-store.js'
 import { dealerAggregateStoreTableProps } from '../src/store/index.js'
 
 import { testStore as test } from './helpers/context.js'
+import { getMockService, getConnection } from '@web3-storage/filecoin-api/test/context/service'
 import { createDynamodDb, createTable, createS3, createBucket } from './helpers/resources.js'
 
 test.beforeEach(async (t) => {
@@ -31,14 +32,19 @@ for (const [title, unit] of Object.entries(filecoinApiTest.service.dealer)) {
     const tableName = await createTable(dynamoClient, dealerAggregateStoreTableProps)
 
     // context
-    const signer = await ed25519.generate()
-    const id = signer.withDID('did:web:test.web3.storage')
+    const dealerSigner = await Signer.generate()
+    const dealTrackerSigner = await Signer.generate()
     const aggregateStore = createAggregateStoreClient(dynamoClient, {
       tableName
     })
     const offerStore = createOfferStoreClient(s3, {
       name: bucketName
     })
+    const service = getMockService()
+    const dealTrackerConnection = getConnection(
+      dealTrackerSigner,
+      service
+    ).connection
 
     await unit(
       {
@@ -49,9 +55,17 @@ for (const [title, unit] of Object.entries(filecoinApiTest.service.dealer)) {
           t.deepEqual(actual, expect, message ? String(message) : undefined),
       },
       {
-        id,
+        id: dealerSigner,
         aggregateStore,
         offerStore,
+        dealTrackerService: {
+          connection: dealTrackerConnection,
+          invocationConfig: {
+            issuer: dealerSigner,
+            with: dealerSigner.did(),
+            audience: dealTrackerSigner,
+          },
+        },
         errorReporter: {
           catch(error) {
             t.fail(error.message)
