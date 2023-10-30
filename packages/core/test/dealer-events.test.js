@@ -1,13 +1,13 @@
 import { test as filecoinApiTest } from '@web3-storage/filecoin-api/test'
 import * as Signer from '@ucanto/principal/ed25519'
 
-import { createClient as createAggregateStoreClient } from '../src/store/dealer-aggregate-store.js'
-import { createClient as createOfferStoreClient } from '../src/store/dealer-offer-store.js'
-import { dealerAggregateStoreTableProps } from '../src/store/index.js'
+import { createClient as createAggregateStoreClient } from '@w3filecoin/core/src/store/dealer-aggregate-store.js'
+import { createClient as createOfferStoreClient } from '@w3filecoin/core/src/store/dealer-offer-store.js'
+import { dealerAggregateStoreTableProps } from '@w3filecoin/core/src/store/index.js'
 
-import { testStore as test } from './helpers/context.js'
+import { testStore as test } from '@w3filecoin/core/test/helpers/context.js'
 import { getMockService, getConnection } from '@web3-storage/filecoin-api/test/context/service'
-import { createDynamodDb, createTable, createS3, createBucket } from './helpers/resources.js'
+import { createDynamodDb, createTable, createS3, createBucket } from '@w3filecoin/core/test/helpers/resources.js'
 
 test.beforeEach(async (t) => {
   const dynamo = await createDynamodDb()
@@ -18,7 +18,7 @@ test.beforeEach(async (t) => {
   })
 })
 
-for (const [title, unit] of Object.entries(filecoinApiTest.service.dealer)) {
+for (const [title, unit] of Object.entries(filecoinApiTest.events.dealer)) {
   const define = title.startsWith('only ')
     // eslint-disable-next-line no-only-tests/no-only-tests
     ? test.only
@@ -41,6 +41,7 @@ for (const [title, unit] of Object.entries(filecoinApiTest.service.dealer)) {
       name: bucketName
     })
     const service = getMockService()
+    const dealerConnection = getConnection(dealerSigner, service).connection
     const dealTrackerConnection = getConnection(
       dealTrackerSigner,
       service
@@ -57,7 +58,21 @@ for (const [title, unit] of Object.entries(filecoinApiTest.service.dealer)) {
       {
         id: dealerSigner,
         aggregateStore,
+        errorReporter: {
+          catch(error) {
+            t.fail(error.message)
+          },
+        },
+        queuedMessages: new Map(),
         offerStore,
+        dealerService: {
+          connection: dealerConnection,
+          invocationConfig: {
+            issuer: dealerSigner,
+            with: dealerSigner.did(),
+            audience: dealerSigner,
+          },
+        },
         dealTrackerService: {
           connection: dealTrackerConnection,
           invocationConfig: {
@@ -66,12 +81,7 @@ for (const [title, unit] of Object.entries(filecoinApiTest.service.dealer)) {
             audience: dealTrackerSigner,
           },
         },
-        errorReporter: {
-          catch(error) {
-            t.fail(error.message)
-          },
-        },
-        queuedMessages: new Map(),
+        service,
         validateAuthorization: () => ({ ok: {} })
       }
     )

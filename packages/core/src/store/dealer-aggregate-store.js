@@ -10,7 +10,7 @@ import { connectTable } from './index.js'
  * @typedef {'offered' | 'accepted' | 'invalid'} AggregateStatus
  * @typedef {import('@web3-storage/filecoin-api/dealer/api').AggregateRecord} AggregateRecord
  * @typedef {import('@web3-storage/filecoin-api/dealer/api').AggregateRecordKey} AggregateRecordKey
- * @typedef {{ status?: AggregateStatus, aggregate?: PieceLink }} AggregateRecordQuery
+ * @typedef {{ status: AggregateStatus }} AggregateRecordQuery
  * @typedef {import('./types').DealerAggregateStoreRecord} DealerAggregateStoreRecord
  * @typedef {import('./types').DealerAggregateStoreRecordKey} DealerAggregateStoreRecordKey
  * @typedef {import('./types').DealerAggregateStoreRecordQueryByAggregate} DealerAggregateStoreRecordQueryByAggregate
@@ -27,9 +27,6 @@ const encodeRecord = (record) => {
     ...record,
     aggregate: record.aggregate.toString(),
     pieces: record.pieces.toString(),
-    // fallback to -1 given is key
-    dealMetadataDealId: record.deal?.dataSource.dealID ? Number(record.deal?.dataSource.dealID) : -1,
-    dealMetadataDataType: record.deal?.dataType !== undefined ? Number(record.deal?.dataType) : undefined,
     stat: encodeStatus(record.status)
   }
 }
@@ -40,13 +37,9 @@ const encodeRecord = (record) => {
  */
 const encodePartialRecord = (record) => {
   return {
-    ...record,
-    aggregate: record.aggregate?.toString(),
-    pieces: record.pieces?.toString(),
-    // fallback to -1 given is key
-    dealMetadataDealId: record.deal?.dataSource.dealID ? Number(record.deal?.dataSource.dealID) : 0,
-    dealMetadataDataType: record.deal?.dataType !== undefined ? Number(record.deal?.dataType) : undefined,
-    stat: record.status && encodeStatus(record.status)
+    ...(record.aggregate && { aggregate: record.aggregate.toString() }),
+    ...(record.pieces && { pieces: record.pieces.toString() }),
+    ...(record.status && { stat: encodeStatus(record.status) }),
   }
 }
 
@@ -54,12 +47,20 @@ const encodePartialRecord = (record) => {
  * @param {AggregateStatus} status 
  */
 const encodeStatus = (status) => {
-  if (status === 'offered') {
-    return 0
-  } else if (status === 'accepted') {
-    return 1
+  switch (status) {
+    case 'offered': {
+      return Status.OFFERED
+    }
+    case 'accepted': {
+      return Status.ACCEPTED
+    }
+    case 'invalid': {
+      return Status.INVALID
+    }
+    default: {
+      throw new Error('invalid status received for encoding')
+    }
   }
-  return 2
 }
 
 /**
@@ -68,10 +69,7 @@ const encodeStatus = (status) => {
  */
 const encodeKey = (recordKey) => {
   return {
-    ...recordKey,
     aggregate: recordKey.aggregate.toString(),
-    // fallback to -1 given is key
-    dealMetadataDealId: recordKey.deal?.dataSource.dealID ? Number(recordKey.deal?.dataSource.dealID) : -1,
   }
 }
 
@@ -79,24 +77,12 @@ const encodeKey = (recordKey) => {
  * @param {AggregateRecordQuery} recordKey 
  */
 const encodeQueryProps = (recordKey) => {
-  if (recordKey.status) {
-    return {
-      IndexName: 'piece',
-      KeyConditions: {
-        piece: {
-          ComparisonOperator: 'EQ',
-          AttributeValueList: [{ N: `${encodeStatus(recordKey.status)}` }]
-        }
-      }
-    }
-  } else if (recordKey.aggregate) {
-    return {
-      IndexName: 'aggregate',
-      KeyConditions: {
-        aggregate: {
-          ComparisonOperator: 'EQ',
-          AttributeValueList: [{ S: `${recordKey.aggregate.toString()}` }]
-        }
+  return {
+    IndexName: 'stat',
+    KeyConditions: {
+      stat: {
+        ComparisonOperator: 'EQ',
+        AttributeValueList: [{ N: `${encodeStatus(recordKey.status)}` }]
       }
     }
   }
@@ -106,14 +92,11 @@ const encodeQueryProps = (recordKey) => {
  * @param {DealerAggregateStoreRecord} encodedRecord 
  * @returns {AggregateRecord}
  */
-const decodeRecord = (encodedRecord) => {
+export const decodeRecord = (encodedRecord) => {
   return {
     aggregate: parseLink(encodedRecord.aggregate),
     pieces: parseLink(encodedRecord.pieces),
     status: decodeStatus(encodedRecord.stat),
-    deal: encodedRecord.dealMetadataDealId && encodedRecord.dealMetadataDealId !== -1 && encodedRecord.dealMetadataDataType !== undefined ?
-      { dataType: BigInt(encodedRecord.dealMetadataDataType), dataSource: { dealID: BigInt(encodedRecord.dealMetadataDealId) } } :
-      undefined,
     insertedAt: encodedRecord.insertedAt,
     updatedAt: encodedRecord.updatedAt
   }
@@ -124,12 +107,20 @@ const decodeRecord = (encodedRecord) => {
  * @returns {"offered" | "accepted" | "invalid"}
  */
 const decodeStatus = (status) => {
-  if (status === 0) {
-    return 'offered'
-  } else if (status === 1) {
-    return 'accepted'
+  switch (status) {
+    case Status.OFFERED: {
+      return 'offered'
+    }
+    case Status.ACCEPTED: {
+      return 'accepted'
+    }
+    case Status.INVALID: {
+      return 'invalid'
+    }
+    default: {
+      throw new Error('invalid status received for decoding')
+    }
   }
-  return 'invalid'
 }
 
 /**
@@ -220,7 +211,7 @@ export function createClient (conf, context) {
         ':ua': { S: encodedRecord.updatedAt || (new Date()).toISOString() },
         ...(encodedRecord.stat && {':st': { N: `${encodedRecord.stat}` }})
       }
-      const stateUpdateExpression = encodedRecord.stat ? ', stat = "st' : ''
+      const stateUpdateExpression = encodedRecord.stat ? ', stat = :st' : ''
       const UpdateExpression = `SET updatedAt = :ua ${stateUpdateExpression}`
 
       const updateCmd = new UpdateItemCommand({
@@ -228,7 +219,7 @@ export function createClient (conf, context) {
         Key: marshall(encodeKey(key)),
         UpdateExpression,
         ExpressionAttributeValues,
-        ReturnValues: 'ALL',
+        ReturnValues: 'ALL_NEW',
       })
 
       let res
@@ -283,4 +274,10 @@ export function createClient (conf, context) {
       }
     },
   }
+}
+
+export const Status = {
+  OFFERED: 0,
+  ACCEPTED: 1,
+  INVALID: 2
 }

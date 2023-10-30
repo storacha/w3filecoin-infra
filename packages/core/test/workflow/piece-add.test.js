@@ -158,7 +158,7 @@ test.skip('handles partial fails when received same pieces and fails to add them
 })
 
 test.skip('handles failures when received same pieces and fails to queue them for buffering', async t => {
-  const { pieces, pieceRecords } = await getPieces(4, 128)
+  const { pieces, pieceRecords } = await getPieces(10, 128)
 
   // Create context
   const queueClient = {

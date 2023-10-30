@@ -92,22 +92,15 @@ export const dealerAggregateStoreTableProps = {
   fields: {
     aggregate: 'string',            // `bagy...aggregate` as PieceCid of an Aggregate (primary index, partition key)
     pieces: 'string',               // `bafy...cbor` as CID of dag-cbor block
-    dealMetadataDataType: 'number', // '0' always 0 for now
-    dealMetadataDealId: 'number',   // '1123' Deal identifier on the Filecoin chain
     stat: 'number',                 // `0` as 'OFFERED' | `1` as 'APPROVED' | `2` as 'REJECTED'
     insertedAt: 'string',           // Insertion date as ISO string
     updatedAt: 'string',            // Updated date as ISO string
   },
   // aggregate+dealMetadataDealId must be unique to satisfy index constraint
-  primaryIndex: { partitionKey: 'aggregate', sortKey: 'dealMetadataDealId' },
+  primaryIndex: { partitionKey: 'aggregate' },
   globalIndexes: {
     stat: {
       partitionKey: 'stat',
-      sortKey: 'insertedAt',
-      projection: 'all'
-    },
-    aggregate: {
-      partitionKey: 'aggregate',
       sortKey: 'insertedAt',
       projection: 'all'
     },

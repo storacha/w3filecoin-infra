@@ -18,16 +18,17 @@ import {
 export function ApiStack({ app, stack }) {
   const {
     DID,
-    DEALER_DID,
     DEALER_URL,
     UCAN_LOG_URL,
     HOSTED_ZONE
   } = getAggregatorEnv(stack)
   const {
     DEAL_TRACKER_API_HOSTED_ZONE,
-    DEAL_TRACKER_DID
+    DEAL_TRACKER_DID,
+    DEAL_TRACKER_PROOF
   } = getDealTrackerEnv()
   const {
+    DEALER_DID,
     DEAL_API_HOSTED_ZONE
   } = getDealerEnv()
 
@@ -47,6 +48,7 @@ export function ApiStack({ app, stack }) {
   const pkg = getApiPackageJson()
   const git = getGitInfo()
   const ucanLogBasicAuth = new Config.Secret(stack, 'UCAN_LOG_BASIC_AUTH')
+  const dealTrackerApiCustomDomain = getCustomDomain(stack.stage, DEAL_TRACKER_API_HOSTED_ZONE)
 
   // Setup `aggregator-api`
   const aggregatorApiCustomDomain = getCustomDomain(stack.stage, HOSTED_ZONE)
@@ -94,6 +96,9 @@ export function ApiStack({ app, stack }) {
           COMMIT: git.commit,
           STAGE: stack.stage,
           DID: DEALER_DID,
+          SERVICE_DID: DEAL_TRACKER_DID,
+          SERVICE_URL: dealTrackerApiCustomDomain?.domainName ? `https://${dealTrackerApiCustomDomain?.domainName}` : '',
+          PROOF: DEAL_TRACKER_PROOF,
           UCAN_LOG_URL,
           OFFER_STORE_BUCKET_NAME: dealerOfferStoreBucket.bucketName,
           OFFER_STORE_BUCKET_REGION: stack.region,
@@ -114,7 +119,6 @@ export function ApiStack({ app, stack }) {
   })
 
   // Setup `deal-tracker-api`
-  const dealTrackerApiCustomDomain = getCustomDomain(stack.stage, DEAL_TRACKER_API_HOSTED_ZONE)
   const dealTrackerApi = new Api(stack, 'deal-tracker-api', {
     customDomain: dealTrackerApiCustomDomain,
     defaults: {
@@ -150,4 +154,10 @@ export function ApiStack({ app, stack }) {
     DealerApiEndpoint: dealerApi.url,
     DealerApiCustomDomain: dealerApiCustomDomain ? `https://${dealerApiCustomDomain.domainName}` : 'Set HOSTED_ZONE in env to deploy to a custom domain',
   })
+
+  return {
+    aggregateApiEndpoint: api.url,
+    dealTrackerApiEndpoint: dealTrackerApi.url,
+    dealerApiEndpoint: dealerApi.url,
+  }
 }
