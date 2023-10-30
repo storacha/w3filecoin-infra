@@ -34,6 +34,8 @@ export async function spadeOracleSyncTick ({
   spadeOracleUrl
 }) {
   // Get latest deal archive
+  // TODO: consider doing a HEAD request and see if an ETAG is the same before proceeding
+  // https://github.com/web3-storage/w3filecoin/issues/62
   const fetchLatestDealArchiveRes = await fetchLatestDealArchive(spadeOracleUrl)
   if (fetchLatestDealArchiveRes.error) {
     return fetchLatestDealArchiveRes
@@ -55,10 +57,17 @@ export async function spadeOracleSyncTick ({
     diffPieceContracts = fetchLatestDealArchiveRes.ok
   } else {
     diffPieceContracts = computeDiff({
-      // falls back to empty map if not found
       currentPieceContracts: getCurrentDealArchiveRes.ok,
       updatedPieceContracts: fetchLatestDealArchiveRes.ok
     })
+  }
+
+  // shortcut if there is no difference
+  if (!diffPieceContracts.size) {
+    return {
+      ok: {},
+      error: undefined
+    }
   }
 
   // Store diff of contracts
@@ -94,18 +103,18 @@ export async function spadeOracleSyncTick ({
  */
 export async function putDiffToDealStore ({ dealStore, diffPieceContracts }) {
   const res = await Promise.all(
-    Array.from(diffPieceContracts, ([key, value]) => {
-      return Promise.all(value.map(contract => {
+    Array.from(diffPieceContracts, ([pieceCidStr, contracts]) => {
+      return Promise.all(contracts.map(contract => {
         /** @type {import('@web3-storage/data-segment').LegacyPieceLink} */
-        const legacyPieceCid = parseLink(key)
-
+        const legacyPieceCid = parseLink(pieceCidStr)
+        const insertedAt = new Date().toISOString()
         return dealStore.put({
           ...contract,
           // @ts-expect-error not PieceCIDv2
           piece: legacyPieceCid,
           provider: `${contract.provider}`,
-          insertedAt: (new Date()).toISOString(),
-          updatedAt: (new Date()).toISOString()
+          insertedAt,
+          updatedAt: insertedAt
         })
       }))
     })
@@ -133,15 +142,14 @@ export function computeDiff ({ currentPieceContracts, updatedPieceContracts }) {
 
   for (const [pieceCid, contracts] of updatedPieceContracts.entries() ) {
     const currentContracts = currentPieceContracts.get(pieceCid) || []
-    // Find diff when different length
-    if (contracts.length !== currentContracts.length) {
-      const diffContracts = []
-      // Get contracts for PieceCID still not recorded
-      for (const c of contracts) {
-        if (!currentContracts.find(pc => pc.dealId === c.dealId)) {
-          diffContracts.push(c)
-        }
+    const diffContracts = []
+    // Get contracts for PieceCID still not recorded
+    for (const c of contracts) {
+      if (!currentContracts.find(pc => pc.dealId === c.dealId)) {
+        diffContracts.push(c)
       }
+    }
+    if (diffContracts.length) {
       diff.set(pieceCid, diffContracts)
     }
   }
@@ -191,8 +199,7 @@ async function fetchLatestDealArchive (spadeOracleUrl) {
   const res = await fetch(spadeOracleUrl)
   if (!res.ok) {
     return {
-      // TODO: Error
-      error: new Error('could not read')
+      error: new Error(`unexpected response status fetching deal archive: ${res.status}`)
     }
   }
 
@@ -205,11 +212,11 @@ async function fetchLatestDealArchive (spadeOracleUrl) {
   const dealArchive = JSON.parse(resDecompressed.toString())
   for (const replica of dealArchive.active_replicas) {
     // Convert PieceCidV1 to PieceCidV2
-    const piecCid = convertPieceCidV1toPieceCidV2(
+    const pieceCid = convertPieceCidV1toPieceCidV2(
       parseLink(replica.piece_cid),
       replica.piece_log2_size
     )
-    dealMap.set(piecCid.toString(), replica.contracts.map(c => ({
+    dealMap.set(pieceCid.toString(), replica.contracts.map(c => ({
       provider: c.provider_id,
       dealId: c.legacy_market_id,
       expirationEpoch: c.legacy_market_end_epoch,
