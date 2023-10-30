@@ -86,13 +86,13 @@ export function DataStack({ stack, app }) {
 
   // --------------------------------- Deal Tracker ---------------------------------
   /**
-   * Spade oracle store used to store active replicas reported by Spade.
+   * Deal archive store used to store active replicas reported by Spade Oracle.
    */
-  const dealTrackerSpaceOracleBucket = getBucketConfig('deal-tracker-spade-oracle-store', stack.stage)
-  const dealTrackerSpaceOracleStoreBucket = new Bucket(stack, dealTrackerSpaceOracleBucket.bucketName, {
+  const dealTrackerDealArchiveBucket = getBucketConfig('deal-tracker-deal-archive-store', stack.stage)
+  const dealTrackerDealArchiveStoreBucket = new Bucket(stack, dealTrackerDealArchiveBucket.bucketName, {
     cors: true,
     cdk: {
-      bucket: dealTrackerSpaceOracleBucket
+      bucket: dealTrackerDealArchiveBucket
     }
   })
 
@@ -109,7 +109,7 @@ export function DataStack({ stack, app }) {
     AggregateTableName: aggregateStoreTableName,
     InclusionTableName: inclusionStoreTableName,
     // Deal Tracker
-    SpadeOracleBucketName: dealTrackerSpaceOracleStoreBucket.bucketName,
+    DealTrackerDealArchiveBucketName: dealTrackerDealArchiveStoreBucket.bucketName,
     DealTrackerDealStoreTableName: dealTrackerDealStoreTableName
   })
 
@@ -127,7 +127,7 @@ export function DataStack({ stack, app }) {
     dealerOfferStoreBucket,
     dealerAggregateStoreTable,
     // deal tracker stores
-    dealTrackerSpaceOracleStoreBucket,
+    dealTrackerDealArchiveStoreBucket,
     dealTrackerDealStoreTable
   }
 }

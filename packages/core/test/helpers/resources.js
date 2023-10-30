@@ -1,4 +1,5 @@
 import { GenericContainer as Container } from 'testcontainers'
+import pRetry from 'p-retry'
 import { customAlphabet } from 'nanoid'
 import { S3Client, CreateBucketCommand } from '@aws-sdk/client-s3'
 import { SQSClient, CreateQueueCommand } from '@aws-sdk/client-sqs'
@@ -12,9 +13,11 @@ import { DynamoDBClient, CreateTableCommand } from '@aws-sdk/client-dynamodb'
 export async function createDynamodDb(opts = {}) {
   const port = opts.port || 8000
   const region = opts.region || 'us-west-2'
-  const dbContainer = await new Container('amazon/dynamodb-local:latest')
-    .withExposedPorts(port)
-    .start()
+  const dbContainer = await pRetry(() =>
+    new Container('amazon/dynamodb-local:latest')
+      .withExposedPorts(port)
+      .start()
+  )
 
   const endpoint = `http://${dbContainer.getHost()}:${dbContainer.getMappedPort(8000)}`
   return {
@@ -117,10 +120,12 @@ export async function createS3(opts = {}) {
   const region = opts.region || 'us-west-2'
   const port = opts.port || 9000
 
-  const minio = await new Container('quay.io/minio/minio')
-    .withCommand(['server', '/data'])
-    .withExposedPorts(port)
-    .start()
+  const minio = await pRetry(() =>
+    new Container('quay.io/minio/minio')
+      .withCommand(['server', '/data'])
+      .withExposedPorts(port)
+      .start()
+  )
 
   const clientOpts = {
     endpoint: `http://${minio.getHost()}:${minio.getMappedPort(port)}`,
@@ -144,7 +149,7 @@ export async function createS3(opts = {}) {
 export async function createBucket(s3) {
   const id = customAlphabet('1234567890abcdefghijklmnopqrstuvwxyz', 10)
   const Bucket = id()
-  await s3.send(new CreateBucketCommand({ Bucket }))
+  await pRetry(() => s3.send(new CreateBucketCommand({ Bucket })))
   return Bucket
 }
 
@@ -157,9 +162,11 @@ export async function createQueue(opts = {}) {
   const region = opts.region || 'us-west-2'
   const port = opts.port || 9324
 
-  const queue = await new Container('softwaremill/elasticmq')
-    .withExposedPorts(port)
-    .start()
+  const queue = await pRetry(() =>
+    new Container('softwaremill/elasticmq')
+      .withExposedPorts(port)
+      .start()
+  )
 
   const endpoint = `http://${queue.getHost()}:${queue.getMappedPort(port)}`
   const client = new SQSClient({
@@ -170,9 +177,11 @@ export async function createQueue(opts = {}) {
   const id = customAlphabet('1234567890abcdefghijklmnopqrstuvwxyz', 10)
   const QueueName = id()
 
-  await client.send(new CreateQueueCommand({
-    QueueName,
-  }))
+  await pRetry(() =>
+    client.send(new CreateQueueCommand({
+      QueueName,
+    }))
+  )
 
   return {
     client,

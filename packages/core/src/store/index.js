@@ -125,6 +125,7 @@ export const dealStoreTableProps = {
     expirationEpoch: 'number',  // '4482396' epoch of deal expiration
     source: 'string',           // 'cargo.dag.haus' source of the deal information
     insertedAt: 'string',       // Insertion date as ISO string
+    updatedAt: 'string',       // Update date as ISO string
   },
   primaryIndex: { partitionKey: 'piece', sortKey: 'dealId' },
   globalIndexes: {

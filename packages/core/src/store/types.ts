@@ -1,3 +1,7 @@
+import { Store } from '@web3-storage/filecoin-api/types'
+import { ByteView } from '@ucanto/interface'
+import { Contract } from '../deal-tracker/types'
+
 // Connectors
 
 export interface BucketConnect {
@@ -7,6 +11,8 @@ export interface BucketConnect {
 export interface TableConnect {
   region: string
 }
+
+// Stores
 
 // Store records
 export type InferStoreRecord<T> = {
@@ -63,3 +69,13 @@ export interface DealerOfferStoreRecordValue {
   // Order that broker will rely on to prioritize deals.
   orderID: number
 }
+
+/** ---------------------- Deal Tracker ---------------------- */
+export interface DealArchiveRecord {
+  key: string
+  value: ByteView<{
+    [k: string]: Contract[];
+  }>
+}
+
+export type DealArchiveStore = Store<string, DealArchiveRecord>
