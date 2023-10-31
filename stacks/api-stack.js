@@ -1,7 +1,7 @@
 import { Api, Config, use } from 'sst/constructs'
 
 import { DataStack } from './data-stack.js'
-import { ProcessorStack } from './processor-stack.js'
+import { AggregatorStack } from './aggregator-stack.js'
 import {
   getApiPackageJson,
   getGitInfo,
@@ -17,10 +17,9 @@ import {
  */
 export function ApiStack({ app, stack }) {
   const {
-    DID,
-    DEALER_URL,
+    AGGREGATOR_HOSTED_ZONE,
+    AGGREGATOR_DID,
     UCAN_LOG_URL,
-    HOSTED_ZONE
   } = getAggregatorEnv(stack)
   const {
     DEAL_TRACKER_API_HOSTED_ZONE,
@@ -28,30 +27,43 @@ export function ApiStack({ app, stack }) {
     DEAL_TRACKER_PROOF
   } = getDealTrackerEnv()
   const {
+    DEAL_API_HOSTED_ZONE,
     DEALER_DID,
-    DEAL_API_HOSTED_ZONE
   } = getDealerEnv()
 
   // Setup app monitoring with Sentry
   setupSentry(app, stack)
 
   const {
-    pieceStoreTable,
-    dealTrackerDealStoreTable,
-    privateKey,
-    dealTrackerPrivateKey,
+    // Private keys
+    aggregatorPrivateKey,
     dealerPrivateKey,
+    dealTrackerPrivateKey,
+    // Aggregator stores
+    aggregatorBufferStoreBucket,
+    aggregatorPieceStoreTable,
+    aggregatorAggregateStoreTable,
+    aggregatorInclusionStoreTable,
+    aggregatorInclusionProofStoreBucket,
+    // Deal tracker stores
+    dealTrackerDealStoreTable,
+    // Dealer stores
     dealerAggregateStoreTable,
     dealerOfferStoreBucket
   } = use(DataStack)
-  const { pieceAddQueue } = use(ProcessorStack)
+  const {
+    pieceQueue,
+    bufferQueue,
+    aggregateOfferQueue,
+    pieceAcceptQueue
+  } = use(AggregatorStack)
   const pkg = getApiPackageJson()
   const git = getGitInfo()
   const ucanLogBasicAuth = new Config.Secret(stack, 'UCAN_LOG_BASIC_AUTH')
   const dealTrackerApiCustomDomain = getCustomDomain(stack.stage, DEAL_TRACKER_API_HOSTED_ZONE)
 
   // Setup `aggregator-api`
-  const aggregatorApiCustomDomain = getCustomDomain(stack.stage, HOSTED_ZONE)
+  const aggregatorApiCustomDomain = getCustomDomain(stack.stage, AGGREGATOR_HOSTED_ZONE)
   const api = new Api(stack, 'aggregator-api', {
     customDomain: aggregatorApiCustomDomain,
     defaults: {
@@ -61,18 +73,30 @@ export function ApiStack({ app, stack }) {
           VERSION: pkg.version,
           COMMIT: git.commit,
           STAGE: stack.stage,
-          DID,
+          DID: AGGREGATOR_DID,
           DEALER_DID,
-          DEALER_URL,
           UCAN_LOG_URL,
-          PIECE_ADD_QUEUE_URL: pieceAddQueue.queueUrl,
-          PIECE_ADD_QUEUE_REGION: stack.region
+          PIECE_QUEUE_URL: pieceQueue.queueUrl,
+          BUFFER_QUEUE_URL: bufferQueue.queueUrl,
+          AGGREGATE_OFFER_QUEUE_URL: aggregateOfferQueue.queueUrl,
+          PIECE_ACCEPT_QUEUE_URL: pieceAcceptQueue.queueUrl,
+          BUFFER_STORE_BUCKET_NAME: aggregatorBufferStoreBucket.bucketName,
+          INCLUSION_PROOF_STORE_BUCKET_NAME: aggregatorInclusionProofStoreBucket.bucketName,
         },
         bind: [
-          privateKey,
+          aggregatorPrivateKey,
           ucanLogBasicAuth,
-          pieceStoreTable,
-          pieceAddQueue
+          aggregatorAggregateStoreTable,
+          aggregatorInclusionStoreTable,
+          aggregatorPieceStoreTable,
+        ],
+        permissions: [
+          aggregatorBufferStoreBucket,
+          aggregatorInclusionProofStoreBucket,
+          pieceQueue,
+          bufferQueue,
+          aggregateOfferQueue,
+          pieceAcceptQueue
         ]
       }
     },
@@ -107,6 +131,9 @@ export function ApiStack({ app, stack }) {
           dealerPrivateKey,
           dealerAggregateStoreTable,
           ucanLogBasicAuth,
+        ],
+        permissions: [
+          dealerOfferStoreBucket
         ]
       }
     },
@@ -147,8 +174,8 @@ export function ApiStack({ app, stack }) {
   })
 
   stack.addOutputs({
-    AggregateApiEndpoint: api.url,
-    AggregateApiCustomDomain: aggregatorApiCustomDomain ? `https://${aggregatorApiCustomDomain.domainName}` : 'Set HOSTED_ZONE in env to deploy to a custom domain',
+    AggregatorApiEndpoint: api.url,
+    AggregatorApiCustomDomain: aggregatorApiCustomDomain ? `https://${aggregatorApiCustomDomain.domainName}` : 'Set HOSTED_ZONE in env to deploy to a custom domain',
     DealTrackerApiEndpoint: dealTrackerApi.url,
     DealTrackerApiCustomDomain: dealTrackerApiCustomDomain ? `https://${dealTrackerApiCustomDomain.domainName}` : 'Set HOSTED_ZONE in env to deploy to a custom domain',
     DealerApiEndpoint: dealerApi.url,

@@ -1,23 +1,7 @@
 import * as ed25519 from '@ucanto/principal/ed25519'
-import * as Server from '@ucanto/server'
 import * as DID from '@ipld/dag-ucan/did'
 import { CAR, HTTP } from '@ucanto/transport'
 import { connect } from '@ucanto/client'
-
-import { createService } from '@web3-storage/filecoin-api-legacy/aggregator'
-
-/**
- * @param {import('@ucanto/interface').Signer} servicePrincipal
- * @param {import('@web3-storage/filecoin-api-legacy/types').AggregatorServiceContext} context
- * @param {import('./types').ErrorReporter} errorReporter
- */
-export const createAggregatorServer = (servicePrincipal, context, errorReporter) =>
-  Server.create({
-    id: servicePrincipal,
-    codec: CAR.inbound,
-    service: createService(context),
-    catch: (error) => errorReporter.catch(error),
-  })
 
 /**
  * Given a config, return a ucanto Signer object representing the service
@@ -34,6 +18,13 @@ export const createAggregatorServer = (servicePrincipal, context, errorReporter)
     return signer.withDID(did)
   }
   return signer
+}
+
+/**
+ * @param {string} did 
+ */
+export function getPrincipal (did) {
+  return DID.parse(did) // 'did:web:spade.web3.storage'
 }
 
 /**

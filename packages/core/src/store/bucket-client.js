@@ -1,45 +1,41 @@
 import {
   PutObjectCommand,
-  GetObjectCommand
+  GetObjectCommand,
+  HeadObjectCommand
 } from '@aws-sdk/client-s3'
 import pRetry from 'p-retry'
-import { StoreOperationFailed, StoreNotFound, EncodeRecordFailed } from '@web3-storage/filecoin-api-legacy/errors'
+import { RecordNotFound, StoreOperationFailed } from '@web3-storage/filecoin-api/errors'
 
 import { connectBucket } from './index.js'
 
 /**
- * @typedef {{ key: string, value: Uint8Array}} StoreRecord
- * @typedef {string} StoreKey
+ * @typedef {import('./types.js').BucketStoreRecord} BucketStoreRecord
+ * @typedef {import('@aws-sdk/client-s3').GetObjectCommandOutput} GetObjectCommandOutput
  */
 
 /**
- * @template Data
+ * @template Key
+ * @template Record
  *
  * @param {import('./types.js').BucketConnect | import('@aws-sdk/client-s3').S3Client} conf
  * @param {object} context
  * @param {string} context.name
- * @param {(data: Data) => Promise<StoreRecord>} context.encodeRecord
- * @param {(item: StoreRecord) => Promise<Data>} context.decodeRecord
- * @returns {import('@web3-storage/filecoin-api-legacy/types').Store<Data>}
+ * @param {(record: Record) => BucketStoreRecord} context.encodeRecord
+ * @param {(key: Key) => string} context.encodeKey
+ * @param {(encodedRecord: BucketStoreRecord) => Record} context.decodeRecord
+ * @param {(res: GetObjectCommandOutput) => Promise<string | Uint8Array>} context.decodeBucketResponse
+ * @returns {import('@web3-storage/filecoin-api/types').Store<Key, Record>}
  */
-export function createBucketStoreClient (conf, context) {
+export function createBucketClient (conf, context) {
   const bucketClient = connectBucket(conf)
 
   return {
     put: async (record) => {
-      let encodedRecord
-      try {
-        encodedRecord = await context.encodeRecord(record)
-      } catch (/** @type {any} */ error) {
-        return {
-          error: new EncodeRecordFailed(error.message)
-        }
-      }
-
+      const { key, body } = context.encodeRecord(record)
       const putCmd = new PutObjectCommand({
         Bucket: context.name,
-        Key: encodedRecord.key,
-        Body: encodedRecord.value
+        Key: key,
+        Body: body
       })
 
       // retry to avoid throttling errors
@@ -56,15 +52,21 @@ export function createBucketStoreClient (conf, context) {
       }
     },
     get: async (key) => {
-      const putCmd = new GetObjectCommand({
+      const encodedKey = context.encodeKey(key)
+      const getCmd = new GetObjectCommand({
         Bucket: context.name,
-        Key: key
+        Key: encodedKey,
       })
 
       let res
       try {
-        res = await bucketClient.send(putCmd)
+        res = await bucketClient.send(getCmd)
       } catch (/** @type {any} */ error) {
+        if (error?.$metadata?.httpStatusCode === 404) {
+          return {
+            error: new RecordNotFound('item not found in store')
+          }
+        }
         return {
           error: new StoreOperationFailed(error.message)
         }
@@ -72,15 +74,39 @@ export function createBucketStoreClient (conf, context) {
 
       if (!res || !res.Body) {
         return {
-          error: new StoreNotFound('item not found in store')
+          error: new RecordNotFound('item not found in store')
+        }
+      }
+
+      const encodedRecord = await context.decodeBucketResponse(res)
+      return {
+        ok: context.decodeRecord({
+          key: encodedKey,
+          body: encodedRecord
+        })
+      }
+    },
+    has: async (key) => {
+      const getCmd = new HeadObjectCommand({
+        Bucket: context.name,
+        Key: context.encodeKey(key),
+      })
+
+      try {
+        await bucketClient.send(getCmd)
+      } catch (/** @type {any} */ error) {
+        if (error?.$metadata?.httpStatusCode === 404) {
+          return {
+            ok: false
+          }
+        }
+        return {
+          error: new StoreOperationFailed(error.message)
         }
       }
 
       return {
-        ok: await context.decodeRecord({
-          key,
-          value: await res.Body.transformToByteArray()
-        })
+        ok: true
       }
     }
   }

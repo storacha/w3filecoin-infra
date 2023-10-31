@@ -1,5 +1,6 @@
 import { test as filecoinApiTest } from '@web3-storage/filecoin-api/test'
 import * as Signer from '@ucanto/principal/ed25519'
+import delay from 'delay'
 
 import { createClient as createAggregateStoreClient } from '@w3filecoin/core/src/store/dealer-aggregate-store.js'
 import { createClient as createOfferStoreClient } from '@w3filecoin/core/src/store/dealer-offer-store.js'
@@ -16,6 +17,10 @@ test.beforeEach(async (t) => {
     s3: (await createS3()).client,
     dynamoClient: dynamo.client,
   })
+})
+
+test.after(async t => {
+  await delay(1000)
 })
 
 for (const [title, unit] of Object.entries(filecoinApiTest.events.dealer)) {

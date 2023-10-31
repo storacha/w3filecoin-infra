@@ -1,10 +1,10 @@
 import { Tags } from 'aws-cdk-lib';
 
-import { ApiStack } from './stacks/api-stack.js'
 import { DataStack } from './stacks/data-stack.js'
-import { ProcessorStack } from './stacks/processor-stack.js'
 import { DealTrackerStack } from './stacks/deal-tracker-stack.js'
 import { DealerStack } from './stacks/dealer-stack.js'
+import { ApiStack } from './stacks/api-stack.js'
+import { AggregatorStack } from './stacks/aggregator-stack.js'
 
 export default {
   config() {
@@ -31,15 +31,15 @@ export default {
 
     app
       .stack(DataStack)
-      .stack(ProcessorStack)
       .stack(DealTrackerStack)
+      .stack(AggregatorStack)
       .stack(ApiStack)
       .stack(DealerStack)
     
     // tags let us discover all the aws resource costs incurred by this app
     // see: https://docs.sst.dev/advanced/tagging-resources
-    Tags.of(app).add('Project', 'spade-proxy')
-    Tags.of(app).add('Repository', 'https://github.com/web3-storage/spade-proxy')
+    Tags.of(app).add('Project', 'w3filecoin')
+    Tags.of(app).add('Repository', 'https://github.com/web3-storage/w3filecoin')
     Tags.of(app).add('Environment', `${app.stage}`)
     Tags.of(app).add('ManagedBy', 'SST')
   }

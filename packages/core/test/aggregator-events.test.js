@@ -7,6 +7,7 @@ import { fromString } from 'uint8arrays/from-string'
 import { decode as JSONdecode } from '@ipld/dag-json'
 
 import { tesWorkflowWithMultipleQueues as test } from './helpers/context.js'
+import { getMockService, getConnection } from '@web3-storage/filecoin-api/test/context/service'
 import { createDynamodDb, createS3, createQueue } from './helpers/resources.js'
 import { getStores, getQueues } from './helpers/aggregator-context.js'
 
@@ -16,7 +17,7 @@ import { getStores, getQueues } from './helpers/aggregator-context.js'
 
 const queueNames = ['pieceQueue', 'bufferQueue', 'aggregateOfferQueue', 'pieceAcceptQueue']
 
-test.before(async (t) => {
+test.before(async t => {
   await delay(1000)
   /** @type {Record<string, QueueContext>} */
   const queues = {}
@@ -36,6 +37,7 @@ test.before(async (t) => {
         const decodedMessage = JSONdecode(decodedBytes)
         const messages = queuedMessages.get(name) || []
         messages.push(decodedMessage)
+        queuedMessages.set(name, messages)
         return Promise.resolve()
       }
     })
@@ -80,7 +82,7 @@ test.after(async t => {
   await delay(1000)
 })
 
-for (const [title, unit] of Object.entries(filecoinApiTest.service.aggregator)) {
+for (const [title, unit] of Object.entries(filecoinApiTest.events.aggregator)) {
   const define = title.startsWith('only ')
     // eslint-disable-next-line no-only-tests/no-only-tests
     ? test.only
@@ -95,6 +97,12 @@ for (const [title, unit] of Object.entries(filecoinApiTest.service.aggregator)) 
     // context
     const aggregatorSigner = await Signer.generate()
     const dealerSigner = await Signer.generate()
+    const service = getMockService()
+    const aggregatorConnection = getConnection(
+      aggregatorSigner,
+      service
+    ).connection
+    const dealerConnection = getConnection(dealerSigner, service).connection
 
     await unit(
       {
@@ -106,13 +114,34 @@ for (const [title, unit] of Object.entries(filecoinApiTest.service.aggregator)) 
       },
       {
         id: aggregatorSigner,
-        dealerId: dealerSigner,
         ...stores,
         ...queues,
+        dealerService: {
+          connection: dealerConnection,
+          invocationConfig: {
+            issuer: aggregatorSigner,
+            with: aggregatorSigner.did(),
+            audience: dealerSigner,
+          },
+        },
+        aggregatorService: {
+          connection: aggregatorConnection,
+          invocationConfig: {
+            issuer: aggregatorSigner,
+            with: aggregatorSigner.did(),
+            audience: aggregatorSigner,
+          },
+        },
         errorReporter: {
           catch(error) {
             t.fail(error.message)
           },
+        },
+        service,
+        config: {
+          maxAggregateSize: 2 ** 35,
+          minAggregateSize: 2 ** 34,
+          minUtilizationFactor: 4,
         },
         queuedMessages: t.context.queuedMessages,
         validateAuthorization: () => ({ ok: {} })

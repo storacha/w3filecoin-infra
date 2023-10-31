@@ -16,3 +16,7 @@ export interface QueuePutError extends Error {
 export interface QueueConnect {
   region: string
 }
+
+export interface QueueOptions {
+  disableMessageGroupId?: boolean
+}

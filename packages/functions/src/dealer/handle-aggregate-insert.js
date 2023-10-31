@@ -14,7 +14,7 @@ Sentry.AWSLambda.init({
 })
 
 /**
- * @typedef {import('@w3filecoin/core/src/store//types').DealerAggregateStoreRecord} DealerAggregateStoreRecord
+ * @typedef {import('@w3filecoin/core/src/store/types').DealerAggregateStoreRecord} DealerAggregateStoreRecord
  */
 
 /**

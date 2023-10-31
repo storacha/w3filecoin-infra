@@ -1,7 +1,11 @@
 import { SendMessageCommand } from '@aws-sdk/client-sqs'
-import { QueueOperationFailed, EncodeRecordFailed } from '@web3-storage/filecoin-api-legacy/errors'
+import { QueueOperationFailed, EncodeRecordFailed } from '@web3-storage/filecoin-api/errors'
 
 import { connectQueue } from './index.js'
+
+/**
+ * @typedef {Pick<import('@aws-sdk/client-sqs').SendMessageCommandInput, 'MessageBody'|'MessageGroupId'>} ClientEncodedMessage
+ */
 
 /**
  * @template Data
@@ -9,17 +13,17 @@ import { connectQueue } from './index.js'
  * @param {import('./types.js').QueueConnect | import('@aws-sdk/client-sqs').SQSClient} conf
  * @param {object} context
  * @param {string} context.queueUrl
- * @param {(item: Data) => Promise<string>} context.encodeMessage
- * @returns {import('@web3-storage/filecoin-api-legacy/types').Queue<Data>}
+ * @param {(item: Data) => ClientEncodedMessage} context.encodeMessage
+ * @returns {import('@web3-storage/filecoin-api/types').Queue<Data>}
  */
 export function createQueueClient (conf, context) {
   const queueClient = connectQueue(conf)
   return {
     add: async (record, options = {}) => {
-      /** @type {string} */
+      /** @type {ClientEncodedMessage} */
       let encodedRecord
       try {
-        encodedRecord = await context.encodeMessage(record)
+        encodedRecord = context.encodeMessage(record)
       } catch (/** @type {any} */ error) {
         return {
           error: new EncodeRecordFailed(error.message)
@@ -28,8 +32,7 @@ export function createQueueClient (conf, context) {
 
       const cmd = new SendMessageCommand({
         QueueUrl: context.queueUrl,
-        MessageBody: encodedRecord,
-        MessageGroupId: options.messageGroupId
+        ...encodedRecord
       })
 
       let r

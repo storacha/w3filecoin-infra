@@ -16,7 +16,7 @@ const repo = 'https://github.com/web3-storage/w3filecoin'
  * AWS HTTP Gateway handler for GET /version
  */
 export async function versionGet () {
-  const { PRIVATE_KEY: privateKey } = Config
+  const { DEALER_PRIVATE_KEY: privateKey } = Config
   const { did, name, version, commit, stage } = getLambdaEnv()
   const serviceSigner = getServiceSigner({ did, privateKey })
   const serviceDid = serviceSigner.did()

@@ -1,44 +1,67 @@
 import {
   PutObjectCommand,
   GetObjectCommand,
-  HeadObjectCommand,
   DeleteObjectCommand
 } from '@aws-sdk/client-s3'
 import pRetry from 'p-retry'
 import { RecordNotFound, StoreOperationFailed } from '@web3-storage/filecoin-api/errors'
 import { parseLink } from '@ucanto/server'
 
+import { createBucketClient } from './bucket-client.js'
 import { connectBucket } from './index.js'
 
 /**
  * @typedef {import('@web3-storage/filecoin-api/dealer/api').OfferDocument} OfferDocument
- * @typedef {import('@web3-storage/filecoin-api/dealer/api').OfferDocument} OfferValue
  * @typedef {import('./types.js').DealerOfferStoreRecordValue} DealerOfferStoreRecordValue
+ * @typedef {string} OfferDocumentStoreRecordBody
+ * @typedef {{key: string, body: OfferDocumentStoreRecordBody}} OfferDocumentStoreRecord
  */
 
 /**
- * @param {OfferDocument} record 
+ * @param {OfferDocument} record
+ * @returns {OfferDocumentStoreRecord}
  */
 const encodeRecord = (record) => {
-  return JSON.stringify(/** @type {DealerOfferStoreRecordValue} */ ({
+  const body = JSON.stringify(/** @type {DealerOfferStoreRecordValue} */ ({
     aggregate: record.value.aggregate.toString(),
     pieces: record.value.pieces.map(p => p.toString()),
     collection: record.value.issuer,
     orderID: Date.now()
   }))
+
+  return {
+    body,
+    key: record.key
+  }
 }
 
 /**
  * @param {string} key
- * @param {string} encodedRecord
+ * @returns {string}
+ */
+const encodeKey = (key) => {
+  return key
+}
+
+/**
+ * @param {import('@aws-sdk/client-s3').GetObjectCommandOutput} res 
+ * @returns {Promise<string>}
+ */
+const decodeBucketResponse = (res) => {
+  // @ts-expect-error typescript do not get body will be there
+  return res.Body.transformToString()
+}
+
+/**
+ * @param {OfferDocumentStoreRecord} encodedRecord
  * @returns {OfferDocument}
  */
-const decodeRecord = (key, encodedRecord) => {
+const decodeRecord = (encodedRecord) => {
   /** @type {DealerOfferStoreRecordValue} */
-  const record =  JSON.parse(encodedRecord)
+  const record =  JSON.parse(encodedRecord.body)
 
   return {
-    key: key,
+    key: encodedRecord.key,
     value: {
       aggregate: parseLink(record.aggregate),
       pieces: record.pieces.map(p => parseLink(p)),
@@ -57,75 +80,13 @@ export function createClient (conf, context) {
   const bucketClient = connectBucket(conf)
 
   return {
-    put: async (record) => {
-      const putCmd = new PutObjectCommand({
-        Bucket: context.name,
-        Key: record.key,
-        Body: encodeRecord(record)
-      })
-
-      // retry to avoid throttling errors
-      try {
-        await pRetry(() => bucketClient.send(putCmd))
-      } catch (/** @type {any} */ error) {
-        return {
-          error: new StoreOperationFailed(error.message)
-        }
-      }
-
-      return {
-        ok: {}
-      }
-    },
-    get: async (key) => {
-      const getCmd = new GetObjectCommand({
-        Bucket: context.name,
-        Key: key
-      })
-
-      let res
-      try {
-        res = await bucketClient.send(getCmd)
-      } catch (/** @type {any} */ error) {
-        return {
-          error: new StoreOperationFailed(error.message)
-        }
-      }
-
-      if (!res || !res.Body) {
-        return {
-          error: new RecordNotFound('item not found in store')
-        }
-      }
-
-      const encodedRecord = await res.Body.transformToString()
-      return {
-        ok: decodeRecord(key, encodedRecord)
-      }
-    },
-    has: async (key) => {
-      const getCmd = new HeadObjectCommand({
-        Bucket: context.name,
-        Key: key
-      })
-
-      try {
-        await bucketClient.send(getCmd)
-      } catch (/** @type {any} */ error) {
-        if (error?.$metadata?.httpStatusCode === 404) {
-          return {
-            ok: false
-          }
-        }
-        return {
-          error: new StoreOperationFailed(error.message)
-        }
-      }
-
-      return {
-        ok: true
-      }
-    },
+    ...createBucketClient(conf, {
+      name: context.name,
+      encodeRecord,
+      encodeKey,
+      decodeRecord,
+      decodeBucketResponse
+    }),
     update: async (key, record) => {
       if (!record.key) {
         return {
@@ -135,7 +96,7 @@ export function createClient (conf, context) {
 
       const getCmd = new GetObjectCommand({
         Bucket: context.name,
-        Key: key
+        Key: encodeKey(key)
       })
 
       let res
@@ -153,10 +114,10 @@ export function createClient (conf, context) {
         }
       }
 
-      const encodedRecord = await res.Body.transformToString()
+      const encodedRecord = await decodeBucketResponse(res)
       const putCmd = new PutObjectCommand({
         Bucket: context.name,
-        Key: record.key,
+        Key: encodeKey(record.key),
         Body: encodedRecord
       })
 
@@ -184,7 +145,10 @@ export function createClient (conf, context) {
       }
 
       return {
-        ok: decodeRecord(record.key, encodedRecord)
+        ok: decodeRecord({
+          key: encodeKey(record.key),
+          body: encodedRecord
+        })
       }
     }
   }
