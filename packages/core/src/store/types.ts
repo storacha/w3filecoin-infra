@@ -1,6 +1,8 @@
 import { Store } from '@web3-storage/filecoin-api/types'
 import { ByteView } from '@ucanto/interface'
 import { Contract } from '../deal-tracker/types'
+import { Link } from 'multiformats'
+import { InclusionProof } from '@web3-storage/capabilities/types'
 
 // Connectors
 
@@ -13,6 +15,10 @@ export interface TableConnect {
 }
 
 // Stores
+export interface BucketStoreRecord {
+  key: string
+  body: any
+}
 
 // Store records
 export type InferStoreRecord<T> = {
@@ -22,10 +28,86 @@ export type InferStoreRecord<T> = {
 /** A record that is of suitable type to be put in DynamoDB. */
 export type StoreRecord = Record<string, string|number>
 
+/** ---------------------- Aggregator ---------------------- */
+/**
+ * Custom PieceStoreRecord given we need to change stat.
+ */
+export type AggregatorPieceStoreRecord = {
+  // Piece CID for the content.
+  piece: string
+  // Grouping information for submitted piece.
+  group: string
+  /**
+   * Status of the offered piece.
+   * - offered = acknowledged received for aggregation.
+   * - accepted = accepted into an aggregate and offered for inclusion in filecoin deal(s).
+   */
+  stat: AggregatorPieceStoreRecordStatus
+  /**
+   * Insertion date ISO string.
+   */
+  insertedAt: string
+  /**
+   * Update date ISO string.
+   */
+  updatedAt: string
+}
+
+export enum AggregatorPieceStoreRecordStatus {
+  Offered = 0,
+  Accepted = 1,
+}
+
+/**
+ * Custom InclusionStoreRecord given we need to store inclusion proof separately.
+ */
+
+export interface AggregatorInclusionRecord extends Omit<import('@web3-storage/filecoin-api/aggregator/api').InclusionRecord, 'inclusion'> {
+  inclusion: Link
+}
+
+export interface AggregatorInclusionStoreRecord {
+  /**
+   * Piece CID for the content.
+   */
+  piece: string
+  /**
+   * Piece CID of an aggregate.
+   */
+  aggregate: string
+  /**
+   * Grouping information for submitted piece.
+   */
+  group: string
+  /**
+   * dag-cbor string with inclusion proof cid.
+   */
+  inclusion: string
+  /**
+   * Insertion date ISO string.
+   */
+  insertedAt: string
+}
+
+export type InclusionProofStore = Store<Link, InclusionProofRecord>
+
+export interface InclusionProofRecord {
+  /**
+   * Inclusion proof record
+   */
+  inclusion: InclusionProof
+  /**
+   * `bafy...cbor` as CID of dag-cbor block with inclusion proof.
+   */
+  block: Link
+}
+
+
+
 /** ---------------------- Dealer ---------------------- */
 /**
  * Custom Dealer Aggregate store record given we need to collapse Deal Metadata into different columns
- * together with status.
+ * together with status change to stat.
  */
 export type DealerAggregateStoreRecord = {
   // PieceCid of an Aggregate `bagy...aggregate`

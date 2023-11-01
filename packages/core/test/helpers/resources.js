@@ -37,7 +37,7 @@ export async function createTable(dynamo, props) {
   const id = customAlphabet('1234567890abcdefghijklmnopqrstuvwxyz', 10)
   const tableName = id()
 
-  await dynamo.send(
+  await pRetry(() => dynamo.send(
     new CreateTableCommand({
       TableName: tableName,
       ...dynamoDBTableConfig(props),
@@ -46,7 +46,7 @@ export async function createTable(dynamo, props) {
         WriteCapacityUnits: 1,
       },
     })
-  )
+  ))
 
   return tableName
 }

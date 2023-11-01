@@ -24,67 +24,53 @@ export function connectTable (target) {
 
 /** @typedef {import('sst/constructs').TableProps} TableProps */
 
+/** ------------------- Aggregator ------------------- */
+
 /** @type TableProps */
-export const pieceStoreTableProps = {
+export const aggregatorPieceStoreTableProps = {
   fields: {
     piece: 'string',        // `bagy...content` as PieceCid of a Filecoin Piece
-    storefront: 'string',   // `did:web:web3.storage`
     group: 'string',        // `did:web:free.web3.storage`
-    insertedAt: 'number',   // `1690464180271` as number of milliseconds elapsed since the epoch
+    stat: 'number',         // `0` as 'OFFERED' | `1` as 'ACCEPTED'
+    insertedAt: 'string',   // Insertion date as ISO string
+    updatedAt: 'string',    // Updated date as ISO string
   },
-  // piece + storefront must be unique to satisfy index constraint
-  primaryIndex: { partitionKey: 'piece', sortKey: 'storefront' },
+  // piece + group must be unique to satisfy index constraint
+  primaryIndex: { partitionKey: 'piece', sortKey: 'group' },
 }
 
 /** @type TableProps */
-export const aggregateStoreTableProps = {
+export const aggregatorAggregateStoreTableProps = {
   fields: {
-    piece: 'string',        // `bagy...aggregate` as PieceCid of an Aggregate (primary index, partition key)
-    buffer: 'string',       // `bafy...cbor` as CID of dag-cbor block
-    invocation: 'string',   // `bafy...inv` as CID of `aggregate/add` invocation
-    task: 'string',         // `bafy...task` as CID of `aggregate/add` task
-    stat: 'number',         // `0` as 'OFFERED' | `1` as 'APPROVED' | `2` as 'REJECTED'
-    storefront: 'string',   // `did:web:web3.storage`
+    aggregate: 'string',    // `bagy...aggregate` as PieceCid of an Aggregate (primary index, partition key)
+    pieces: 'string',       // `bafy...cbor` as CID of dag-cbor block with list of pieces in an aggregate.
     group: 'string',        // `did:web:free.web3.storage`
-    insertedAt: 'number',   // `1690464180271` as number of milliseconds elapsed since the epoch
+    insertedAt: 'string',   // Insertion date as ISO string
   },
   // piece must be unique to satisfy index constraint
-  primaryIndex: { partitionKey: 'piece' },
-  globalIndexes: {
-    indexStat: {
-      partitionKey: 'stat',
-      sortKey: 'insertedAt',
-      projection: 'all'
-    },
-    indexStorefront: {
-      partitionKey: 'storefront',
-      sortKey: 'insertedAt',
-      projection: 'all'
-    }
-  }
+  primaryIndex: { partitionKey: 'aggregate' },
 }
 
 /** @type TableProps */
-export const inclusionStoreTableProps = {
+export const aggregatorInclusionStoreTableProps = {
   fields: {
     aggregate: 'string',    // `bagy...aggregate` as PieceCid of an Aggregate
     piece: 'string',        // `bagy...content` as PieceCid of a Filecoin Piece
-    stat: 'number',         // `0` as 'APPROVED' | `1` as 'REJECTED'
-    insertedAt: 'number',   // `1690464180271` as number of milliseconds elapsed since the epoch for piece inserted
-    submitedAt: 'number',   // `1690464180271` as number of milliseconds elapsed since the epoch for aggregate submission
-    resolvedAt: 'number',   // `1690464180271` as number of milliseconds elapsed since the epoch for aggregate deal resolution
-    failedReason: 'string', // 'invalid piece for content'
+    group: 'string',        // `did:web:free.web3.storage`
+    inclusion: 'string',    // proof that the piece is included in the aggregate
+    insertedAt: 'string',   // Insertion date as ISO string
   },
   // aggregate + piece must be unique to satisfy index constraint
   primaryIndex: { partitionKey: 'aggregate', sortKey: 'piece' },
   globalIndexes: {
     indexPiece: {
       partitionKey: 'piece',
-      sortKey: 'resolvedAt',
+      sortKey: 'group',
       projection: 'all'
     }
   }
 }
+
 /** ------------------- Dealer ------------------- */
 
 /** @type TableProps */

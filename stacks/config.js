@@ -123,13 +123,12 @@ export function getAggregatorEnv(stack) {
 
   return {
     ...getEnv(),
-    HOSTED_ZONE: process.env.HOSTED_ZONE,
-    DID: mustGetEnv('DID'),
-    DEALER_DID: mustGetEnv('DEALER_DID'),
-    DEALER_URL: mustGetEnv('DEALER_URL'),
+    AGGREGATOR_HOSTED_ZONE: process.env.AGGREGATOR_HOSTED_ZONE,
+    AGGREGATOR_DID: mustGetEnv('AGGREGATOR_DID'),
     MAX_AGGREGATE_SIZE: process.env.MAX_AGGREGATE_SIZE || defaultMaxAggregateSize,
     MIN_AGGREGATE_SIZE: process.env.MIN_AGGREGATE_SIZE || defaultMinAggregateSize,
     MIN_UTILIZATION_FACTOR: process.env.MIN_UTILIZATION_FACTOR || defaultMinUtilizationFactor,
+    AGGREGATOR_PROOF: process.env.AGGREGATOR_PROOF ?? '',
   }
 }
 

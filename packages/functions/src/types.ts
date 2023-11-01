@@ -7,7 +7,7 @@ import 'sst/node/config';
 
 declare module 'sst/node/bucket' {
   export interface BucketResources {
-    'buffer-store': {
+    'aggregator-buffer-store': {
       bucketName: string;
     };
   }
@@ -15,13 +15,13 @@ declare module 'sst/node/bucket' {
 
 declare module 'sst/node/table' {
   export interface TableResources {
-    'piece-store': {
+    'aggregator-piece-store': {
       tableName: string;
     };
-    'aggregate-store': {
+    'aggregator-aggregate-store': {
       tableName: string;
     };
-    'inclusion-store': {
+    'aggregator-inclusion-store': {
       tableName: string;
     };
     'deal-tracker-deal-store': {
@@ -35,7 +35,7 @@ declare module 'sst/node/table' {
 
 declare module 'sst/node/config' {
   export interface SecretResources {
-    PRIVATE_KEY: {
+    AGGREGATOR_PRIVATE_KEY: {
       value: string
     },
     DEALER_PRIVATE_KEY: {

@@ -1,5 +1,6 @@
 import { test as filecoinApiTest } from '@web3-storage/filecoin-api/test'
 import * as Signer from '@ucanto/principal/ed25519'
+import delay from 'delay'
 
 import { createClient as createAggregateStoreClient } from '@w3filecoin/core/src/store/dealer-aggregate-store.js'
 import { createClient as createOfferStoreClient } from '@w3filecoin/core/src/store/dealer-offer-store.js'
@@ -9,13 +10,17 @@ import { testStore as test } from '@w3filecoin/core/test/helpers/context.js'
 import { getMockService, getConnection } from '@web3-storage/filecoin-api/test/context/service'
 import { createDynamodDb, createTable, createS3, createBucket } from '@w3filecoin/core/test/helpers/resources.js'
 
-test.beforeEach(async (t) => {
+test.before(async (t) => {
   const dynamo = await createDynamodDb()
 
   Object.assign(t.context, {
     s3: (await createS3()).client,
     dynamoClient: dynamo.client,
   })
+})
+
+test.after(async t => {
+  await delay(1000)
 })
 
 for (const [title, unit] of Object.entries(filecoinApiTest.events.dealer)) {

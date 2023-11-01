@@ -6,7 +6,6 @@ import anyTest from 'ava'
  * @property {string} queueName
  * @property {string} queueUrl
  * @property {import('sqs-consumer').Consumer} queueConsumer
- * @property {import('@aws-sdk/client-sqs').Message[]} queuedMessages
  * 
  * @typedef {object} DbContext
  * @property {import('@aws-sdk/client-dynamodb').DynamoDBClient} dynamoClient
@@ -17,6 +16,7 @@ import anyTest from 'ava'
  * 
  * @typedef {object} MultipleQueueContext
  * @property {Record<string, QueueContext>} queues
+ * @property {Map<string, unknown[]>} queuedMessages
  * 
  * @typedef {import('ava').TestFn<any>} Test
  * @typedef {import('ava').TestFn<QueueContext & DbContext>} TestService

@@ -19,9 +19,6 @@ dotenv.config({
  *
  * @typedef {object} Context
  * @property {string} apiEndpoint
- * @property {Dynamo} pieceStoreDynamo
- * @property {Dynamo} aggregateStoreDynamo
- * @property {Bucket} bufferStoreBucket
  *
  * @typedef {import('ava').TestFn<Awaited<Context>>} TestContextFn
  */

@@ -1,5 +1,6 @@
 import { test as filecoinApiTest } from '@web3-storage/filecoin-api/test'
 import { ed25519 } from '@ucanto/principal'
+import delay from 'delay'
 
 import { createClient } from '../src/store/deal-store.js'
 import { dealStoreTableProps } from '../src/store/index.js'
@@ -7,12 +8,16 @@ import { dealStoreTableProps } from '../src/store/index.js'
 import { testService as test } from './helpers/context.js'
 import { createDynamodDb, createTable } from './helpers/resources.js'
 
-test.beforeEach(async (t) => {
+test.before(async (t) => {
   const dynamo = await createDynamodDb()
 
   Object.assign(t.context, {
     dynamoClient: dynamo.client,
   })
+})
+
+test.after(async t => {
+  await delay(1000)
 })
 
 for (const [title, unit] of Object.entries(filecoinApiTest.service.dealTracker)) {
