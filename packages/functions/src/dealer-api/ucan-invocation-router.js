@@ -143,7 +143,7 @@ function getLambdaEnv () {
     did: mustGetEnv('DID'),
     serviceDid: mustGetEnv('SERVICE_DID'),
     serviceUrl: mustGetEnv('SERVICE_URL'),
-    delegatedProof: mustGetEnv('PROOF'),
+    delegatedProof: process.env.PROOF,
     ucanLogUrl: mustGetEnv('UCAN_LOG_URL'),
     aggregateStoreTableName: Table['dealer-aggregate-store'],
     aggregateStoreTableRegion: mustGetEnv('AWS_REGION'),
