@@ -10,7 +10,7 @@ import { testStore as test } from '@w3filecoin/core/test/helpers/context.js'
 import { getMockService, getConnection } from '@web3-storage/filecoin-api/test/context/service'
 import { createDynamodDb, createTable, createS3, createBucket } from '@w3filecoin/core/test/helpers/resources.js'
 
-test.beforeEach(async (t) => {
+test.before(async (t) => {
   const dynamo = await createDynamodDb()
 
   Object.assign(t.context, {

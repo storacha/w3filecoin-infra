@@ -1,6 +1,6 @@
 # These variables are only available in your SST code.
 
-# uncomment to try out deploying the `aggregator-api`` under a custom domain.
+# uncomment to try out deploying the `aggregator-api` under a custom domain.
 # the value should match a hosted zone configured in route53 that your aws account has access to.
 # AGGREGATOR_HOSTED_ZONE=aggregator.web3.storage
 

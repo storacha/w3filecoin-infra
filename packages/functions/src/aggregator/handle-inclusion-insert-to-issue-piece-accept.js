@@ -38,7 +38,7 @@ async function handleInclusionInsertToIssuePieceAccept (event) {
   if (eventRawRecords.length !== 1) {
     return {
       statusCode: 400,
-      body: `Expected 1 DynamoDBStreamEvent per invocation but received ${eventRawRecords.length}`
+      body: `Expected 1 DynamoDB record per invocation but received ${eventRawRecords.length}`
     }
   }
   /** @type {AggregatorInclusionStoreRecord} */

@@ -1,5 +1,5 @@
 import { encode as JSONencode, decode as JSONdecode } from '@ipld/dag-json'
-import { toString } from 'uint8arrays/to-string'
+import { toString } from 'uint8arrays/to-string'	
 import { fromString } from 'uint8arrays/from-string'
 
 import { createQueueClient } from './client.js'
@@ -19,6 +19,7 @@ const encodeMessage = (aggregateOfferMessage, options) => {
   return {
     MessageBody: toString(encodedBytes),
     // FIFO Queue message group id
+    // TODO: this should be an option
     MessageGroupId: options.disableMessageGroupId ? undefined : aggregateOfferMessage.group
   }
 }

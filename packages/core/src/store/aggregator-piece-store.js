@@ -44,10 +44,17 @@ const encodePartialRecord = (record) => {
  * @returns 
  */
 const encodeStatus = (status) => {
-  if (status === 'offered') {
-    return Status.OFFERED
+  switch (status) {
+    case 'offered': {
+      return Status.OFFERED
+    }
+    case 'accepted': {
+      return Status.ACCEPTED
+    }
+    default: {
+      throw new Error('invalid status received for encoding')
+    }
   }
-  return Status.ACCEPTED
 }
 
 /**
@@ -78,10 +85,17 @@ export const decodeRecord = (encodedRecord) => {
  * @returns {PieceStatus}
  */
 const decodeStatus = (status) => {
-  if (status === Status.OFFERED) {
-    return 'offered'
+  switch (status) {
+    case Status.OFFERED: {
+      return 'offered'
+    }
+    case Status.ACCEPTED: {
+      return 'accepted'
+    }
+    default: {
+      throw new Error('invalid status received for decoding')
+    }
   }
-  return 'accepted'
 }
 
 /**

@@ -16,7 +16,7 @@ import { createQueueClient } from './client.js'
 const encodeMessage = (pieceMessage) => {
   const encodedBytes = JSONencode(pieceMessage)
   return {
-    MessageBody: toString(encodedBytes),
+    MessageBody: toString(encodedBytes)
   }
 }
 
