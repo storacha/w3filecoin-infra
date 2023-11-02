@@ -18,6 +18,17 @@ export function getResourceName (name, stage, version = 0) {
 }
 
 /**
+ * Get nicer queue name
+ *
+ * @param {string} name
+ * @param {number} version
+ */
+export function getQueueName (name, version = 0) {
+  // e.g `prod-w3filecoin-piece-queue-0`
+  return `${name}-${version}`
+}
+
+/**
  * Return the custom domain config for http api
  * 
  * @param {string} stage
@@ -47,18 +58,6 @@ export function getGitInfo () {
 }
 
 /**
- * Get nicer bucket names
- *
- * @param {string} name
- * @param {string} stage
- * @param {number} version
- */
-export function getBucketName (name, stage, version = 0) {
-  // e.g `carpark-prod-0` or `carpark-pr101-0`
-  return `${name}-${stage}-${version}`
-}
-
-/**
  * Is an ephemeral build?
  *
  * @param {string} stage
@@ -75,7 +74,7 @@ export function isPrBuild (stage) {
  */
 export function getBucketConfig(name, stage, version = 0){
   return {
-    bucketName: getBucketName(name, stage, version),
+    bucketName: getResourceName(name, stage, version),
     ...(isPrBuild(stage) && {
       autoDeleteObjects: true,
       removalPolicy: RemovalPolicy.DESTROY
