@@ -7,7 +7,7 @@ import {
   setupSentry,
   getAggregatorEnv,
   getDealerEnv,
-  getQueueName,
+  getResourceName,
   getCustomDomain
 } from './config.js'
 
@@ -47,13 +47,13 @@ export function AggregatorStack({ stack, app }) {
    /**
     * 1st processor queue - piece/offer invocation
     */
-   const pieceQueueName = getQueueName('piece-queue')
+   const pieceQueueName = getResourceName('piece-queue', stack.stage)
    const pieceQueue = new Queue(stack, pieceQueueName)
 
   /**
    * 2nd processor queue - buffer reducing event
    */
-  const bufferQueueName = getQueueName('buffer-queue')
+  const bufferQueueName = getResourceName('buffer-queue', stack.stage)
   const bufferQueue = new Queue(stack, bufferQueueName, {
     cdk: {
       queue: {
@@ -71,7 +71,7 @@ export function AggregatorStack({ stack, app }) {
   /**
    * 3rd processor queue - aggregator/offer invocation
    */
-  const aggregateOfferQueueName = getQueueName('aggregate-offer-queue')
+  const aggregateOfferQueueName = getResourceName('aggregate-offer-queue', stack.stage)
   const aggregateOfferQueue = new Queue(stack, aggregateOfferQueueName, {
     cdk: {
       queue: {
@@ -89,7 +89,7 @@ export function AggregatorStack({ stack, app }) {
   /**
    * 4th processor queue - piece/accept invocation
    */
-  const pieceAcceptQueueName = getQueueName('piece-accept-queue')
+  const pieceAcceptQueueName = getResourceName('piece-accept-queue', stack.stage)
   const pieceAcceptQueue = new Queue(stack, pieceAcceptQueueName)
 
   /**
