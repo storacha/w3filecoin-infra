@@ -69,7 +69,7 @@ export function ApiStack({ app, stack }) {
     defaults: {
       function: {
         environment: {
-          NAME: pkg.name,
+          NAME: 'aggregator-api',
           VERSION: pkg.version,
           COMMIT: git.commit,
           STAGE: stack.stage,
@@ -115,7 +115,7 @@ export function ApiStack({ app, stack }) {
     defaults: {
       function: {
         environment: {
-          NAME: pkg.name,
+          NAME: 'dealer-api',
           VERSION: pkg.version,
           COMMIT: git.commit,
           STAGE: stack.stage,
@@ -141,6 +141,7 @@ export function ApiStack({ app, stack }) {
       'GET /':        'packages/functions/src/dealer-api/get.home',
       'GET /error':   'packages/functions/src/dealer-api/get.error',
       'GET /version': 'packages/functions/src/dealer-api/get.version',
+      'GET /cron':    'packages/functions/src/dealer/handle-cron-tick.main',
       'POST /':       'packages/functions/src/dealer-api/ucan-invocation-router.handler',
     },
   })
@@ -151,7 +152,7 @@ export function ApiStack({ app, stack }) {
     defaults: {
       function: {
         environment: {
-          NAME: pkg.name,
+          NAME: 'deal-tracker-api',
           VERSION: pkg.version,
           COMMIT: git.commit,
           STAGE: stack.stage,
@@ -175,11 +176,11 @@ export function ApiStack({ app, stack }) {
 
   stack.addOutputs({
     AggregatorApiEndpoint: api.url,
-    AggregatorApiCustomDomain: aggregatorApiCustomDomain ? `https://${aggregatorApiCustomDomain.domainName}` : 'Set HOSTED_ZONE in env to deploy to a custom domain',
+    AggregatorApiCustomDomain: aggregatorApiCustomDomain ? `https://${aggregatorApiCustomDomain.domainName}` : 'Set AGGREGATOR_HOSTED_ZONE in env to deploy to a custom domain',
     DealTrackerApiEndpoint: dealTrackerApi.url,
-    DealTrackerApiCustomDomain: dealTrackerApiCustomDomain ? `https://${dealTrackerApiCustomDomain.domainName}` : 'Set HOSTED_ZONE in env to deploy to a custom domain',
+    DealTrackerApiCustomDomain: dealTrackerApiCustomDomain ? `https://${dealTrackerApiCustomDomain.domainName}` : 'Set DEAL_TRACKER_API_HOSTED_ZONE in env to deploy to a custom domain',
     DealerApiEndpoint: dealerApi.url,
-    DealerApiCustomDomain: dealerApiCustomDomain ? `https://${dealerApiCustomDomain.domainName}` : 'Set HOSTED_ZONE in env to deploy to a custom domain',
+    DealerApiCustomDomain: dealerApiCustomDomain ? `https://${dealerApiCustomDomain.domainName}` : 'Set DEALER_API_HOSTED_ZONE in env to deploy to a custom domain',
   })
 
   return {

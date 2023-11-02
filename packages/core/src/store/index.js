@@ -43,12 +43,19 @@ export const aggregatorPieceStoreTableProps = {
 export const aggregatorAggregateStoreTableProps = {
   fields: {
     aggregate: 'string',    // `bagy...aggregate` as PieceCid of an Aggregate (primary index, partition key)
+    buffer: 'string',       // `bafy...cbor` as CID of dag-cbor of the buffer storing aggregate pieces.
     pieces: 'string',       // `bafy...cbor` as CID of dag-cbor block with list of pieces in an aggregate.
     group: 'string',        // `did:web:free.web3.storage`
     insertedAt: 'string',   // Insertion date as ISO string
   },
   // piece must be unique to satisfy index constraint
   primaryIndex: { partitionKey: 'aggregate' },
+  globalIndexes: {
+    group: {
+      partitionKey: 'group',
+      projection: 'all'
+    }
+  }
 }
 
 /** @type TableProps */

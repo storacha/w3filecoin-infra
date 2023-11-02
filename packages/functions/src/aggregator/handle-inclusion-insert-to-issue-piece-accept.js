@@ -117,7 +117,7 @@ function getEnv () {
     did: mustGetEnv('DID'),
     serviceDid: mustGetEnv('SERVICE_DID'),
     serviceUrl: mustGetEnv('SERVICE_URL'),
-    delegatedProof: mustGetEnv('PROOF'),
+    delegatedProof: process.env.PROOF,
   }
 }
 

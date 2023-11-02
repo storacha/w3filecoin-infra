@@ -106,7 +106,7 @@ function parseDynamoDbEvent (event) {
 function getEnv () {
   return {
     did: mustGetEnv('DID'),
-    serviceDid: mustGetEnv('SERVICE_URL'),
+    serviceDid: mustGetEnv('SERVICE_DID'),
     serviceUrl: mustGetEnv('SERVICE_URL'),
     delegatedProof: process.env.PROOF,
   }

@@ -1,4 +1,4 @@
-import { PutItemCommand, GetItemCommand } from '@aws-sdk/client-dynamodb'
+import { PutItemCommand, GetItemCommand, QueryCommand } from '@aws-sdk/client-dynamodb'
 import { marshall, unmarshall } from '@aws-sdk/util-dynamodb'
 import { RecordNotFound, StoreOperationFailed } from '@web3-storage/filecoin-api/errors'
 import { parseLink } from '@ucanto/server'
@@ -21,6 +21,7 @@ const encodeRecord = (record) => {
     ...record,
     aggregate: record.aggregate.toString(),
     pieces: record.pieces.toString(),
+    buffer: record.buffer.toString(),
   }
 }
 
@@ -42,7 +43,8 @@ export const decodeRecord = (encodedRecord) => {
   return {
     ...encodedRecord,
     aggregate: parseLink(encodedRecord.aggregate),
-    pieces: parseLink(encodedRecord.pieces)
+    pieces: parseLink(encodedRecord.pieces),
+    buffer: parseLink(encodedRecord.buffer)
   }
 }
 
@@ -50,7 +52,7 @@ export const decodeRecord = (encodedRecord) => {
  * @param {import('./types.js').TableConnect | import('@aws-sdk/client-dynamodb').DynamoDBClient} conf
  * @param {object} context
  * @param {string} context.tableName
- * @returns {import('@web3-storage/filecoin-api/aggregator/api').AggregateStore}
+ * @returns {import('./types').CustomAggregateStore}
  */
 export function createClient (conf, context) {
   const tableclient = connectTable(conf)
@@ -126,6 +128,39 @@ export function createClient (conf, context) {
 
       return {
         ok: true
+      }
+    },
+    /**
+     * 
+     * @param {{ group: string }} search 
+     */
+    query: async (search) => {
+      const queryCmd = new QueryCommand({
+        TableName: context.tableName,
+        IndexName: 'group',
+        KeyConditions: {
+          group: {
+            ComparisonOperator: 'EQ',
+            AttributeValueList: [{ S: search.group }]
+          }
+        }
+      })
+
+      let res
+      try {
+        res = await tableclient.send(queryCmd)
+      } catch (/** @type {any} */ error) {
+        return {
+          error: new StoreOperationFailed(error.message)
+        }
+      }
+
+      // TODO: handle pulling the entire list. currently we only support 2 providers so
+      // this list should not be longer than the default page size so this is not terribly urgent.
+      return {
+        ok: res.Items ? res.Items.map(item => decodeRecord(
+          /** @type {InferStoreRecord} */ (unmarshall(item))
+        )) : []
       }
     }
   }

@@ -273,6 +273,9 @@ export function AggregatorStack({ stack, app }) {
       environment: {
         INCLUSION_PROOF_STORE_BUCKET_NAME: aggregatorInclusionProofStoreBucket.bucketName,
       },
+      permissions: [
+        aggregatorInclusionProofStoreBucket,
+      ],
       bind: [
         aggregatorInclusionStoreTable,
       ],
@@ -292,7 +295,7 @@ export function AggregatorStack({ stack, app }) {
       function: {
         handler: 'packages/functions/src/aggregator/handle-inclusion-insert-to-update-state.main',
         environment: {},
-        permissions: [
+        bind: [
           aggregatorPieceStoreTable,
         ]
       },

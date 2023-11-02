@@ -21,12 +21,15 @@ AGGREGATOR_DID=""
 # Deal tracker DID
 DEAL_TRACKER_DID=""
 
-# just for a local test
-PRIVATE_KEY=""
-
 # Dealer service
 DEALER_DID=""
+
+# just for a local test
+PRIVATE_KEY=""
 
 # Ucan log
 UCAN_LOG_URL=""
 UCAN_LOG_BASIC_AUTH=""
+
+# Spade
+SPADE_ORACLE_URL=""
