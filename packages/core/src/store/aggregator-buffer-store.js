@@ -16,7 +16,7 @@ import { createBucketClient } from './bucket-client.js'
  */
 const encodeRecord = (record) => {
   return {
-    key: record.block.toString(),
+    key: encodeKey(record.block),
     body: CBOR.encode(record.buffer)
   }
 }
@@ -26,7 +26,7 @@ const encodeRecord = (record) => {
  * @returns {string}
  */
 const encodeKey = (link) => {
-  return link.toString()
+  return `${link.toString()}/${link.toString()}`
 }
 
 /**
@@ -47,7 +47,7 @@ const decodeRecord = (encodedRecord) => {
   const buffer =  CBOR.decode(encodedRecord.body)
 
   return {
-    block: parseLink(encodedRecord.key),
+    block: parseLink(encodedRecord.key.split('/')[0]),
     buffer
   }
 }

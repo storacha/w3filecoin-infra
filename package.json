@@ -1,5 +1,5 @@
 {
-  "name": "w3filecoin",
+  "name": "w3filecoin-infra",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -23,6 +23,7 @@
     "@types/git-rev-sync": "^2.0.0",
     "@types/node": "^18.11.18",
     "@ucanto/client": "^9.0.0",
+    "@ucanto/core": "^9.0.0",
     "@ucanto/principal": "^9.0.0",
     "@ucanto/transport": "^9.0.0",
     "@web3-storage/filecoin-client": "^3.0.0",

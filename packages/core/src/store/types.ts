@@ -1,8 +1,10 @@
-import { Store } from '@web3-storage/filecoin-api/types'
+import { Store, StoreGetError } from '@web3-storage/filecoin-api/types'
+import { AggregateStore, AggregateRecord } from '@web3-storage/filecoin-api/aggregator/api'
 import { ByteView } from '@ucanto/interface'
 import { Contract } from '../deal-tracker/types'
 import { Link } from 'multiformats'
 import { InclusionProof } from '@web3-storage/capabilities/types'
+import { Result } from '../types'
 
 // Connectors
 
@@ -29,6 +31,10 @@ export type InferStoreRecord<T> = {
 export type StoreRecord = Record<string, string|number>
 
 /** ---------------------- Aggregator ---------------------- */
+export interface CustomAggregateStore extends AggregateStore {
+  query: (search: { group: string }) => Promise<Result<AggregateRecord[], StoreGetError>>
+}
+
 /**
  * Custom PieceStoreRecord given we need to change stat.
  */
@@ -101,8 +107,6 @@ export interface InclusionProofRecord {
    */
   block: Link
 }
-
-
 
 /** ---------------------- Dealer ---------------------- */
 /**

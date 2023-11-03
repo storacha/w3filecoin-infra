@@ -62,7 +62,7 @@ async function handleEvent () {
 
   // @ts-expect-error weirdness type error for ucanto/interface until we get rid of legacy deps
   // Types of parameters 'request' and 'request' are incompatible.
-  const { ok, error } = await dealerEvents.handleCronTick(context)
+  const { error } = await dealerEvents.handleCronTick(context)
   if (error) {
     return {
       statusCode: 500,
@@ -71,8 +71,7 @@ async function handleEvent () {
   }
 
   return {
-    statusCode: 200,
-    body: ok
+    statusCode: 200
   }
 }
 

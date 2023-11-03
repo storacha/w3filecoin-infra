@@ -10,7 +10,7 @@ Sentry.AWSLambda.init({
   tracesSampleRate: 1.0,
 })
 
-const repo = 'https://github.com/web3-storage/w3filecoin'
+const repo = 'https://github.com/web3-storage/w3filecoin-infra'
 
 /**
  * AWS HTTP Gateway handler for GET /version
@@ -44,7 +44,7 @@ export async function homeGet () {
     headers: {
       'Content-Type': 'text/plain; charset=utf-8'
     },
-    body: `⁂ w3filecoin-api v${version} ${env}\n- ${repo}`
+    body: `⁂ w3filecoin dealer-tracker-api v${version} ${env}\n- ${repo}`
   }
 }
 

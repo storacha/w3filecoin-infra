@@ -21,9 +21,11 @@ import { connectTable } from './index.js'
  */
 const encodeRecord = (record) => {
   return {
-    ...record,
     piece: record.piece.toString(),
-    stat: encodeStatus(record.status)
+    stat: encodeStatus(record.status),
+    group: record.group,
+    insertedAt: record.insertedAt,
+    updatedAt: record.updatedAt,
   }
 }
 

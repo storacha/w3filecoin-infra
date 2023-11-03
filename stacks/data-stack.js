@@ -133,16 +133,16 @@ export function DataStack({ stack, app }) {
   stack.addOutputs({
     // Aggregator
     AggregatorBufferBucketName: aggregatorBufferBucket.bucketName,
-    AggregatorPieceTableName: aggregatorPieceStoreTableName,
-    AggregatorAggregateTableName: aggregatorAggregateStoreTableName,
-    AggregatorInclusionTableName: aggregatorInclusionStoreTableName,
+    AggregatorPieceTableName: aggregatorPieceStoreTable.tableName,
+    AggregatorAggregateTableName: aggregatorAggregateStoreTable.tableName,
+    AggregatorInclusionTableName: aggregatorInclusionStoreTable.tableName,
     AggregatorInclusionProofBucketName: aggregatorInclusionProofBucket.bucketName,
     // Dealer
     DealerOfferStoreBucketName: dealerOfferBucket.bucketName,
-    DealerAggregateStoreTableName: dealerAggregateStoreTableName,
+    DealerAggregateStoreTableName: dealerAggregateStoreTable.tableName,
     // Deal Tracker
     DealTrackerDealArchiveBucketName: dealTrackerDealArchiveStoreBucket.bucketName,
-    DealTrackerDealStoreTableName: dealTrackerDealStoreTableName
+    DealTrackerDealStoreTableName: dealTrackerDealStoreTable.tableName
   })
 
   return {
