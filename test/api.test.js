@@ -309,5 +309,5 @@ test('POST /', async t => {
 function getDealerOfferStoreKey (record) {
   return `${new Date(
     record.insertedAt
-  ).toISOString()} ${record.aggregate.toString()}.json`
+  ).toISOString()}_${record.aggregate.toString()}.json`
 }
