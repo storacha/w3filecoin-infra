@@ -23,7 +23,7 @@
     "@ucanto/transport": "^9.0.0",
     "@web3-storage/capabilities": "^11.1.0",
     "@web3-storage/data-segment": "^4.0.0",
-    "@web3-storage/filecoin-api": "^4.0.3",
+    "@web3-storage/filecoin-api": "^4.0.4",
     "@web3-storage/filecoin-client": "^3.0.1",
     "multiformats": "12.0.1",
     "uint8arrays": "^4.0.4",
