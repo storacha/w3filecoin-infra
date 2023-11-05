@@ -252,7 +252,7 @@ test('POST /', async t => {
     throw new Error('no cid for `piece/offer`')
   }
 
-  console.log(`wait for piece/offer receipt...`)
+  console.log(`wait for piece/offer ${pieceOfferReceiptCid.toString()} receipt...`)
   const pieceOfferReceipt = await waitForStoreOperationOkResult(
     () => t.context.store.storefront.receiptStore.get(pieceOfferReceiptCid),
     (res) => Boolean(res.ok)
@@ -264,7 +264,7 @@ test('POST /', async t => {
   // @ts-ignore
   t.truthy(pieceOfferReceipt.ok?.out.ok?.piece)
 
-  console.log(`wait for piece/accept receipt...`)
+  console.log(`wait for piece/accept ${pieceAcceptReceiptCid.toString()} receipt...`)
   const pieceAcceptReceipt = await waitForStoreOperationOkResult(
     () => t.context.store.storefront.receiptStore.get(pieceAcceptReceiptCid),
     (res) => Boolean(res.ok)
@@ -281,7 +281,7 @@ test('POST /', async t => {
   // @ts-ignore
   t.truthy(pieceAcceptReceipt.ok?.out.ok?.inclusion)
 
-  console.log(`wait for aggregate/offer receipt...`)
+  console.log(`wait for aggregate/offer ${aggregateOfferReceiptCid.toString()} receipt...`)
   const aggregateOfferReceipt = await waitForStoreOperationOkResult(
     () => t.context.store.storefront.receiptStore.get(aggregateOfferReceiptCid),
     (res) => Boolean(res.ok)
@@ -291,7 +291,7 @@ test('POST /', async t => {
     throw new Error('aggregate/offer receipt has no effect for aggregate/accept')
   }
 
-  console.log(`wait for aggregate/accept receipt...`)
+  console.log(`wait for aggregate/accept ${aggregateAcceptReceiptCid.toString()} receipt...`)
   const aggregateAcceptReceipt = await waitForStoreOperationOkResult(
     () => t.context.store.storefront.receiptStore.get(aggregateAcceptReceiptCid),
     (res) => Boolean(res.ok)
