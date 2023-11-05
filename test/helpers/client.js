@@ -11,7 +11,7 @@ import { connect } from '@ucanto/client'
 export async function getClientConfig (url) {
   // UCAN actors
   const storefront = await Signer.generate()
-  const aggregatorService = DID.parse('did:key:z6Mkq5KT7MGL8LCWiv6DNDpxKoXxg7NjFZFBFnkgRvXMaoxV')
+  const aggregatorService = DID.parse('did:web:staging.web3.storage')
 
   return {
     invocationConfig: {
