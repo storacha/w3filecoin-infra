@@ -25,10 +25,11 @@
     "@web3-storage/data-segment": "^4.0.0",
     "@web3-storage/filecoin-api": "^4.0.4",
     "@web3-storage/filecoin-client": "^3.0.1",
+    "fzstd": "^0.1.0",
     "multiformats": "12.0.1",
     "uint8arrays": "^4.0.4",
+    "p-all": "^5.0.0",
     "p-retry": "^5.1.2",
-    "simple-zstd": "^1.4.2",
     "stream-read-all": "^4.0.0"
   },
   "devDependencies": {

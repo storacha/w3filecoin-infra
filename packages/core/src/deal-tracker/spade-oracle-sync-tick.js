@@ -1,12 +1,10 @@
-// @ts-expect-error no types available
-import { ZSTDDecompress } from 'simple-zstd'
-import { Readable } from 'stream'
-// @ts-expect-error no types available
-import streamReadAll from 'stream-read-all'
+import * as fzstd from 'fzstd'
 import { encode, decode } from '@ipld/dag-json'
 import { RecordNotFoundErrorName } from '@web3-storage/filecoin-api/errors'
 import { parse as parseLink } from 'multiformats/link'
 import { Piece } from '@web3-storage/data-segment'
+import { toString } from 'uint8arrays/to-string'
+import pAll from 'p-all'
 
 /**
  * @typedef {import('@web3-storage/filecoin-api/deal-tracker/api').DealStore} DealStore
@@ -102,24 +100,23 @@ export async function spadeOracleSyncTick ({
  * @returns {Promise<import('../types').Result<{}, import('@web3-storage/filecoin-api/types').StorePutError>>}
  */
 export async function putDiffToDealStore ({ dealStore, diffPieceContracts }) {
-  const res = await Promise.all(
-    Array.from(diffPieceContracts, ([pieceCidStr, contracts]) => {
-      return Promise.all(contracts.map(contract => {
-        /** @type {import('@web3-storage/data-segment').LegacyPieceLink} */
-        const legacyPieceCid = parseLink(pieceCidStr)
-        const insertedAt = new Date().toISOString()
-        return dealStore.put({
-          ...contract,
-          // @ts-expect-error not PieceCIDv2
-          piece: legacyPieceCid,
-          provider: `${contract.provider}`,
-          insertedAt,
-          updatedAt: insertedAt
-        })
-      }))
-    })
-  )
+  const tasks = Array.from(diffPieceContracts, ([pieceCidStr, contracts]) => {
+    return () => Promise.all(contracts.map(contract => {
+      /** @type {import('@web3-storage/data-segment').LegacyPieceLink} */
+      const legacyPieceCid = parseLink(pieceCidStr)
+      const insertedAt = new Date().toISOString()
+      return dealStore.put({
+        ...contract,
+        // @ts-expect-error not PieceCIDv2
+        piece: legacyPieceCid,
+        provider: `${contract.provider}`,
+        insertedAt,
+        updatedAt: insertedAt
+      })
+    }))
+  })
 
+  const res = await pAll(tasks, { concurrency: 3 })
   const firsPutError = res.find(pieceContracts => pieceContracts.find(c => c.error))?.find(comb => comb.error)
   if (firsPutError?.error) {
     return {
@@ -203,13 +200,12 @@ async function fetchLatestDealArchive (spadeOracleUrl) {
     }
   }
 
-  const resDecompressed = await streamReadAll(
-    // @ts-expect-error aws types...
-    Readable.fromWeb(res.body)
-      .pipe(ZSTDDecompress())
-  )
+  const compressed = new Uint8Array(await res.arrayBuffer())
+  const decompressed = fzstd.decompress(compressed)
+  const resDecompressed = toString(decompressed)
+
   /** @type {DealArchive} */
-  const dealArchive = JSON.parse(resDecompressed.toString())
+  const dealArchive = JSON.parse(resDecompressed)
   for (const replica of dealArchive.active_replicas) {
     // Convert PieceCidV1 to PieceCidV2
     const pieceCid = convertPieceCidV1toPieceCidV2(
