@@ -48,12 +48,18 @@ export function AggregatorStack({ stack, app }) {
     * 1st processor queue - piece/offer invocation
     */
    const pieceQueueName = getResourceName('piece-queue', stack.stage)
+   const pieceQueueDLQ = new Queue(stack, `${pieceQueueName}-dlq`, {
+    cdk: { queue: { retentionPeriod: Duration.days(14) } }
+   })
    const pieceQueue = new Queue(stack, pieceQueueName)
 
   /**
    * 2nd processor queue - buffer reducing event
    */
   const bufferQueueName = getResourceName('buffer-queue', stack.stage)
+  const bufferQueueDLQ = new Queue(stack, `${bufferQueueName}-dlq`, {
+    cdk: { queue: { retentionPeriod: Duration.days(14) } }
+   })
   const bufferQueue = new Queue(stack, bufferQueueName, {
     cdk: {
       queue: {
@@ -72,6 +78,9 @@ export function AggregatorStack({ stack, app }) {
    * 3rd processor queue - aggregator/offer invocation
    */
   const aggregateOfferQueueName = getResourceName('aggregate-offer-queue', stack.stage)
+  const aggregateOfferQueueDLQ = new Queue(stack, `${aggregateOfferQueueName}-dlq`, {
+    cdk: { queue: { retentionPeriod: Duration.days(14) } }
+   })
   const aggregateOfferQueue = new Queue(stack, aggregateOfferQueueName, {
     cdk: {
       queue: {
@@ -90,6 +99,9 @@ export function AggregatorStack({ stack, app }) {
    * 4th processor queue - piece/accept invocation
    */
   const pieceAcceptQueueName = getResourceName('piece-accept-queue', stack.stage)
+  const pieceAcceptQueueDLQ = new Queue(stack, `${pieceAcceptQueueName}-dlq`, {
+    cdk: { queue: { retentionPeriod: Duration.days(14) } }
+   })
   const pieceAcceptQueue = new Queue(stack, pieceAcceptQueueName)
 
   /**
@@ -102,6 +114,7 @@ export function AggregatorStack({ stack, app }) {
         aggregatorPieceStoreTable
       ]
     },
+    deadLetterQueue: pieceQueueDLQ.cdk.queue,
     cdk: {
       eventSource: {
         batchSize: 1
@@ -109,6 +122,9 @@ export function AggregatorStack({ stack, app }) {
     },
   })
 
+  const aggregatorPieceStoreHandleInsertDLQ = new Queue(stack, `aggregator-piece-store-handle-insert-dlq`, {
+    cdk: { queue: { retentionPeriod: Duration.days(14) } }
+  })
   /**
    * On Piece store insert batch, buffer pieces together to resume buffer processing.
    */
@@ -125,6 +141,7 @@ export function AggregatorStack({ stack, app }) {
           bufferQueue
         ]
       },
+      deadLetterQueue: aggregatorPieceStoreHandleInsertDLQ.cdk.queue,
       cdk: {
         // https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_lambda_event_sources.DynamoEventSourceProps.html#filters
         eventSource: {
@@ -173,6 +190,7 @@ export function AggregatorStack({ stack, app }) {
         aggregateOfferQueue
       ]
     },
+    deadLetterQueue: bufferQueueDLQ.cdk.queue,
     cdk: {
       eventSource: {
         // as soon as we have 2, we can act fast and reduce to see if enough bytes
@@ -193,6 +211,7 @@ export function AggregatorStack({ stack, app }) {
         aggregatorAggregateStoreTable
       ],
     },
+    deadLetterQueue: aggregateOfferQueueDLQ.cdk.queue,
     cdk: {
       eventSource: {
         batchSize: 1,
@@ -200,6 +219,12 @@ export function AggregatorStack({ stack, app }) {
     }
   })
 
+  const aggregatorAggregateStoreHandleInsertToPieceAcceptDLQ = new Queue(stack, `aggregator-aggregate-store-handle-insert-to-piece-accept-dlq`, {
+    cdk: { queue: { retentionPeriod: Duration.days(14) } }
+  })
+  const aggregatorAggregateStoreHandleInsertToAggregateOfferDLQ = new Queue(stack, `aggregator-aggregate-store-handle-insert-to-aggregate-offer-dlq`, {
+    cdk: { queue: { retentionPeriod: Duration.days(14) } }
+  })
   aggregatorAggregateStoreTable.addConsumers(stack, {
     /**
      * On Aggregate store insert, offer inserted aggregate for deal.
@@ -219,6 +244,7 @@ export function AggregatorStack({ stack, app }) {
           pieceAcceptQueue
         ],
       },
+      deadLetterQueue: aggregatorAggregateStoreHandleInsertToPieceAcceptDLQ.cdk.queue,
       cdk: {
         eventSource: {
           batchSize: 1,
@@ -249,6 +275,7 @@ export function AggregatorStack({ stack, app }) {
           aggregatorPrivateKey
         ]
       },
+      deadLetterQueue: aggregatorAggregateStoreHandleInsertToAggregateOfferDLQ.cdk.queue,
       cdk: {
         eventSource: {
           batchSize: 1,
@@ -280,6 +307,7 @@ export function AggregatorStack({ stack, app }) {
         aggregatorInclusionStoreTable,
       ],
     },
+    deadLetterQueue: pieceAcceptQueueDLQ.cdk.queue,
     cdk: {
       eventSource: {
         batchSize: 1,
@@ -287,6 +315,12 @@ export function AggregatorStack({ stack, app }) {
     }
   })
 
+  const aggregatorInclusionStoreHandleInsertToUpdateStateDLQ = new Queue(stack, `aggregator-inclusion-store-handle-insert-to-update-state-dlq`, {
+    cdk: { queue: { retentionPeriod: Duration.days(14) } }
+  })
+  const aggregatorInclusionStoreHandleInsertToPieceAcceptDLQ = new Queue(stack, `aggregator-inclusion-store-handle-insert-to-piece-accept-dlq`, {
+    cdk: { queue: { retentionPeriod: Duration.days(14) } }
+  })
   aggregatorInclusionStoreTable.addConsumers(stack, {
     /**
      * On Inclusion store insert, piece table can be updated to reflect piece state.
@@ -299,6 +333,7 @@ export function AggregatorStack({ stack, app }) {
           aggregatorPieceStoreTable,
         ]
       },
+      deadLetterQueue: aggregatorInclusionStoreHandleInsertToUpdateStateDLQ.cdk.queue,
       cdk: {
         eventSource: {
           batchSize: 1,
@@ -328,6 +363,7 @@ export function AggregatorStack({ stack, app }) {
           aggregatorPrivateKey
         ]
       },
+      deadLetterQueue: aggregatorInclusionStoreHandleInsertToPieceAcceptDLQ.cdk.queue,
       cdk: {
         eventSource: {
           batchSize: 1,
