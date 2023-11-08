@@ -219,10 +219,10 @@ export function AggregatorStack({ stack, app }) {
     }
   })
 
-  const aggregatorAggregateStoreHandleInsertToPieceAcceptDLQ = new Queue(stack, `aggregator-aggregate-store-handle-insert-to-piece-accept-dlq`, {
+  const aggregatorAggregateStoreHandleInsertToPieceAcceptDLQ = new Queue(stack, `aggregate-store-handle-piece-accept-dlq`, {
     cdk: { queue: { retentionPeriod: Duration.days(14) } }
   })
-  const aggregatorAggregateStoreHandleInsertToAggregateOfferDLQ = new Queue(stack, `aggregator-aggregate-store-handle-insert-to-aggregate-offer-dlq`, {
+  const aggregatorAggregateStoreHandleInsertToAggregateOfferDLQ = new Queue(stack, `aggregate-store-handle-aggregate-offer-dlq`, {
     cdk: { queue: { retentionPeriod: Duration.days(14) } }
   })
   aggregatorAggregateStoreTable.addConsumers(stack, {
@@ -315,10 +315,10 @@ export function AggregatorStack({ stack, app }) {
     }
   })
 
-  const aggregatorInclusionStoreHandleInsertToUpdateStateDLQ = new Queue(stack, `aggregator-inclusion-store-handle-insert-to-update-state-dlq`, {
+  const aggregatorInclusionStoreHandleInsertToUpdateStateDLQ = new Queue(stack, `inclusion-store-handle-update-state-dlq`, {
     cdk: { queue: { retentionPeriod: Duration.days(14) } }
   })
-  const aggregatorInclusionStoreHandleInsertToPieceAcceptDLQ = new Queue(stack, `aggregator-inclusion-store-handle-insert-to-piece-accept-dlq`, {
+  const aggregatorInclusionStoreHandleInsertToPieceAcceptDLQ = new Queue(stack, `inclusion-store-handle-piece-accept-dlq`, {
     cdk: { queue: { retentionPeriod: Duration.days(14) } }
   })
   aggregatorInclusionStoreTable.addConsumers(stack, {
