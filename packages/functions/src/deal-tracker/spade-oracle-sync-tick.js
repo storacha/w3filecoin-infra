@@ -34,7 +34,7 @@ export async function main() {
     tableName: dealStoreTableName.tableName
   })
 
-  const { ok, error } = await spadeOracleSyncTick({
+  const { error } = await spadeOracleSyncTick({
     dealStore,
     dealArchiveStore,
     spadeOracleUrl: new URL(spadeOracleUrl)
@@ -49,7 +49,6 @@ export async function main() {
 
   return {
     statusCode: 200,
-    body: ok
   }
 }
 
