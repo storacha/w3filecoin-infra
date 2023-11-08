@@ -24,7 +24,7 @@ export function DealTrackerStack({ stack, app }) {
   } = use(DataStack)
 
   // We should only run this in production and staging to avoid large number of dynamo ops
-  if (stack.stage === 'production' || stack.stage === 'staging') {
+  if (stack.stage === 'prod' || stack.stage === 'staging') {
     /**
      * CRON to track deals resolution from Spade Oracle
      */
