@@ -1,0 +1,30 @@
+name: Get Aggregate deals
+
+on:
+  workflow_dispatch:
+    inputs:
+      piece:
+        required: true
+        description: PieceCID of the aggregate
+        type: string
+
+jobs:
+  getDeals:
+    name: Get Aggregate deals
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        env: ['staging', 'production']
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          registry-url: 'https://registry.npmjs.org'
+          node-version: 18
+          cache: 'npm'
+      - run: npm ci
+      - name: Run job
+        env:
+          CF_API_TOKEN: ${{ secrets.CF_GATEWAY_TOKEN }}
+        run: pm run get-aggregate-deals -w packages/tools ${{ github.event.inputs.piece }}
