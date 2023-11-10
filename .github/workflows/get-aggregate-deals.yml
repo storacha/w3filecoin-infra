@@ -27,4 +27,4 @@ jobs:
       - name: Run job
         env:
           CF_API_TOKEN: ${{ secrets.CF_GATEWAY_TOKEN }}
-        run: pm run get-aggregate-deals -w packages/tools ${{ github.event.inputs.piece }}
+        run: npm run get-aggregate-deals -w packages/tools ${{ github.event.inputs.piece }}
