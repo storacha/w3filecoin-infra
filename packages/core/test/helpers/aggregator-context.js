@@ -61,24 +61,24 @@ export async function getStores (ctx) {
  */
 export function getQueues (ctx) {
   return {
-    pieceQueue: createPieceQueueClient(ctx.queues.pieceQueue.sqsClient,
+    pieceQueue: createPieceQueueClient(ctx.sqsClient,
       { queueUrl: ctx.queues.pieceQueue.queueUrl }
     ),
-    bufferQueue: createBufferQueueClient(ctx.queues.bufferQueue.sqsClient,
+    bufferQueue: createBufferQueueClient(ctx.sqsClient,
       {
         queueUrl: ctx.queues.bufferQueue.queueUrl,
         // testing is not FIFO QUEUE
         disableMessageGroupId: true
       }
     ),
-    aggregateOfferQueue: createAggregateOfferQueueClient(ctx.queues.aggregateOfferQueue.sqsClient,
+    aggregateOfferQueue: createAggregateOfferQueueClient(ctx.sqsClient,
       {
         queueUrl: ctx.queues.aggregateOfferQueue.queueUrl,
         // testing is not FIFO QUEUE
         disableMessageGroupId: true
       }
     ),
-    pieceAcceptQueue: createPieceAcceptQueueClient(ctx.queues.pieceAcceptQueue.sqsClient,
+    pieceAcceptQueue: createPieceAcceptQueueClient(ctx.sqsClient,
       { queueUrl: ctx.queues.pieceAcceptQueue.queueUrl }
     ),
   }

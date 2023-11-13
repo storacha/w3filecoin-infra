@@ -2,7 +2,6 @@ import anyTest from 'ava'
 
 /**
  * @typedef {object} QueueContext
- * @property {import('@aws-sdk/client-sqs').SQSClient} sqsClient
  * @property {string} queueName
  * @property {string} queueUrl
  * @property {import('sqs-consumer').Consumer} queueConsumer
@@ -15,16 +14,20 @@ import anyTest from 'ava'
  * @property {import('@aws-sdk/client-s3').S3Client} s3
  * 
  * @typedef {object} MultipleQueueContext
+ * @property {import('@aws-sdk/client-sqs').SQSClient} sqsClient
  * @property {Record<string, QueueContext>} queues
  * @property {Map<string, unknown[]>} queuedMessages
  * 
+ * @typedef {object} Stoppable
+ * @property {() => Promise<any>} stop
+ * 
  * @typedef {import('ava').TestFn<any>} Test
- * @typedef {import('ava').TestFn<QueueContext & DbContext>} TestService
- * @typedef {import('ava').TestFn<BucketContext & DbContext>} TestStore
+ * @typedef {import('ava').TestFn<QueueContext & DbContext & Stoppable>} TestService
+ * @typedef {import('ava').TestFn<BucketContext & DbContext & Stoppable>} TestStore
  * @typedef {import('ava').TestFn<QueueContext>} TestQueue
  * @typedef {import('ava').TestFn<BucketContext & DbContext & QueueContext>} TestWorkflow
  * @typedef {import('ava').TestFn<BucketContext & DbContext>} TestDealTracker
- * @typedef {import('ava').TestFn<BucketContext & DbContext & MultipleQueueContext>} TestWorkflowWithMultipleQueues
+ * @typedef {import('ava').TestFn<BucketContext & DbContext & MultipleQueueContext & Stoppable>} TestWorkflowWithMultipleQueues
  */
 
 // eslint-disable-next-line unicorn/prefer-export-from

@@ -9,14 +9,18 @@ import { testService as test } from './helpers/context.js'
 import { createDynamodDb, createTable } from './helpers/resources.js'
 
 test.before(async (t) => {
-  const dynamo = await createDynamodDb()
+  const { client: dynamoClient, stop: dynamoStop} = await createDynamodDb()
 
   Object.assign(t.context, {
-    dynamoClient: dynamo.client,
+    dynamoClient,
+    stop: async () => {
+      await dynamoStop()
+    }
   })
 })
 
 test.after(async t => {
+  await t.context.stop()
   await delay(1000)
 })
 
