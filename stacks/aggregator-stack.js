@@ -307,6 +307,7 @@ export function AggregatorStack({ stack, app }) {
       bind: [
         aggregatorInclusionStoreTable,
       ],
+      timeout: '30 seconds'
     },
     deadLetterQueue: pieceAcceptQueueDLQ.cdk.queue,
     cdk: {
