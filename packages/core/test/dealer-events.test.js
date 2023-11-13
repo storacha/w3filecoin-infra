@@ -11,15 +11,21 @@ import { getMockService, getConnection } from '@web3-storage/filecoin-api/test/c
 import { createDynamodDb, createTable, createS3, createBucket } from '@w3filecoin/core/test/helpers/resources.js'
 
 test.before(async (t) => {
-  const dynamo = await createDynamodDb()
+  const { client: s3Client, stop: s3Stop } = await createS3({ port: 9000 })
+  const { client: dynamoClient, stop: dynamoStop} = await createDynamodDb()
 
   Object.assign(t.context, {
-    s3: (await createS3()).client,
-    dynamoClient: dynamo.client,
+    s3: s3Client,
+    dynamoClient,
+    stop: async () => {
+      await s3Stop()
+      await dynamoStop()
+    }
   })
 })
 
 test.after(async t => {
+  await t.context.stop()
   await delay(1000)
 })
 

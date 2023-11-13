@@ -25,7 +25,8 @@ export async function createDynamodDb(opts = {}) {
       region,
       endpoint
     }),
-    endpoint
+    endpoint,
+    stop: () => dbContainer.stop(),
   }
 }
 
@@ -140,6 +141,7 @@ export async function createS3(opts = {}) {
   return {
     client: new S3Client(clientOpts),
     clientOpts,
+    stop: () => minio.stop(),
   }
 }
 
@@ -158,7 +160,7 @@ export async function createBucket(s3) {
  * @param {number} [opts.port]
  * @param {string} [opts.region]
  */
-export async function createQueue(opts = {}) {
+export const createSQS = async (opts = {}) => {
   const region = opts.region || 'us-west-2'
   const port = opts.port || 9324
 
@@ -167,25 +169,35 @@ export async function createQueue(opts = {}) {
       .withExposedPorts(port)
       .start()
   )
-
   const endpoint = `http://${queue.getHost()}:${queue.getMappedPort(port)}`
   const client = new SQSClient({
     region,
     endpoint
   })
-  const accountId = '000000000000'
+
+  return {
+    client,
+    stop: () => queue.stop()
+  }
+}
+
+/**
+ * @param {import('@aws-sdk/client-sqs').SQSClient} sqs
+ */
+export async function createQueue (sqs) {
   const id = customAlphabet('1234567890abcdefghijklmnopqrstuvwxyz', 10)
   const QueueName = id()
 
-  await pRetry(() =>
-    client.send(new CreateQueueCommand({
+  const res = await pRetry(() =>
+    sqs.send(new CreateQueueCommand({
       QueueName,
     }))
   )
 
+  if (!res.QueueUrl) throw new Error('missing queue URL')
+
   return {
-    client,
-    queueName: QueueName,
-    queueUrl: `${endpoint}/${accountId}/${QueueName}`
+    queueUrl: res.QueueUrl,
+    queueName: QueueName
   }
 }
