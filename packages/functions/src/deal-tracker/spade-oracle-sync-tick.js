@@ -59,7 +59,7 @@ function getLambdaEnv () {
   return {
     dealArchiveStoreBucketName: mustGetEnv('DEAL_ARCHIVE_STORE_BUCKET_NAME'),
     dealArchiveStoreBucketRegion: mustGetEnv('DEAL_ARCHIVE_STORE_REGION'),
-    dealStoreTableName: Table['deal-tracker-deal-store'],
+    dealStoreTableName: Table['deal-tracker-deal-store-v1'],
     dealStoreTableRegion: mustGetEnv('AWS_REGION'),
     spadeOracleUrl: mustGetEnv('SPADE_ORACLE_URL'),
   }
