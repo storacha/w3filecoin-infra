@@ -112,7 +112,7 @@ export function DataStack({ stack, app }) {
   /**
    * Deal archive store used to store active replicas reported by Spade Oracle.
    */
-  const dealTrackerDealArchiveBucket = getBucketConfig('deal-tracker-deal-archive-store', stack.stage)
+  const dealTrackerDealArchiveBucket = getBucketConfig('deal-tracker-deal-archive-store', stack.stage, 1)
   const dealTrackerDealArchiveStoreBucket = new Bucket(stack, dealTrackerDealArchiveBucket.bucketName, {
     cors: true,
     cdk: {
@@ -123,7 +123,7 @@ export function DataStack({ stack, app }) {
   /**
    * Deal store used to store deal information 
    */
-  const dealTrackerDealStoreTableName = 'deal-tracker-deal-store'
+  const dealTrackerDealStoreTableName = 'deal-tracker-deal-store-v1'
   const dealTrackerDealStoreTable = new Table(stack, dealTrackerDealStoreTableName, {
     ...dealStoreTableProps,
     // information that will be written to the stream

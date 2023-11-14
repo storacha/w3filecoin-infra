@@ -115,7 +115,7 @@ export const getStoreClients = () => {
     },
     tracker: {
       dealStore: createDealTrackerDealStoreClient(dynamoClient,
-        { tableName: getTableName(`deal-tracker-deal-store`) }
+        { tableName: getTableName(`deal-tracker-deal-store-v1`) }
       )
     }
   }

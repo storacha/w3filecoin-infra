@@ -210,7 +210,7 @@ async function fetchLatestDealArchive (spadeOracleUrl) {
     // Convert PieceCidV1 to PieceCidV2
     const pieceCid = convertPieceCidV1toPieceCidV2(
       parseLink(replica.piece_cid),
-      replica.piece_log2_size
+      log2PieceSizeToHeight(replica.piece_log2_size)
     )
     dealMap.set(pieceCid.toString(), replica.contracts.map(c => ({
       provider: c.provider_id,
@@ -238,4 +238,12 @@ export function convertPieceCidV1toPieceCidV2 (link, height) {
   })
 
   return piece.link
+}
+
+/**
+ * 
+ * @param {number} log2Size 
+ */
+export function log2PieceSizeToHeight (log2Size) {
+  return Piece.Size.Expanded.toHeight(2n ** BigInt(log2Size))
 }
