@@ -244,6 +244,6 @@ export function convertPieceCidV1toPieceCidV2 (link, height) {
  * 
  * @param {number} log2Size 
  */
-function log2PieceSizeToHeight (log2Size) {
-  return Piece.Size.Expanded.toHeight(BigInt(log2Size))
+export function log2PieceSizeToHeight (log2Size) {
+  return Piece.Size.Expanded.toHeight(2n ** BigInt(log2Size))
 }

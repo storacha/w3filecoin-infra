@@ -206,6 +206,10 @@ test('converts PieceCidV1 to PieceCidV2', t => {
   t.falsy(pieceCidV1.equals(pieceCidV2))
 })
 
+test('converts log2pieceSize to height', t => {
+  const height = spadeOracleSyncTick.log2PieceSizeToHeight(35)
+  t.is(height, 30)
+})
 /**
  * @param {string} source 
  */
