@@ -127,6 +127,7 @@ export function DealerStack({ stack, app }) {
     schedule: 'rate(5 minutes)',
     job: {
       function: {
+        timeout: '4 minutes',
         handler: 'packages/functions/src/dealer/handle-cron-tick.main',
         environment: {
           DID: DEALER_DID,
