@@ -2,9 +2,10 @@ import * as fzstd from 'fzstd'
 import { encode, decode } from '@ipld/dag-json'
 import { RecordNotFoundErrorName } from '@web3-storage/filecoin-api/errors'
 import { parse as parseLink } from 'multiformats/link'
-import { Piece } from '@web3-storage/data-segment'
 import { toString } from 'uint8arrays/to-string'
 import pAll from 'p-all'
+
+import { convertPieceCidV1toPieceCidV2, log2PieceSizeToHeight } from '../utils.js'
 
 /**
  * @typedef {import('@web3-storage/filecoin-api/deal-tracker/api').DealStore} DealStore
@@ -223,27 +224,4 @@ async function fetchLatestDealArchive (spadeOracleUrl) {
   return {
     ok: dealMap
   }
-}
-
-/**
- * @param {import('@web3-storage/data-segment').LegacyPieceLink} link
- * @param {number} height
- */
-export function convertPieceCidV1toPieceCidV2 (link, height) {
-  const piece = Piece.toView({
-    root: link.multihash.digest,
-    height,
-    // Aggregates do not have padding
-    padding: 0n
-  })
-
-  return piece.link
-}
-
-/**
- * 
- * @param {number} log2Size 
- */
-export function log2PieceSizeToHeight (log2Size) {
-  return Piece.Size.Expanded.toHeight(2n ** BigInt(log2Size))
 }

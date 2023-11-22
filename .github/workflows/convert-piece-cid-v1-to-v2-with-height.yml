@@ -1,0 +1,28 @@
+name: Convert PieceCID v1 to v2 with height
+
+on:
+  workflow_dispatch:
+    inputs:
+      piece:
+        required: true
+        description: PieceCID of to convert
+        type: string
+      height:
+        required: true
+        description: Height of the Piece
+        type: number
+
+jobs:
+  convertPieceCidV1ToV2WithHeight:
+    name: Convert PieceCID v1 to v2 with height
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          registry-url: 'https://registry.npmjs.org'
+          node-version: 18
+          cache: 'npm'
+      - run: npm ci
+      - name: Run job
+        run: npm run convert-piece-cid-v1-to-v2-with-height -w packages/tools ${{ github.event.inputs.piece }} ${{ github.event.inputs.height }}

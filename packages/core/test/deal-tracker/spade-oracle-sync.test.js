@@ -8,6 +8,7 @@ import { dealStoreTableProps } from '../../src/store/index.js'
 import { createClient as createDealStoreClient } from '../../src/store/deal-store.js'
 import { createClient as createDealArchiveStoreClient } from '../../src/store/deal-archive-store.js'
 import * as spadeOracleSyncTick from '../../src/deal-tracker/spade-oracle-sync-tick.js'
+import { convertPieceCidV1toPieceCidV2, log2PieceSizeToHeight } from '../../src/utils.js'
 import { RecordNotFoundErrorName } from '@web3-storage/filecoin-api/errors'
 
 test.beforeEach(async (t) => {
@@ -202,12 +203,12 @@ test('converts PieceCidV1 to PieceCidV2', t => {
   const pieceCidV1 = parseLink('baga6ea4seaqhmw7z7q3jypdr54xaluhzdn6syn7ovovvjpaqul2qqenhmg43wii')
   const height = 35
 
-  const pieceCidV2 = spadeOracleSyncTick.convertPieceCidV1toPieceCidV2(pieceCidV1, height)
+  const pieceCidV2 = convertPieceCidV1toPieceCidV2(pieceCidV1, height)
   t.falsy(pieceCidV1.equals(pieceCidV2))
 })
 
 test('converts log2pieceSize to height', t => {
-  const height = spadeOracleSyncTick.log2PieceSizeToHeight(35)
+  const height = log2PieceSizeToHeight(35)
   t.is(height, 30)
 })
 /**
