@@ -3,9 +3,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "get-aggregate-deals": "node get-aggregate-deals.js",
-    "convert-piece-cid-v1-to-v2-with-height": "node convert-piece-cid-v1-to-v2-with-height",
-    "convert-piece-cid-v1-to-v2-with-log2-size": "node convert-piece-cid-v1-to-v2-with-log2-size"
+    "get-aggregate-deals": "node get-aggregate-deals.js"
   },
   "dependencies": {},
   "devDependencies": {
