@@ -1,4 +1,4 @@
-import { Api, Config, use } from 'sst/constructs'
+import { Api, Config, Cron, use } from 'sst/constructs'
 
 import { DataStack } from './data-stack.js'
 import { AggregatorStack } from './aggregator-stack.js'
@@ -6,10 +6,12 @@ import {
   getApiPackageJson,
   getGitInfo,
   getCustomDomain,
+  getEnv,
   getAggregatorEnv,
   getDealerEnv,
   getDealTrackerEnv,
-  setupSentry
+  setupSentry,
+  getResourceName
 } from './config.js'
 
 /**
@@ -30,6 +32,12 @@ export function ApiStack({ app, stack }) {
     DEAL_API_HOSTED_ZONE,
     DEALER_DID,
   } = getDealerEnv()
+  const {
+    MIN_PIECE_CRITICAL_THRESHOLD_MS,
+    MIN_PIECE_WARN_THRESHOLD_MS,
+    AGGREGATE_MONITOR_THRESHOLD_MS,
+    MONITORING_NOTIFICATIONS_ENDPOINT
+  } = getEnv()
 
   // Setup app monitoring with Sentry
   setupSentry(app, stack)
@@ -173,6 +181,31 @@ export function ApiStack({ app, stack }) {
       'POST /':       'packages/functions/src/deal-tracker-api/ucan-invocation-router.handler',
     },
   })
+
+  // Setup `monitoring`
+  // only needed for production
+  if (stack.stage === 'prod') {
+    const dealMonitorAlertCronName = getResourceName('deal-monitor-alert-cron', stack.stage)
+    new Cron(stack, dealMonitorAlertCronName, {
+      schedule: 'rate(30 minutes)',
+      job: {
+        function: {
+          timeout: '5 minutes',
+          handler: 'packages/functions/src/monitor/handle-deal-monitor-alert-cron-tick.main',
+          environment: {
+            MIN_PIECE_CRITICAL_THRESHOLD_MS,
+            MIN_PIECE_WARN_THRESHOLD_MS,
+            AGGREGATE_MONITOR_THRESHOLD_MS,
+            MONITORING_NOTIFICATIONS_ENDPOINT
+          },
+          bind: [
+            dealerAggregateStoreTable,
+            aggregatorAggregateStoreTable,
+          ],
+        }
+      }
+    })
+  }
 
   stack.addOutputs({
     AggregatorApiEndpoint: api.url,
