@@ -17,12 +17,11 @@ jobs:
     name: Convert PieceCID v1 to v2 with height
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
         with:
           registry-url: 'https://registry.npmjs.org'
           node-version: 18
           cache: 'npm'
-      - run: npm ci
+      - run: npm install @web3-storage/pieces
       - name: Run job
-        run: npm run convert-piece-cid-v1-to-v2-with-height -w packages/tools ${{ github.event.inputs.piece }} ${{ github.event.inputs.height }}
+        run: npx @web3-storage/pieces v2 ${{ github.event.inputs.piece }} --height ${{ github.event.inputs.height }}
