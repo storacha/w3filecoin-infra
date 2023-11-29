@@ -139,7 +139,8 @@ export function AggregatorStack({ stack, app }) {
         permissions: [
           aggregatorBufferStoreBucket,
           bufferQueue
-        ]
+        ],
+        timeout: '20 seconds'
       },
       deadLetterQueue: aggregatorPieceStoreHandleInsertDLQ.cdk.queue,
       cdk: {
@@ -188,7 +189,8 @@ export function AggregatorStack({ stack, app }) {
         bufferQueue,
         aggregatorBufferStoreBucket,
         aggregateOfferQueue
-      ]
+      ],
+      timeout: '20 seconds'
     },
     deadLetterQueue: bufferQueueDLQ.cdk.queue,
     cdk: {
@@ -243,7 +245,7 @@ export function AggregatorStack({ stack, app }) {
           aggregatorBufferStoreBucket,
           pieceAcceptQueue
         ],
-        timeout: '10 minutes'
+        timeout: '5 minutes'
       },
       deadLetterQueue: aggregatorAggregateStoreHandleInsertToPieceAcceptDLQ.cdk.queue,
       cdk: {

@@ -24,15 +24,6 @@ Sentry.AWSLambda.init({
  * @param {import('aws-lambda').SQSEvent} sqsEvent
  */
 async function handleBufferQueueMessage (sqsEvent) {
-  // if one we should put back in queue
-  if (sqsEvent.Records.length === 1) {
-    return {
-      batchItemFailures: sqsEvent.Records.map(r => ({
-        itemIdentifier: r.messageId
-      }))
-    }
-  }
-
   // unexpected number of records
   if (sqsEvent.Records.length !== 2) {
     return {
