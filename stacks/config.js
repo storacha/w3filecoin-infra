@@ -2,8 +2,12 @@ import { RemovalPolicy } from 'aws-cdk-lib'
 import git from 'git-rev-sync'
 import * as pack from '../package.json'
 
-export const DEFAULT_FERRY_CARGO_MAX_SIZE = 127*(1<<28)
-export const DEFAULT_FERRY_CARGO_MIN_SIZE = 1+127*(1<<27)
+// 72 Hours
+export const DEFAULT_MIN_PIECE_CRITICAL_THRESHOLD_MS = String(72 * 60 * 60 * 1000)
+// 60 Hours
+export const DEFAULT_MIN_PIECE_WARN_THRESHOLD_MS = String(60 * 60 * 60 * 1000)
+// 48 Hours
+export const DEFAULT_AGGREGATE_MONITOR_THRESHOLD_MS = String(48 * 60 * 60 * 1000)
 
 /**
  * Get nicer resources name
@@ -105,7 +109,11 @@ export function setupSentry (app, stack) {
 export function getEnv() {
   return {
     SENTRY_DSN: mustGetEnv('SENTRY_DSN'),
-    UCAN_LOG_URL: mustGetEnv('UCAN_LOG_URL')
+    UCAN_LOG_URL: mustGetEnv('UCAN_LOG_URL'),
+    MIN_PIECE_CRITICAL_THRESHOLD_MS: process.env.MIN_PIECE_CRITICAL_THRESHOLD_MS || DEFAULT_MIN_PIECE_CRITICAL_THRESHOLD_MS,
+    MIN_PIECE_WARN_THRESHOLD_MS: process.env.MIN_PIECE_WARN_THRESHOLD_MS || DEFAULT_MIN_PIECE_WARN_THRESHOLD_MS,
+    AGGREGATE_MONITOR_THRESHOLD_MS: process.env.AGGREGATE_MONITOR_THRESHOLD_MS || DEFAULT_AGGREGATE_MONITOR_THRESHOLD_MS,
+    MONITORING_NOTIFICATIONS_ENDPOINT: mustGetEnv('MONITORING_NOTIFICATIONS_ENDPOINT')
   }
 }
 
