@@ -1,0 +1,27 @@
+name: Convert PieceCID v1 to v2 with log2 size
+
+on:
+  workflow_dispatch:
+    inputs:
+      piece:
+        required: true
+        description: PieceCID of to convert
+        type: string
+      log2:
+        required: true
+        description: Log2 Size of the Piece
+        type: number
+
+jobs:
+  convertPieceCidV1ToV2WithLog2Size:
+    name: Convert PieceCID v1 to v2 with log2 size
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v3
+        with:
+          registry-url: 'https://registry.npmjs.org'
+          node-version: 18
+          cache: 'npm'
+      - run: npm install @web3-storage/pieces
+      - name: Run job
+        run: npx @web3-storage/pieces v2 ${{ github.event.inputs.piece }} --log-size ${{ github.event.inputs.log2 }}
