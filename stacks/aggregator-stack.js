@@ -69,9 +69,10 @@ export function AggregatorStack({ stack, app }) {
         // During the deduplication interval (5 minutes), Amazon SQS treats
         // messages that are sent with identical body content
         contentBasedDeduplication: true,
-        queueName: `${bufferQueueName}.fifo`
+        queueName: `${bufferQueueName}.fifo`,
+        visibilityTimeout: Duration.minutes(2)
       }
-    }
+    },
   })
 
   /**
@@ -190,7 +191,8 @@ export function AggregatorStack({ stack, app }) {
         aggregatorBufferStoreBucket,
         aggregateOfferQueue
       ],
-      timeout: '20 seconds'
+      timeout: '2 minutes',
+      memorySize: '2 GB'
     },
     deadLetterQueue: bufferQueueDLQ.cdk.queue,
     cdk: {
