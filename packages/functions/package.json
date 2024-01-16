@@ -11,7 +11,7 @@
     "@ucanto/core": "^9.0.0",
     "@ucanto/server": "^9.0.1",
     "@ucanto/transport": "^9.0.0",
-    "@web3-storage/filecoin-api": "^4.0.4",
+    "@web3-storage/filecoin-api": "^4.3.1",
     "@web3-storage/filecoin-client": "3.0.1",
     "@w3filecoin/core": "*"
   },
