@@ -4,6 +4,7 @@ import { createClient as createBufferStoreClient } from '@w3filecoin/core/src/st
 import { createClient as createBufferQueueClient, decodeMessage } from '@w3filecoin/core/src/queue/buffer-queue.js'
 import { createClient as createAggregateOfferQueueClient } from '@w3filecoin/core/src/queue/aggregate-offer-queue.js'
 import * as aggregatorEvents from '@web3-storage/filecoin-api/aggregator/events'
+import { Piece } from '@web3-storage/data-segment'
 
 import { mustGetEnv } from '../utils.js'
 
@@ -93,7 +94,14 @@ function getContext () {
     config: {
       maxAggregateSize,
       minAggregateSize,
-      minUtilizationFactor
+      minUtilizationFactor,
+      prependBufferedPieces: [{
+        // Small piece to prepend that is encoded as a CAR file
+        piece: Piece.fromString('bafkzcibciab3bwd67rgcoiejigar34jguwfasa5327hq3sjdcma3zz2ccupy4oi').link,
+        // will be prepended, so policy is irrelevant
+        policy: /** @type {import('@web3-storage/filecoin-api/src/aggregator/api').PiecePolicy} */ (0),
+        insertedAt: (new Date()).toISOString()
+      }]
     }
   }
 }
