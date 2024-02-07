@@ -125,7 +125,7 @@ export function getEnv() {
 export function getAggregatorEnv(stack) {
   const defaultMaxAggregateSize = String(2**35)
   // testing value aligned with integration test fixtures
-  const defaultMinAggregateSize = stack.stage === 'production' ? String(2**34) : String(2 ** 13)
+  const defaultMinAggregateSize = stack.stage === 'production' ? String(2**34) : String(2 ** 12)
   const defaultMinUtilizationFactor = stack.stage === 'production' ? String(4) : String(10e9)
 
   return {
