@@ -87,10 +87,10 @@ test('handles deal monitor tick with aggregates in warn type', async t => {
 
   const tickRes = await dealMonitorAlertTick.dealMonitorAlertTick({
     ...context,
-    // do not wait
     minPieceCriticalThresholdMs: threshold * 10,
     minPieceWarnThresholdMs: 0,
-    aggregateMonitorThresholdMs: threshold
+    // do not wait
+    aggregateMonitorThresholdMs: 0
   })
 
   t.assert(tickRes.ok)
@@ -148,7 +148,7 @@ test('handles deal monitor tick with aggregates in critical type', async t => {
     // should do critical check first
     minPieceCriticalThresholdMs: 0,
     minPieceWarnThresholdMs: 0,
-    aggregateMonitorThresholdMs: threshold
+    aggregateMonitorThresholdMs: 0
   })
 
   t.assert(tickRes.ok)
@@ -156,6 +156,61 @@ test('handles deal monitor tick with aggregates in critical type', async t => {
   t.is(tickRes.ok?.alerts[0].severity, 'critical')
   t.assert(tickRes.ok?.alerts[0].duration)
   t.assert(tickRes.ok?.alerts[0].aggregate.equals(aggregate.link))
+})
+
+test('handles deal monitor tick ignoring aggregates within a threshold', async t => {
+  const context = await getContext(t.context)
+  const storefront = await Signer.generate()
+  const group = storefront.did()
+  const { pieces, aggregate } = await randomAggregate(10, 128)
+  const threshold = 1000
+  const pieceInsertTime = Date.now() - threshold
+  const buffer = {
+    pieces: pieces.map((p) => ({
+      piece: p.link,
+      insertedAt: new Date(
+        pieceInsertTime
+      ).toISOString(),
+      policy: 0,
+    })),
+    group,
+  }
+  const block = await CBOR.write(buffer)
+  // Store aggregate record into store
+  const offer = pieces.map((p) => p.link)
+  const piecesBlock = await CBOR.write(offer)
+
+  // Store aggregate in aggregator
+  const aggregatePutRes = await context.aggregatorAggregateStore.put({
+    aggregate: aggregate.link,
+    pieces: piecesBlock.cid,
+    buffer: block.cid,
+    group,
+    insertedAt: new Date().toISOString(),
+    minPieceInsertedAt: new Date().toISOString(),
+  })
+  t.assert(aggregatePutRes.ok)
+
+  // Propagate aggregate to dealer
+  const putRes = await context.dealerAggregateStore.put({
+    aggregate: aggregate.link,
+    pieces: piecesBlock.cid,
+    status: 'offered',
+    insertedAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  })
+  t.assert(putRes.ok)
+
+  const tickRes = await dealMonitorAlertTick.dealMonitorAlertTick({
+    ...context,
+    minPieceCriticalThresholdMs: threshold * 10,
+    minPieceWarnThresholdMs: 0,
+    // wait some time
+    aggregateMonitorThresholdMs: threshold
+  })
+
+  t.assert(tickRes.ok)
+  t.is(tickRes.ok?.alerts.length, 0)
 })
 
 /**
