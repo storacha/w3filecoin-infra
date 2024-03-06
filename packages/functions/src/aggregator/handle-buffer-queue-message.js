@@ -55,6 +55,7 @@ async function handleBufferQueueMessage (sqsEvent) {
 
   const { ok, error } = await aggregatorEvents.handleBufferQueueMessage(context, records)
   if (error) {
+    console.log('error', error)
     return {
       statusCode: 500,
       body: error.message || 'failed to handle buffer queue message'
