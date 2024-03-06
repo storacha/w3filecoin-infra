@@ -35,7 +35,7 @@ async function handleBufferQueueMessage (sqsEvent) {
   }
 
   // unexpected number of records
-  if (sqsEvent.Records.length !== 2) {
+  if (sqsEvent.Records.length === 0) {
     return {
       statusCode: 400,
       body: `Expected 2 SQS messages per invocation but received ${sqsEvent.Records.length}`
@@ -50,6 +50,8 @@ async function handleBufferQueueMessage (sqsEvent) {
       MessageBody: r.body
     })
   })
+
+  console.log('buffer records:', records.map(r => r.aggregate?.link()))
 
   const { ok, error } = await aggregatorEvents.handleBufferQueueMessage(context, records)
   if (error) {
