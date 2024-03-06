@@ -51,7 +51,7 @@ async function handleBufferQueueMessage (sqsEvent) {
     })
   })
 
-  console.log('buffer records:', records.map(r => r.aggregate?.link()))
+  console.log('buffer records:', records.map(r => r.pieces?.link()))
 
   const { ok, error } = await aggregatorEvents.handleBufferQueueMessage(context, records)
   if (error) {
