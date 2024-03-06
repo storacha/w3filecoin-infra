@@ -61,6 +61,7 @@ async function handleBufferQueueMessage (sqsEvent) {
       body: error.message || 'failed to handle buffer queue message'
     }
   }
+  console.log('ok', ok)
 
   return {
     statusCode: 200,
