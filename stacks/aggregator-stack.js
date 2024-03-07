@@ -197,8 +197,9 @@ export function AggregatorStack({ stack, app }) {
     deadLetterQueue: bufferQueueDLQ.cdk.queue,
     cdk: {
       eventSource: {
-        // as soon as we have 2, we can act fast and reduce to see if enough bytes
-        batchSize: 2,
+        // we can reduce most buffers possible at same time to avoid large buffers to create huge congestion on the queue while being processed.
+        // also makes less lambda calls and decreases overall execution time.
+        batchSize: 10,
         // allow reporting partial failures
         reportBatchItemFailures: true,
       },
