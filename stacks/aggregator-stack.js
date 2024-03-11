@@ -70,7 +70,7 @@ export function AggregatorStack({ stack, app }) {
         // messages that are sent with identical body content
         contentBasedDeduplication: true,
         queueName: `${bufferQueueName}.fifo`,
-        visibilityTimeout: Duration.minutes(2)
+        visibilityTimeout: Duration.minutes(5)
       }
     },
   })
@@ -191,7 +191,7 @@ export function AggregatorStack({ stack, app }) {
         aggregatorBufferStoreBucket,
         aggregateOfferQueue
       ],
-      timeout: '2 minutes',
+      timeout: '5 minutes',
       memorySize: '2 GB'
     },
     deadLetterQueue: bufferQueueDLQ.cdk.queue,
