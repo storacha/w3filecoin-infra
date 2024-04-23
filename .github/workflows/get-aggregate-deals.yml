@@ -25,6 +25,4 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - name: Run job
-        env:
-          CF_API_TOKEN: ${{ secrets.CF_GATEWAY_TOKEN }}
         run: npm run get-aggregate-deals -w packages/tools ${{ github.event.inputs.piece }}
