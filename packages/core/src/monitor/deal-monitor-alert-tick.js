@@ -162,7 +162,8 @@ function getAlertPayload (alerts) {
     })),
     status: 'firing',
     version: '4',
-    groupKey: '{}:{alertname=\\FilecoinDealDelay\\}',
+    // eslint-disable-next-line no-useless-escape
+    groupKey: '{}:{alertname=\"FilecoinDealDelay\"}',
     receiver: 'combo',
     groupLabels: {
       alertname: 'FilecoinDealDelay'
