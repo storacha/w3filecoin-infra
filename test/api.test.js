@@ -60,8 +60,6 @@ test('POST /', async t => {
   const { invocationConfig, connection } = await getClientConfig(new URL(t.context.api.aggregator))
   const group = (await Signer.generate()).did()
 
-  console.log('group', group)
-
   // Create random pieces to add
   const pieces = await randomCargo(10, 1024)
 
@@ -74,7 +72,6 @@ test('POST /', async t => {
   // All pieces succeeded to be queued
   t.is(
     pieceOfferResponses.reduce((accum, res) => {
-      console.log('res.out', res.out.error)
       if (res.out.ok) {
         accum += 1
       }
@@ -94,7 +91,6 @@ test('POST /', async t => {
         () => t.context.store.aggregator.pieceStore.get({ piece: p.link, group }),
         (res) => Boolean(res.ok)
       )
-      console.log('stored', group, storedPiece)
       if (!storedPiece.ok) {
         throw new Error('piece not available')
       }

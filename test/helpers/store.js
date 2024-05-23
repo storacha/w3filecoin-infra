@@ -8,7 +8,6 @@ import pRetry from 'p-retry'
 export async function waitForStoreOperationOkResult (fn, verifyResFn) {
   return await pRetry(async () => {
     const r = await fn()
-    console.log('r', r)
     if (!verifyResFn(r)) {
       if (r.error) {
         throw r.error
