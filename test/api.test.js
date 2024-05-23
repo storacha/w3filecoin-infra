@@ -61,6 +61,8 @@ test('POST /', async t => {
   const { invocationConfig, connection } = await getClientConfig(new URL(t.context.api.aggregator))
   const group = (await Signer.generate()).did()
 
+  console.log('group', group)
+
   // Create random pieces to add
   const pieces = await randomCargo(10, 1024)
 
@@ -73,6 +75,7 @@ test('POST /', async t => {
   // All pieces succeeded to be queued
   t.is(
     pieceOfferResponses.reduce((accum, res) => {
+      console.log('res.out', Boolean(res.out.ok), res.out.error)
       if (res.out.ok) {
         accum += 1
       }
@@ -80,7 +83,7 @@ test('POST /', async t => {
     }, 0),
     pieces.length
   )
-  console.log('all pieces were successfully offered')
+  console.log('all pieces were successfully offered', pieces.map(p => p.link))
 
   // wait for piece-store entry to exist given it is propagated with a queue message to be added
   await delay(5e3)

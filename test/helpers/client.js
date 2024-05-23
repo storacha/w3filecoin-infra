@@ -14,6 +14,7 @@ export async function getClientConfig (url) {
     did: 'did:web:staging.web3.storage',
     privateKey: process.env.AGGREGATOR_PRIVATE_KEY || ''
   })
+  console.log('storefront', (process.env.AGGREGATOR_PRIVATE_KEY || '').length, storefront.did())
   const aggregatorService = DID.parse('did:web:staging.web3.storage')
 
   return {

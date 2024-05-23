@@ -1,0 +1,43 @@
+curl -X POST       https://oncall-prod-us-central-0.grafana.net/oncall/integrations/v1/grafana_alerting/Jl9BKY8h1HqVVHuZJik1Y8uyl/       -H 'Content-Type: Application/json'       -d '{
+  "alerts": [
+    {
+      "labels": {
+        "job": "node",
+        "group": "production",
+        "instance": "localhost:8081",
+        "severity": "critical",
+        "alertname": "InstanceDown"
+      },
+      "status": "firing",
+      "fingerprint": "f404ecabc8dd5cd7"
+    },
+    {
+      "labels": {
+        "job": "node",
+        "group": "canary",
+        "instance": "localhost:8082",
+        "severity": "critical",
+        "alertname": "FilecoinDealDelay"
+      },
+      "status": "firing",
+      "fingerprint": "f8f08d4e32c61a9d"
+    }
+  ],
+  "status": "firing",
+  "version": "4",
+  "groupKey": "{}:{alertname=\"FilecoinDealDelay\"}",
+  "receiver": "combo",
+  "numFiring": 3,
+  "externalURL": "",
+  "groupLabels": {
+    "alertname": "FilecoinDealDelay"
+  },
+  "numResolved": 0,
+  "commonLabels": {
+    "job": "node",
+    "severity": "critical",
+    "alertname": "FilecoinDealDelay"
+  },
+  "truncatedAlerts": 0,
+  "commonAnnotations": {}
+}'
