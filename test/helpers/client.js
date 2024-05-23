@@ -10,7 +10,10 @@ import { connect } from '@ucanto/client'
  */
 export async function getClientConfig (url) {
   // UCAN actors
-  const storefront = await Signer.generate()
+  const storefront = getServiceSigner({
+    did: 'did:web:staging.web3.storage',
+    privateKey: process.env.AGGREGATOR_PRIVATE_KEY || ''
+  })
   const aggregatorService = DID.parse('did:web:staging.web3.storage')
 
   return {
@@ -28,4 +31,21 @@ export async function getClientConfig (url) {
       }),
     })
   }
+}
+
+/**
+ * Given a config, return a ucanto Signer object representing the service
+ *
+ * @param {object} config
+ * @param {string} config.privateKey - multiformats private key of primary signing key
+ * @param {string} [config.did] - public DID for the service (did:key:... derived from PRIVATE_KEY if not set)
+ * @returns {import('@ucanto/principal/ed25519').Signer.Signer}
+ */
+export function getServiceSigner(config) {
+  const signer = Signer.parse(config.privateKey)
+  if (config.did) {
+    const did = DID.parse(config.did).did()
+    return signer.withDID(did)
+  }
+  return signer
 }

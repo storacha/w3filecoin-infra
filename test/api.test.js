@@ -1,5 +1,6 @@
 import { test } from './helpers/context.js'
 
+import * as Signer from '@ucanto/principal/ed25519'
 import delay from 'delay'
 import pRetry from 'p-retry'
 import git from 'git-rev-sync'
@@ -58,7 +59,7 @@ test('POST /', async t => {
 
   // Client connection config for w3filecoin pipeline entrypoint, i.e. API Storefront relies on
   const { invocationConfig, connection } = await getClientConfig(new URL(t.context.api.aggregator))
-  const group = invocationConfig.with
+  const group = (await Signer.generate()).did()
 
   // Create random pieces to add
   const pieces = await randomCargo(10, 1024)
@@ -96,7 +97,7 @@ test('POST /', async t => {
       }
       // Validate piece entry content
       t.truthy(storedPiece.ok.piece.equals(p.link))
-      t.is(storedPiece.ok.group, invocationConfig.with)
+      t.is(storedPiece.ok.group, group)
       t.is(storedPiece.ok.status, 'offered')
       t.truthy(storedPiece.ok.insertedAt)
       t.truthy(storedPiece.ok.updatedAt)
