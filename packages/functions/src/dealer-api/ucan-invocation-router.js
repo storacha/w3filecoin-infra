@@ -87,7 +87,6 @@ export async function ucanInvocationRouter(request) {
     aggregateStore,
     offerStore,
     dealTrackerService: {
-      // @ts-expect-error weirdness type error for ucanto/interface until we get rid of legacy deps
       // Types of parameters 'request' and 'request' are incompatible.
       connection,
       invocationConfig: {

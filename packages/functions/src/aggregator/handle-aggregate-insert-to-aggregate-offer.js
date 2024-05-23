@@ -46,8 +46,6 @@ async function handleAggregateInsertToAggregateOffer (event) {
 
   // Get context
   const context = await getContext()
-
-  // @ts-expect-error differrent ucanto versions
   const { ok, error } = await aggregatorEvents.handleAggregateInsertToAggregateOffer(context, record)
   if (error) {
     return {

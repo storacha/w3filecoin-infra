@@ -1,5 +1,6 @@
 import { test } from './helpers/context.js'
 
+import * as Signer from '@ucanto/principal/ed25519'
 import delay from 'delay'
 import pRetry from 'p-retry'
 import git from 'git-rev-sync'
@@ -55,10 +56,9 @@ test('GET /version', async t => {
 // Integration tests that verifies full flow from `piece/offer` received by Aggregator, into a deal being done
 test('POST /', async t => {
   // TODO: Mock a Storefront!
-
   // Client connection config for w3filecoin pipeline entrypoint, i.e. API Storefront relies on
   const { invocationConfig, connection } = await getClientConfig(new URL(t.context.api.aggregator))
-  const group = invocationConfig.with
+  const group = (await Signer.generate()).did()
 
   // Create random pieces to add
   const pieces = await randomCargo(10, 1024)
@@ -79,7 +79,7 @@ test('POST /', async t => {
     }, 0),
     pieces.length
   )
-  console.log('all pieces were successfully offered')
+  console.log('all pieces were successfully offered', pieces.map(p => p.link))
 
   // wait for piece-store entry to exist given it is propagated with a queue message to be added
   await delay(5e3)
@@ -96,7 +96,7 @@ test('POST /', async t => {
       }
       // Validate piece entry content
       t.truthy(storedPiece.ok.piece.equals(p.link))
-      t.is(storedPiece.ok.group, invocationConfig.with)
+      t.is(storedPiece.ok.group, group)
       t.is(storedPiece.ok.status, 'offered')
       t.truthy(storedPiece.ok.insertedAt)
       t.truthy(storedPiece.ok.updatedAt)
