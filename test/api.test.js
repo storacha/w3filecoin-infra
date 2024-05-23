@@ -56,7 +56,6 @@ test('GET /version', async t => {
 // Integration tests that verifies full flow from `piece/offer` received by Aggregator, into a deal being done
 test('POST /', async t => {
   // TODO: Mock a Storefront!
-
   // Client connection config for w3filecoin pipeline entrypoint, i.e. API Storefront relies on
   const { invocationConfig, connection } = await getClientConfig(new URL(t.context.api.aggregator))
   const group = (await Signer.generate()).did()
@@ -75,7 +74,7 @@ test('POST /', async t => {
   // All pieces succeeded to be queued
   t.is(
     pieceOfferResponses.reduce((accum, res) => {
-      console.log('res.out', Boolean(res.out.ok), res.out.error)
+      console.log('res.out', res.out.error)
       if (res.out.ok) {
         accum += 1
       }
