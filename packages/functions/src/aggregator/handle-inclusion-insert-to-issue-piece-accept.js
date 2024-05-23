@@ -45,8 +45,6 @@ async function handleInclusionInsertToIssuePieceAccept (event) {
   // @ts-expect-error can't figure out type of new
   const storeRecord = unmarshall(eventRawRecords[0].new)
   const record = decodeRecord(storeRecord)
-
-  // @ts-expect-error
   const { ok, error } = await aggregatorEvents.handleInclusionInsertToIssuePieceAccept(context, record)
   if (error) {
     return {

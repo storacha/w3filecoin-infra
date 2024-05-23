@@ -60,7 +60,6 @@ async function handleEvent () {
     })
   }
 
-  // @ts-expect-error weirdness type error for ucanto/interface until we get rid of legacy deps
   // Types of parameters 'request' and 'request' are incompatible.
   const { error } = await dealerEvents.handleCronTick(context)
   if (error) {
