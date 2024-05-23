@@ -92,6 +92,7 @@ test('POST /', async t => {
         () => t.context.store.aggregator.pieceStore.get({ piece: p.link, group }),
         (res) => Boolean(res.ok)
       )
+      console.log('stored', group, storedPiece)
       if (!storedPiece.ok) {
         throw new Error('piece not available')
       }
