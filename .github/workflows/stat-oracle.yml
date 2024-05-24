@@ -1,16 +1,11 @@
-name: Get Aggregate deals
+name: Stat Oracle
 
 on:
   workflow_dispatch:
-    inputs:
-      piece:
-        required: true
-        description: PieceCID of the aggregate
-        type: string
 
 jobs:
-  getDeals:
-    name: Get Aggregate deals
+  statOracle:
+    name: Stat Oracle
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -25,4 +20,4 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - name: Run job
-        run: npm run get-aggregate-deals -w packages/tools ${{ github.event.inputs.piece }}
+        run: npm run stat-oracle -w packages/tools
