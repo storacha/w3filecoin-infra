@@ -16,7 +16,7 @@ Deal Tracker MUST be compatible with deals that are not handled by Spade. This i
 
 Spade's oracle in its current form will hard-stop functioning in ~November (due to network upgrades). To not cause disruption in services like retrieval bot and Deal Tracker, Spade team put together an endpoint that we can rely to track what is on chain over time.
 
-> https://cargo.dag.haus/active_replicas.json.zst
+> https://api.spade.storage/public/daghaus_active_replicas.json.zst
 
 Note that the file provided is compressed and must be decompressed to use. At the time of writing, the compressed file has a size of ~3MB and the decompressed file has a size of ~29MB.
 
