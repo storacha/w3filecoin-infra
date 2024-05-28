@@ -1,16 +1,11 @@
-name: Get Aggregate deals
+name: Get Aggregates pending deals
 
 on:
   workflow_dispatch:
-    inputs:
-      piece:
-        required: true
-        description: PieceCID of the aggregate
-        type: string
 
 jobs:
-  getDeals:
-    name: Get Aggregate deals
+  getAggregatesOffered:
+    name: Get Aggregates pending deals
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -25,4 +20,4 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - name: Run job
-        run: npm run get-aggregate-deals -w packages/tools ${{ github.event.inputs.piece }}
+        run: npm run get-aggregates-pending-deals -w packages/tools
