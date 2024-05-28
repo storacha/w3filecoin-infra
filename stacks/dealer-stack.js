@@ -124,7 +124,7 @@ export function DealerStack({ stack, app }) {
    */
   const dealTrackCronName = getResourceName('deal-track-cron', stack.stage)
   new Cron(stack, dealTrackCronName, {
-    schedule: 'rate(5 minutes)',
+    schedule: 'rate(7 minutes)',
     job: {
       function: {
         timeout: '4 minutes',
