@@ -44,3 +44,15 @@ bafkzcibcaapn... at 2024-05-28T07:12:45.567Z
 bafkzcibcaapb... at 2024-05-28T07:48:21.420Z
 bafkzcibcaapi... at 2024-05-28T08:23:59.203Z
 ```
+
+### Stat oracle content
+
+```sh
+$ npm run stat-oracle
+
+> @w3filecoin/tools@0.0.0 stat-oracle
+> node stat-oracle.js
+
+Oracle Last Modified:  2024-05-30T14:33:37.000Z
+Oracle Content Length:  35424899
+```
