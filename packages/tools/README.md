@@ -56,3 +56,18 @@ $ npm run stat-oracle
 Oracle Last Modified:  2024-05-30T14:33:37.000Z
 Oracle Content Length:  35424899
 ```
+
+### Stat buffer
+
+Analyse a buffer in the pipeline containing Filecoin piece references.
+
+```sh
+$ npm run stat-buffer bafyreid...
+
+> @w3filecoin/tools@0.0.0 stat-buffer
+> node stat-buffer.js bafyreid...
+
+Number of piece:  4
+Total size of pieces:  17188258048n
+Total aggregate used space:  25786580992n
+```
