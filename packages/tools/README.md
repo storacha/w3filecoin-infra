@@ -44,3 +44,18 @@ bafkzcibcaapn... at 2024-05-28T07:12:45.567Z
 bafkzcibcaapb... at 2024-05-28T07:48:21.420Z
 bafkzcibcaapi... at 2024-05-28T08:23:59.203Z
 ```
+
+### Stat buffer
+
+Analyse a buffer in the pipeline containing Filecoin piece references.
+
+```sh
+$ npm run stat-buffer bafyreid...
+
+> @w3filecoin/tools@0.0.0 stat-buffer
+> node stat-buffer.js bafyreid...
+
+Number of piece:  4
+Total size of pieces:  17188258048n
+Total aggregate used space:  25786580992n
+```
