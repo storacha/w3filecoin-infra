@@ -5,7 +5,8 @@
   "scripts": {
     "get-aggregate-deals": "node get-aggregate-deals.js",
     "get-aggregates-pending-deals": "node get-aggregates-pending-deals.js",
-    "stat-buffer": "node stat-buffer.js"
+    "stat-buffer": "node stat-buffer.js",
+    "stat-oracle": "node stat-oracle.js"
   },
   "dependencies": {},
   "devDependencies": {
