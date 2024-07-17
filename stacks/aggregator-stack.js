@@ -368,7 +368,8 @@ export function AggregatorStack({ stack, app }) {
         },
         bind: [
           aggregatorPrivateKey
-        ]
+        ],
+        timeout: '30 seconds'
       },
       deadLetterQueue: aggregatorInclusionStoreHandleInsertToPieceAcceptDLQ.cdk.queue,
       cdk: {

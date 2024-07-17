@@ -76,6 +76,7 @@ export function ApiStack({ app, stack }) {
     customDomain: aggregatorApiCustomDomain,
     defaults: {
       function: {
+        timeout: '30 seconds',
         environment: {
           NAME: 'aggregator-api',
           VERSION: pkg.version,
