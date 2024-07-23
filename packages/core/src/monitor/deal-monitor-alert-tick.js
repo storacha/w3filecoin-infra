@@ -39,7 +39,7 @@ export async function dealMonitorAlertTick (context) {
   // Get offered aggregates to monitor
   const offeredAggregatesToMonitor = []
   const currentTime = Date.now()
-  for (const offeredAggregate of offeredAggregates.ok) {
+  for (const offeredAggregate of offeredAggregates.ok.results) {
     const offerTime = (new Date(offeredAggregate.insertedAt)).getTime()
     // Monitor if current time is bigger than offer time + monitor threshold
     if (currentTime > (offerTime + context.aggregateMonitorThresholdMs)) {

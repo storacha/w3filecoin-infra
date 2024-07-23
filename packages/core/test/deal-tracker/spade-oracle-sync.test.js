@@ -135,13 +135,13 @@ test('computes diff', async t => {
     piece: parseLink(alreadyExistingPieceCid)
   })
   t.truthy(queryInitAlreadyExisting.ok)
-  t.is(queryInitAlreadyExisting.ok?.length, 2)
+  t.is(queryInitAlreadyExisting.ok?.results.length, 2)
 
   const queryInitNew = await dealStore.query({
     piece: parseLink(newPieceCid)
   })
   t.truthy(queryInitNew.ok)
-  t.is(queryInitNew.ok?.length, 0)
+  t.is(queryInitNew.ok?.results.length, 0)
 
   // Create updated oracle
   const updatedPieceContracts = getOracleContracts(source)
@@ -188,13 +188,13 @@ test('computes diff', async t => {
     piece: parseLink(alreadyExistingPieceCid)
   })
   t.truthy(queryAfterDiffAlreadyExisting.ok)
-  t.is(queryAfterDiffAlreadyExisting.ok?.length, 3)
+  t.is(queryAfterDiffAlreadyExisting.ok?.results.length, 3)
 
   const queryAfterDiffNew = await dealStore.query({
     piece: parseLink(newPieceCid)
   })
   t.truthy(queryAfterDiffNew.ok)
-  t.is(queryAfterDiffNew.ok?.length, 1)
+  t.is(queryAfterDiffNew.ok?.results.length, 1)
 })
 
 test('converts PieceCidV1 to PieceCidV2', t => {
