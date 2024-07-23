@@ -9,6 +9,7 @@ const aggregateStore = createAggregateStoreClient({
 })
 
 console.log('Aggregate offer list:')
+/** @type {string|undefined} */
 let cursor
 do {
   // Get offered aggregates pending approval/rejection
