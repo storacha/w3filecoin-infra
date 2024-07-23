@@ -243,7 +243,7 @@ export function createClient (conf, context) {
         )
       }
     },
-    query: async (search) => {
+    query: async (search, options) => {
       const queryProps = encodeQueryProps(search)
       if (!queryProps) {
         return {
@@ -254,23 +254,28 @@ export function createClient (conf, context) {
       // @ts-ignore query props partial
       const queryCmd = new QueryCommand({
         TableName: context.tableName,
-        ...queryProps
+        ...queryProps,
+        ExclusiveStartKey: options?.cursor ? JSON.parse(options.cursor) : undefined,
+        Limit: options?.size
       })
 
       let res
       try {
         res = await tableclient.send(queryCmd)
       } catch (/** @type {any} */ error) {
+        console.error(error)
         return {
           error: new StoreOperationFailed(error.message)
         }
       }
 
-      // TODO: handle pulling the entire list. Even with renewals we are far away from this being needed
       return {
-        ok: res.Items ? res.Items.map(item => decodeRecord(
-          /** @type {DealerAggregateStoreRecord} */ (unmarshall(item))
-        )) : []
+        ok: {
+          results: (res.Items ?? []).map(item => decodeRecord(
+            /** @type {DealerAggregateStoreRecord} */ (unmarshall(item))
+          )),
+          ...(res.LastEvaluatedKey ? { cursor: JSON.stringify(res.LastEvaluatedKey) } : {})
+        }
       }
     },
   }
