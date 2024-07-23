@@ -167,7 +167,7 @@ export function createClient (conf, context) {
         ok: true
       }
     },
-    query: async (search) => {
+    query: async (search, options) => {
       const queryProps = encodeQueryProps(search)
       if (!queryProps) {
         return {
@@ -178,40 +178,41 @@ export function createClient (conf, context) {
       // @ts-ignore query props partial
       const queryCmd = new QueryCommand({
         TableName: context.tableName,
-        ...queryProps
+        ...queryProps,
+        ExclusiveStartKey: options?.cursor ? JSON.parse(options.cursor) : undefined,
+        Limit: options?.size
       })
 
       let res
       try {
         res = await tableclient.send(queryCmd)
       } catch (/** @type {any} */ error) {
+        console.error(error)
         return {
           error: new StoreOperationFailed(error.message)
         }
       }
 
-      // TODO: handle pulling the entire list. Even with renewals we are far away from this being needed
-      if (!res.Items) {
-        return {
-          ok: /** @type {AggregatorInclusionRecord[]} */ ([])
-        }
-      }
-
       const inclusionRecordsGet = await Promise.all(
-        res.Items.map((item) => getInclusionRecordFromInclusionStoreRecord(
+        (res.Items ?? []).map((item) => getInclusionRecordFromInclusionStoreRecord(
           /** @type {InclusionStoreRecord} */ (unmarshall(item)),
           context.inclusionProofStore
         ))
       )
 
+      const records = []
       for (const get of inclusionRecordsGet) {
         if (get.error) {
           return get
         }
+        records.push(get.ok)
       }
 
       return {
-        ok: /** @type {AggregatorInclusionRecord[]} */ (inclusionRecordsGet.map(get => get.ok))
+        ok: {
+          results: records,
+          ...(res.LastEvaluatedKey ? { cursor: JSON.stringify(res.LastEvaluatedKey) } : {})
+        }
       }
     },
   }

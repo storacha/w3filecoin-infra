@@ -8,16 +8,19 @@ const aggregateStore = createAggregateStoreClient({
   tableName: 'prod-w3filecoin-dealer-aggregate-store'
 })
 
-// Get offered aggregates pending approval/rejection
-const offeredAggregates = await aggregateStore.query({
-  status: 'offered',
-})
-if (offeredAggregates.error) {
-  throw offeredAggregates.error
-}
-
-console.log('Offered aggregates page size:', offeredAggregates.ok.length, '\n')
 console.log('Aggregate offer list:')
-for (const aggregate of offeredAggregates.ok) {
-  console.log(`${aggregate.aggregate.link()} at ${aggregate.insertedAt}`)
-}
+let cursor
+do {
+  // Get offered aggregates pending approval/rejection
+  const offeredAggregates = await aggregateStore.query({
+    status: 'offered',
+  })
+  if (offeredAggregates.error) {
+    throw offeredAggregates.error
+  }
+
+  for (const aggregate of offeredAggregates.ok.results) {
+    console.log(`${aggregate.aggregate.link()} at ${aggregate.insertedAt}`)
+  }
+  cursor = offeredAggregates.ok.cursor
+} while (cursor)

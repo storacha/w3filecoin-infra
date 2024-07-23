@@ -140,7 +140,7 @@ export function createClient (conf, context) {
         ok: true
       }
     },
-    query: async (search) => {
+    query: async (search, options) => {
       const dealStoreRecordQueryByPiece = encodeQueryByPiece(search)
       const queryCmd = new QueryCommand({
         TableName: context.tableName,
@@ -150,24 +150,28 @@ export function createClient (conf, context) {
             ComparisonOperator: 'EQ',
             AttributeValueList: [{ S: dealStoreRecordQueryByPiece.piece }]
           }
-        }
+        },
+        ExclusiveStartKey: options?.cursor ? JSON.parse(options.cursor) : undefined,
+        Limit: options?.size
       })
 
       let res
       try {
         res = await tableclient.send(queryCmd)
       } catch (/** @type {any} */ error) {
+        console.error(error)
         return {
           error: new StoreOperationFailed(error.message)
         }
       }
 
-      // TODO: handle pulling the entire list. currently we only support 2 providers so
-      // this list should not be longer than the default page size so this is not terribly urgent.
       return {
-        ok: res.Items ? res.Items.map(item => decodeRecord(
-          /** @type {InferStoreRecord} */ (unmarshall(item))
-        )) : []
+        ok: {
+          results: (res.Items ?? []).map(item => decodeRecord(
+            /** @type {InferStoreRecord} */ (unmarshall(item))
+          )),
+          ...(res.LastEvaluatedKey ? { cursor: JSON.stringify(res.LastEvaluatedKey) } : {})
+        }
       }
     }
   }
