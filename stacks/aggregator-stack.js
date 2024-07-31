@@ -191,7 +191,7 @@ export function AggregatorStack({ stack, app }) {
         aggregatorBufferStoreBucket,
         aggregateOfferQueue
       ],
-      timeout: '5 minutes',
+      timeout: '10 minutes',
       memorySize: '2 GB'
     },
     deadLetterQueue: bufferQueueDLQ.cdk.queue,
