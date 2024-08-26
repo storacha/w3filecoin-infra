@@ -66,11 +66,11 @@ export function AggregatorStack({ stack, app }) {
         // Guarantee exactly-once processing
         // (Note: maximum 10 batch)
         fifo: true,
-        // During the deduplication interval (10 minutes), Amazon SQS treats
+        // During the deduplication interval (15 minutes), Amazon SQS treats
         // messages that are sent with identical body content
         contentBasedDeduplication: true,
         queueName: `${bufferQueueName}.fifo`,
-        visibilityTimeout: Duration.minutes(10)
+        visibilityTimeout: Duration.minutes(15)
       }
     },
   })
