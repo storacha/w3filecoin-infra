@@ -1,6 +1,6 @@
 import * as Sentry from '@sentry/serverless'
 
-import { createClient as createBufferStoreClient } from '@w3filecoin/core/src/store/aggregator-buffer-store.js'
+import { createClient as createBufferStoreClient, withCache as withBufferStoreCache } from '@w3filecoin/core/src/store/aggregator-buffer-store.js'
 import { createClient as createBufferQueueClient, decodeMessage } from '@w3filecoin/core/src/queue/buffer-queue.js'
 import { createClient as createAggregateOfferQueueClient } from '@w3filecoin/core/src/queue/aggregate-offer-queue.js'
 import * as aggregatorEvents from '@web3-storage/filecoin-api/aggregator/events'
@@ -83,11 +83,12 @@ function getContext () {
   } = getEnv()
 
   return {
-    bufferStore: 
+    bufferStore: withBufferStoreCache(
       createBufferStoreClient(
         { region: bufferStoreBucketRegion },
         { name: bufferStoreBucketName }
-      ),
+      )
+    ),
     bufferQueue: createBufferQueueClient(
       { region: bufferQueueRegion },
       { queueUrl: bufferQueueUrl }
