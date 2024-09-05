@@ -9,10 +9,8 @@ export async function waitForStoreOperationOkResult (fn, verifyResFn) {
   return await pRetry(async () => {
     const r = await fn()
     if (!verifyResFn(r)) {
-      if (r.error) {
-        throw r.error
-      }
-      throw new Error('result did not satisfy verifcation function')
+      console.error('wait result:', r)
+      throw (r.error ?? new Error('result did not satisfy verifcation function'))
     }
 
     return r
