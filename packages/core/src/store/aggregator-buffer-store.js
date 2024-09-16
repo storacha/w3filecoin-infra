@@ -80,6 +80,11 @@ export const withCache = (bufferStore) => {
   const cache = new LRUCache({ max: CACHE_MAX })
   return {
     ...bufferStore,
+    async put (rec) {
+      const res = await bufferStore.put(rec)
+      if (res.ok) cache.set(rec.block.toString(), rec)
+      return res
+    },
     async get (key) {
       const cacheKey = key.toString()
       const cached = cache.get(cacheKey)
