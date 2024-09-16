@@ -199,7 +199,7 @@ export function AggregatorStack({ stack, app }) {
       eventSource: {
         // we can reduce most buffers possible at same time to avoid large buffers to create huge congestion on the queue while being processed.
         // also makes less lambda calls and decreases overall execution time.
-        batchSize: 5,
+        batchSize: 3,
         // allow reporting partial failures
         reportBatchItemFailures: true,
       },
