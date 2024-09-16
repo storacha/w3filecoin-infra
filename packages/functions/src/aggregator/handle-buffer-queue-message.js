@@ -1,11 +1,11 @@
 import * as Sentry from '@sentry/serverless'
 
-import { createClient as createBufferStoreClient, withCache as withBufferStoreCache } from '@w3filecoin/core/src/store/aggregator-buffer-store.js'
+import { createClient as createBufferStoreClient } from '@w3filecoin/core/src/store/aggregator-buffer-store.js'
 import { createClient as createBufferQueueClient, decodeMessage } from '@w3filecoin/core/src/queue/buffer-queue.js'
 import { createClient as createAggregateOfferQueueClient } from '@w3filecoin/core/src/queue/aggregate-offer-queue.js'
 import * as aggregatorEvents from '@web3-storage/filecoin-api/aggregator/events'
 import { Piece } from '@web3-storage/data-segment'
-
+import { LRUCache } from 'lru-cache'
 import { mustGetEnv } from '../utils.js'
 
 Sentry.AWSLambda.init({
@@ -69,6 +69,33 @@ async function handleBufferQueueMessage (sqsEvent) {
   }
 }
 
+/** @type {LRUCache<string, import('@web3-storage/filecoin-api/aggregator/api').BufferRecord>} */
+const bufferStoreCache = new LRUCache({ max: 10_000 })
+
+/**
+ * @param {import('@web3-storage/filecoin-api/aggregator/api').BufferStore} bufferStore
+ * @param {LRUCache<string, import('@web3-storage/filecoin-api/aggregator/api').BufferRecord>} cache
+ * @returns {import('@web3-storage/filecoin-api/aggregator/api').BufferStore}
+ */
+const withBufferStoreCache = (bufferStore, cache) => {
+  return {
+    ...bufferStore,
+    async put (rec) {
+      const res = await bufferStore.put(rec)
+      if (res.ok) cache.set(rec.block.toString(), rec)
+      return res
+    },
+    async get (key) {
+      const cacheKey = key.toString()
+      const cached = cache.get(cacheKey)
+      if (cached) return { ok: cached }
+      const res = await bufferStore.get(key)
+      if (res.ok) cache.set(cacheKey, res.ok)
+      return res
+    }
+  }
+}
+
 function getContext () {
   const {
     bufferStoreBucketName,
@@ -87,7 +114,8 @@ function getContext () {
       createBufferStoreClient(
         { region: bufferStoreBucketRegion },
         { name: bufferStoreBucketName }
-      )
+      ),
+      bufferStoreCache
     ),
     bufferQueue: createBufferQueueClient(
       { region: bufferQueueRegion },

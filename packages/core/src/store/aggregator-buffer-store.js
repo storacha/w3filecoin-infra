@@ -1,6 +1,5 @@
 import { CBOR } from '@ucanto/core'
 import { parseLink } from '@ucanto/server'
-import { LRUCache } from 'lru-cache'
 
 import { createBucketClient } from './bucket-client.js'
 
@@ -67,31 +66,4 @@ export function createClient (conf, context) {
     decodeRecord,
     decodeBucketResponse
   })
-}
-
-const CACHE_MAX = 10_000
-
-/**
- * @param {import('@web3-storage/filecoin-api/aggregator/api').BufferStore} bufferStore
- * @returns {import('@web3-storage/filecoin-api/aggregator/api').BufferStore}
- */
-export const withCache = (bufferStore) => {
-  /** @type {LRUCache<string, import('@web3-storage/filecoin-api/aggregator/api').BufferRecord>} */
-  const cache = new LRUCache({ max: CACHE_MAX })
-  return {
-    ...bufferStore,
-    async put (rec) {
-      const res = await bufferStore.put(rec)
-      if (res.ok) cache.set(rec.block.toString(), rec)
-      return res
-    },
-    async get (key) {
-      const cacheKey = key.toString()
-      const cached = cache.get(cacheKey)
-      if (cached) return { ok: cached }
-      const res = await bufferStore.get(key)
-      if (res.ok) cache.set(cacheKey, res.ok)
-      return res
-    }
-  }
 }
