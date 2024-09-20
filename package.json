@@ -39,7 +39,9 @@
     "sst": "^2.17.2",
     "typescript": "^4.9.4"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@storacha/one-webcrypto": "^1.0.1"
+  },
   "simple-git-hooks": {
     "pre-commit": "npx lint-staged"
   },
