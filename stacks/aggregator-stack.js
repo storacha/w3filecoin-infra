@@ -66,11 +66,11 @@ export function AggregatorStack({ stack, app }) {
         // Guarantee exactly-once processing
         // (Note: maximum 10 batch)
         fifo: true,
-        // During the deduplication interval (12 minutes), Amazon SQS treats
+        // During the deduplication interval (14 minutes), Amazon SQS treats
         // messages that are sent with identical body content
         contentBasedDeduplication: true,
         queueName: `${bufferQueueName}.fifo`,
-        visibilityTimeout: Duration.minutes(12)
+        visibilityTimeout: Duration.minutes(14)
       }
     },
   })
@@ -191,7 +191,7 @@ export function AggregatorStack({ stack, app }) {
         aggregatorBufferStoreBucket,
         aggregateOfferQueue
       ],
-      timeout: '12 minutes',
+      timeout: '14 minutes',
       memorySize: '6 GB'
     },
     deadLetterQueue: bufferQueueDLQ.cdk.queue,
