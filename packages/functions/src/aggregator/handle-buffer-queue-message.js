@@ -1,11 +1,13 @@
 import * as Sentry from '@sentry/serverless'
-
+import crypto from 'node:crypto'
 import { createClient as createBufferStoreClient } from '@w3filecoin/core/src/store/aggregator-buffer-store.js'
 import { createClient as createBufferQueueClient, decodeMessage } from '@w3filecoin/core/src/queue/buffer-queue.js'
 import { createClient as createAggregateOfferQueueClient } from '@w3filecoin/core/src/queue/aggregate-offer-queue.js'
 import * as aggregatorEvents from '@web3-storage/filecoin-api/aggregator/events'
 import { Piece } from '@web3-storage/data-segment'
 import { LRUCache } from 'lru-cache'
+import * as Digest from 'multiformats/hashes/digest'
+import { sha256 } from 'multiformats/hashes/sha2'
 import { mustGetEnv } from '../utils.js'
 
 Sentry.AWSLambda.init({
@@ -135,7 +137,16 @@ function getContext () {
         // will be prepended, so policy is irrelevant
         policy: /** @type {import('@web3-storage/filecoin-api/src/aggregator/api').PiecePolicy} */ (0),
         insertedAt: (new Date()).toISOString()
-      }]
+      }],
+      hasher: {
+        name: sha256.name,
+        code: sha256.code,
+        /** @param {Uint8Array} bytes */
+        digest: bytes => {
+          const digest = crypto.createHash('sha256').update(bytes).digest()
+          return Digest.create(sha256.code, digest)
+        }
+      }
     }
   }
 }
