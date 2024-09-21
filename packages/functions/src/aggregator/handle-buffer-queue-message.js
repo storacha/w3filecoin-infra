@@ -143,7 +143,8 @@ function getContext () {
         code: sha256.code,
         /** @param {Uint8Array} bytes */
         digest: bytes => {
-          const digest = crypto.createHash('sha256').update(bytes).digest()
+          // @ts-expect-error only available in node.js 20
+          const digest = crypto.hash('sha256', bytes, 'buffer')
           return Digest.create(sha256.code, digest)
         }
       }

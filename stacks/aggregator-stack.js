@@ -177,6 +177,7 @@ export function AggregatorStack({ stack, app }) {
    */
   bufferQueue.addConsumer(stack, {
     function: {
+      runtime: 'nodejs20.x',
       handler: 'packages/functions/src/aggregator/handle-buffer-queue-message.main',
       environment: {
         BUFFER_QUEUE_URL: bufferQueue.queueUrl,
