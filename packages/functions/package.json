@@ -13,7 +13,7 @@
     "@w3filecoin/core": "*",
     "@web3-storage/data-segment": "^5.2.0",
     "@web3-storage/filecoin-api": "^7.3.0",
-    "@web3-storage/filecoin-client": "3.3.3",
+    "@web3-storage/filecoin-client": "^3.3.4",
     "lru-cache": "^11.0.1",
     "multiformats": "^13.3.0",
     "uint8arrays": "^4.0.6"
