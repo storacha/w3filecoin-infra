@@ -72,13 +72,13 @@ export function dynamoDBTableConfig ({ fields, primaryIndex, globalIndexes = {} 
 
   const AttributeDefinitions = Object.entries(fields)
     .filter(([k]) => attributes.includes(k)) // 'The number of attributes in key schema must match the number of attributes defined in attribute definitions'
-    .map(([k, v]) => ({
+    .map(([k, v]) => /** @type {import('@aws-sdk/client-dynamodb').AttributeDefinition} */ ({
       AttributeName: k,
       AttributeType: v[0].toUpperCase()
     }))
   const KeySchema = toKeySchema(primaryIndex)
   const GlobalSecondaryIndexes = Object.entries(globalIndexes)
-    .map(([IndexName, val]) => ({
+    .map(([IndexName, val]) => /** @type {import('@aws-sdk/client-dynamodb').GlobalSecondaryIndex} */ ({
       IndexName,
       KeySchema: toKeySchema(val),
       Projection: { ProjectionType: 'ALL' },
@@ -101,6 +101,7 @@ export function dynamoDBTableConfig ({ fields, primaryIndex, globalIndexes = {} 
  * @param {string} [index.sortKey]
  */
 function toKeySchema ({partitionKey, sortKey}) {
+  /** @type {import('@aws-sdk/client-dynamodb').KeySchemaElement[]} */
   const KeySchema = [
     { AttributeName: partitionKey, KeyType: 'HASH' }
   ]
