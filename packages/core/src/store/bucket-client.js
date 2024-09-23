@@ -40,7 +40,9 @@ export function createBucketClient (conf, context) {
 
       // retry to avoid throttling errors
       try {
-        await pRetry(() => bucketClient.send(putCmd))
+        await pRetry(() => bucketClient.send(putCmd), {
+          onFailedAttempt: err => console.warn(`failed to put object: ${key}`, err)
+        })
       } catch (/** @type {any} */ error) {
         return {
           error: new StoreOperationFailed(error.message)
