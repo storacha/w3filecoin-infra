@@ -1,6 +1,9 @@
 import { S3Client } from '@aws-sdk/client-s3'
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb'
 
+/** @type {Record<string, import('@aws-sdk/client-s3').S3Client>} */
+const s3Clients = {}
+
 /**
  * @param {import('./types.js').BucketConnect | S3Client} target 
  */
@@ -8,8 +11,14 @@ export function connectBucket (target) {
   if (target instanceof S3Client) {
     return target
   }
-  return new S3Client(target)
+  if (!s3Clients[target.region]) {
+    s3Clients[target.region] = new S3Client(target)
+  }
+  return s3Clients[target.region]
 }
+
+/** @type {Record<string, import('@aws-sdk/client-dynamodb').DynamoDBClient>} */
+const dynamoClients = {}
 
 /**
  * @param {import('./types.js').TableConnect | DynamoDBClient} target 
@@ -18,8 +27,10 @@ export function connectTable (target) {
   if (target instanceof DynamoDBClient) {
     return target
   }
-
-  return new DynamoDBClient(target)
+  if (!dynamoClients[target.region]) {
+    dynamoClients[target.region] = new DynamoDBClient(target)
+  }
+  return dynamoClients[target.region]
 }
 
 /** @typedef {import('sst/constructs').TableProps} TableProps */
