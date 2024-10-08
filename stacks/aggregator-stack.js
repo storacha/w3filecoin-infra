@@ -249,7 +249,7 @@ export function AggregatorStack({ stack, app }) {
           aggregatorBufferStoreBucket,
           pieceAcceptQueue
         ],
-        timeout: '5 minutes'
+        timeout: '15 minutes'
       },
       deadLetterQueue: aggregatorAggregateStoreHandleInsertToPieceAcceptDLQ.cdk.queue,
       cdk: {
