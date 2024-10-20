@@ -112,7 +112,6 @@ function getContext () {
     maxAggregatePieces
   } = getEnv()
 
-  let customHasherUsed = false
   return {
     bufferStore: withBufferStoreCache(
       createBufferStoreClient(
@@ -146,10 +145,6 @@ function getContext () {
         code: sha256.code,
         /** @param {Uint8Array} bytes */
         digest: bytes => {
-          if (!customHasherUsed) {
-            console.log('Using custom hasher')
-            customHasherUsed = true
-          }
           // @ts-expect-error only available in node.js 20
           const digest = crypto.hash('sha256', bytes, 'buffer')
           return Digest.create(sha256.code, digest)
