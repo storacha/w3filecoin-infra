@@ -131,6 +131,7 @@ function getContext () {
     ),
     config: {
       maxAggregateSize,
+      maxAggregatePieces,
       minAggregateSize,
       minUtilizationFactor,
       prependBufferedPieces: [{
