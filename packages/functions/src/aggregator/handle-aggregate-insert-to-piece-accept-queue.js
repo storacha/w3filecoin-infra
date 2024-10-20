@@ -105,6 +105,9 @@ function getEnv () {
     pieceAcceptQueueUrl: mustGetEnv('PIECE_ACCEPT_QUEUE_URL'),
     pieceAcceptQueueRegion: mustGetEnv('AWS_REGION'),
     maxAggregateSize: Number.parseInt(mustGetEnv('MAX_AGGREGATE_SIZE')),
+    maxAggregatePieces: process.env.MAX_AGGREGATE_PIECES
+      ? Number.parseInt(process.env.MAX_AGGREGATE_PIECES)
+      : undefined,
     minAggregateSize: Number.parseInt(mustGetEnv('MIN_AGGREGATE_SIZE')),
     minUtilizationFactor: Number.parseInt(mustGetEnv('MIN_UTILIZATION_FACTOR')),
   }

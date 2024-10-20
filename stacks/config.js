@@ -133,6 +133,7 @@ export function getAggregatorEnv(stack) {
     AGGREGATOR_HOSTED_ZONE: process.env.AGGREGATOR_HOSTED_ZONE,
     AGGREGATOR_DID: mustGetEnv('AGGREGATOR_DID'),
     MAX_AGGREGATE_SIZE: process.env.MAX_AGGREGATE_SIZE || defaultMaxAggregateSize,
+    MAX_AGGREGATE_PIECES: process.env.MAX_AGGREGATE_PIECES ?? '',
     MIN_AGGREGATE_SIZE: process.env.MIN_AGGREGATE_SIZE || defaultMinAggregateSize,
     MIN_UTILIZATION_FACTOR: process.env.MIN_UTILIZATION_FACTOR || defaultMinUtilizationFactor,
     AGGREGATOR_PROOF: process.env.AGGREGATOR_PROOF ?? '',
