@@ -19,6 +19,7 @@ export function AggregatorStack({ stack, app }) {
     AGGREGATOR_HOSTED_ZONE,
     AGGREGATOR_DID,
     MAX_AGGREGATE_SIZE,
+    MAX_AGGREGATE_PIECES,
     MIN_AGGREGATE_SIZE,
     MIN_UTILIZATION_FACTOR,
     AGGREGATOR_PROOF
@@ -184,6 +185,7 @@ export function AggregatorStack({ stack, app }) {
         BUFFER_STORE_BUCKET_NAME: aggregatorBufferStoreBucket.bucketName,
         AGGREGATE_OFFER_QUEUE_URL: aggregateOfferQueue.queueUrl,
         MAX_AGGREGATE_SIZE,
+        MAX_AGGREGATE_PIECES,
         MIN_AGGREGATE_SIZE,
         MIN_UTILIZATION_FACTOR,
       },
@@ -242,6 +244,7 @@ export function AggregatorStack({ stack, app }) {
           BUFFER_STORE_BUCKET_NAME: aggregatorBufferStoreBucket.bucketName,
           PIECE_ACCEPT_QUEUE_URL: pieceAcceptQueue.queueUrl,
           MAX_AGGREGATE_SIZE,
+          MAX_AGGREGATE_PIECES,
           MIN_AGGREGATE_SIZE,
           MIN_UTILIZATION_FACTOR,
         },
