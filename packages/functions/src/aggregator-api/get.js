@@ -7,7 +7,7 @@ import { mustGetEnv } from '../utils.js'
 Sentry.AWSLambda.init({
   environment: process.env.SST_STAGE,
   dsn: process.env.SENTRY_DSN,
-  tracesSampleRate: 1.0,
+  tracesSampleRate: 0,
 })
 
 const repo = 'https://github.com/web3-storage/w3filecoin-infra'
