@@ -39,7 +39,7 @@ export async function getStores (ctx) {
   ] = await Promise.all([
     createTable(dynamoClient, aggregatorPieceStoreTableProps),
     createTable(dynamoClient, aggregatorAggregateStoreTableProps),
-    createTable(dynamoClient, aggregatorInclusionStoreTableProps),
+    createTable(dynamoClient, aggregatorInclusionStoreTableProps)
   ])
 
   return {
@@ -52,7 +52,7 @@ export async function getStores (ctx) {
         inclusionProofStore: createInclusionProofStoreClient(s3, { name: inclusionProofStoreBucketName })
       }
     ),
-    pieceStore: createPieceStoreClient(dynamoClient, { tableName: pieceStoreTableName }),
+    pieceStore: createPieceStoreClient(dynamoClient, { tableName: pieceStoreTableName })
   }
 }
 
@@ -80,6 +80,6 @@ export function getQueues (ctx) {
     ),
     pieceAcceptQueue: createPieceAcceptQueueClient(ctx.sqsClient,
       { queueUrl: ctx.queues.pieceAcceptQueue.queueUrl }
-    ),
+    )
   }
 }

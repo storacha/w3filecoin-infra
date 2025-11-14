@@ -2,7 +2,7 @@ import * as Sentry from '@sentry/serverless'
 import { Table } from 'sst/node/table'
 
 import { createClient as createAggregateStoreClient } from '@w3filecoin/core/src/store/aggregator-aggregate-store.js'
-import * as aggregatorEvents from '@web3-storage/filecoin-api/aggregator/events'
+import * as aggregatorEvents from '@storacha/filecoin-api/aggregator/events'
 import { decodeMessage } from '@w3filecoin/core/src/queue/aggregate-offer-queue.js'
 
 import { mustGetEnv } from '../utils.js'
@@ -10,7 +10,7 @@ import { mustGetEnv } from '../utils.js'
 Sentry.AWSLambda.init({
   environment: process.env.SST_STAGE,
   dsn: process.env.SENTRY_DSN,
-  tracesSampleRate: 0,
+  tracesSampleRate: 0
 })
 
 /**
@@ -33,7 +33,10 @@ async function handleAggregateOfferMessage (sqsEvent) {
     MessageBody: sqsEvent.Records[0].body
   })
 
-  const { ok, error } = await aggregatorEvents.handleAggregateOfferMessage(context, record)
+  const { ok, error } = await aggregatorEvents.handleAggregateOfferMessage(
+    context,
+    record
+  )
   if (error) {
     return {
       statusCode: 500,
@@ -48,10 +51,7 @@ async function handleAggregateOfferMessage (sqsEvent) {
 }
 
 function getContext () {
-  const {
-    aggregateStoreTableName,
-    aggregateStoreTableRegion,
-  } = getEnv()
+  const { aggregateStoreTableName, aggregateStoreTableRegion } = getEnv()
 
   return {
     aggregateStore: createAggregateStoreClient(
@@ -67,7 +67,7 @@ function getContext () {
 function getEnv () {
   return {
     aggregateStoreTableName: Table['aggregator-aggregate-store'].tableName,
-    aggregateStoreTableRegion: mustGetEnv('AWS_REGION'),
+    aggregateStoreTableRegion: mustGetEnv('AWS_REGION')
   }
 }
 

@@ -12,7 +12,7 @@ import { mustGetEnv } from '../utils.js'
 Sentry.AWSLambda.init({
   environment: process.env.SST_STAGE,
   dsn: process.env.SENTRY_DSN,
-  tracesSampleRate: 0,
+  tracesSampleRate: 0
 })
 
 async function handleEvent () {
@@ -56,7 +56,7 @@ async function handleEvent () {
   }
 
   return {
-    statusCode: 200,
+    statusCode: 200
   }
 }
 

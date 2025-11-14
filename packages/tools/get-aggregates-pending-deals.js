@@ -14,7 +14,7 @@ let cursor
 do {
   // Get offered aggregates pending approval/rejection
   const offeredAggregates = await aggregateStore.query({
-    status: 'offered',
+    status: 'offered'
   }, { cursor })
   if (offeredAggregates.error) {
     throw offeredAggregates.error

@@ -2,7 +2,6 @@ import { HeadObjectCommand } from '@aws-sdk/client-s3'
 
 import { connectBucket } from '@w3filecoin/core/src/store/index.js'
 
-
 const AWS_REGION = 'us-west-2'
 const spadeOracleUrl = 'https://api.spade.storage/public/daghaus_active_replicas.json.zst'
 

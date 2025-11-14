@@ -1,11 +1,11 @@
 import { encode as JSONencode, decode as JSONdecode } from '@ipld/dag-json'
-import { toString } from 'uint8arrays/to-string'	
+import { toString } from 'uint8arrays/to-string'
 import { fromString } from 'uint8arrays/from-string'
 
 import { createQueueClient } from './client.js'
 
 /**
- * @typedef {import('@web3-storage/filecoin-api/aggregator/api').AggregateOfferMessage} AggregateOfferMessage
+ * @typedef {import('@storacha/filecoin-api/aggregator/api').AggregateOfferMessage} AggregateOfferMessage
  * @typedef {import('./client.js').ClientEncodedMessage} ClientEncodedMessage
  */
 
@@ -20,12 +20,14 @@ const encodeMessage = (aggregateOfferMessage, options) => {
     MessageBody: toString(encodedBytes),
     // FIFO Queue message group id
     // TODO: this should be an option
-    MessageGroupId: options.disableMessageGroupId ? undefined : aggregateOfferMessage.group
+    MessageGroupId: options.disableMessageGroupId
+      ? undefined
+      : aggregateOfferMessage.group
   }
 }
 
 /**
- * @param {{ 'MessageBody': string }} message 
+ * @param {{ 'MessageBody': string }} message
  * @returns {AggregateOfferMessage}
  */
 export const decodeMessage = (message) => {
@@ -34,19 +36,19 @@ export const decodeMessage = (message) => {
 }
 
 /**
- * 
+ *
  * @param {import('./types.js').QueueConnect | import('@aws-sdk/client-sqs').SQSClient} conf
  * @param {object} context
  * @param {string} context.queueUrl
  * @param {boolean} [context.disableMessageGroupId]
- * @returns {import('@web3-storage/filecoin-api/aggregator/api').AggregateOfferQueue}
+ * @returns {import('@storacha/filecoin-api/aggregator/api').AggregateOfferQueue}
  */
 export function createClient (conf, context) {
-  return createQueueClient(conf,
-    {
-      queueUrl: context.queueUrl,
-      encodeMessage: (item) => encodeMessage(item, {
+  return createQueueClient(conf, {
+    queueUrl: context.queueUrl,
+    encodeMessage: (item) =>
+      encodeMessage(item, {
         disableMessageGroupId: context.disableMessageGroupId
       })
-    })
+  })
 }

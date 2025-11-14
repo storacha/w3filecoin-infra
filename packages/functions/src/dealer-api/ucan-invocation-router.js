@@ -10,15 +10,18 @@ import * as Server from '@ucanto/server'
 import { connect as ucanLogConnect } from '@w3filecoin/core/src/ucan-log.js'
 import { createClient as createAggregateStoreClient } from '@w3filecoin/core/src/store/dealer-aggregate-store.js'
 import { createClient as createOfferStoreClient } from '@w3filecoin/core/src/store/dealer-offer-store.js'
-import { getServiceConnection, getServiceSigner } from '@w3filecoin/core/src/service.js'
-import { createServer } from '@web3-storage/filecoin-api/dealer/service'
+import {
+  getServiceConnection,
+  getServiceSigner
+} from '@w3filecoin/core/src/service.js'
+import { createServer } from '@storacha/filecoin-api/dealer/service'
 
 import { mustGetEnv } from '../utils.js'
 
 Sentry.AWSLambda.init({
   environment: process.env.SST_STAGE,
   dsn: process.env.SENTRY_DSN,
-  tracesSampleRate: 0,
+  tracesSampleRate: 0
 })
 
 /**
@@ -29,7 +32,7 @@ Sentry.AWSLambda.init({
  *
  * @param {import('aws-lambda').APIGatewayProxyEventV2} request
  */
-export async function ucanInvocationRouter(request) {
+export async function ucanInvocationRouter (request) {
   const {
     did,
     serviceDid,
@@ -44,7 +47,7 @@ export async function ucanInvocationRouter(request) {
 
   if (request.body === undefined) {
     return {
-      statusCode: 400,
+      statusCode: 400
     }
   }
 
@@ -58,25 +61,33 @@ export async function ucanInvocationRouter(request) {
   let issuer = getServiceSigner({
     privateKey
   })
-  const aggregateStore = createAggregateStoreClient({
-    region: aggregateStoreTableRegion
-  }, {
-    tableName: aggregateStoreTableName.tableName
-  })
-  const offerStore = createOfferStoreClient({
-    region: offerStoreBucketRegion
-  }, {
-    name: offerStoreBucketName
-  })
+  const aggregateStore = createAggregateStoreClient(
+    {
+      region: aggregateStoreTableRegion
+    },
+    {
+      tableName: aggregateStoreTableName.tableName
+    }
+  )
+  const offerStore = createOfferStoreClient(
+    {
+      region: offerStoreBucketRegion
+    },
+    {
+      name: offerStoreBucketName
+    }
+  )
   const connection = getServiceConnection({
     did: serviceDid,
     url: serviceUrl
   })
   const proofs = []
   if (delegatedProof) {
-    const proof = await Delegation.extract(fromString(delegatedProof, 'base64pad'))
-      if (!proof.ok) throw new Error('failed to extract proof', { cause: proof.error })
-      proofs.push(proof.ok)
+    const proof = await Delegation.extract(
+      fromString(delegatedProof, 'base64pad')
+    )
+    if (!proof.ok) { throw new Error('failed to extract proof', { cause: proof.error }) }
+    proofs.push(proof.ok)
   } else {
     // if no proofs, we must be using the service private key to sign
     issuer = issuer.withDID(DID.parse(did).did())
@@ -113,7 +124,7 @@ export async function ucanInvocationRouter(request) {
     return toLambdaResponse({
       status: result.error.status,
       headers: result.error.headers || {},
-      body: Buffer.from(result.error.message || ''),
+      body: Buffer.from(result.error.message || '')
     })
   }
 
@@ -147,19 +158,19 @@ function getLambdaEnv () {
     aggregateStoreTableName: Table['dealer-aggregate-store'],
     aggregateStoreTableRegion: mustGetEnv('AWS_REGION'),
     offerStoreBucketName: mustGetEnv('OFFER_STORE_BUCKET_NAME'),
-    offerStoreBucketRegion: mustGetEnv('OFFER_STORE_BUCKET_REGION'),
+    offerStoreBucketRegion: mustGetEnv('OFFER_STORE_BUCKET_REGION')
   }
 }
 
 /**
  * @param {import('@ucanto/core').API.HTTPResponse} response
  */
-export function toLambdaResponse({ status = 200, headers, body }) {
+export function toLambdaResponse ({ status = 200, headers, body }) {
   return {
     statusCode: status,
     headers,
     body: Buffer.from(body).toString('base64'),
-    isBase64Encoded: true,
+    isBase64Encoded: true
   }
 }
 
@@ -168,7 +179,7 @@ export function toLambdaResponse({ status = 200, headers, body }) {
  */
 export const fromLambdaRequest = (request) => ({
   headers: /** @type {Record<string, string>} */ (request.headers),
-  body: Buffer.from(request.body || '', 'base64'),
+  body: Buffer.from(request.body || '', 'base64')
 })
 
 export const handler = Sentry.AWSLambda.wrapHandler(ucanInvocationRouter)

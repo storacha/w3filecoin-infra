@@ -6,16 +6,16 @@ export class OperationFailed extends Server.Failure {
    * @param {string} message
    * @param {import('@web3-storage/data-segment').PieceLink} piece
    */
-  constructor(message, piece) {
+  constructor (message, piece) {
     super(message)
     this.piece = piece
   }
 
-  get reason() {
+  get reason () {
     return this.message
   }
 
-  get name() {
+  get name () {
     return OperationErrorName
   }
 }

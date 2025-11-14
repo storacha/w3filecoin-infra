@@ -1,10 +1,10 @@
-import { Store, StoreGetError } from '@web3-storage/filecoin-api/types'
-import { AggregateStore, AggregateRecord } from '@web3-storage/filecoin-api/aggregator/api'
+import { Store, StoreGetError } from '@storacha/filecoin-api/types'
+import { AggregateStore, AggregateRecord } from '@storacha/filecoin-api/aggregator/api'
 import { ByteView } from '@ucanto/interface'
-import { Contract } from '../deal-tracker/types'
+import { Contract } from '../deal-tracker/types.js'
 import { Link } from 'multiformats'
-import { InclusionProof } from '@web3-storage/capabilities/types'
-import { Result } from '../types'
+import { InclusionProof } from '@storacha/capabilities/types'
+import { Result } from '../types.js'
 
 // Connectors
 
@@ -68,7 +68,7 @@ export enum AggregatorPieceStoreRecordStatus {
  * Custom InclusionStoreRecord given we need to store inclusion proof separately.
  */
 
-export interface AggregatorInclusionRecord extends Omit<import('@web3-storage/filecoin-api/aggregator/api').InclusionRecord, 'inclusion'> {
+export interface AggregatorInclusionRecord extends Omit<import('@storacha/filecoin-api/aggregator/api').InclusionRecord, 'inclusion'> {
   inclusion: Link
 }
 

@@ -2,10 +2,10 @@ import prettyMilliseconds from 'pretty-ms'
 
 /**
  * @typedef {import('@web3-storage/data-segment').PieceLink} PieceLink
- * @typedef {import('@web3-storage/filecoin-api/aggregator/api').AggregateStore} AggregatorAggregateStore
- * @typedef {import('@web3-storage/filecoin-api/dealer/api').AggregateStore} DealerAggregateStore
- * @typedef {import('@web3-storage/filecoin-api/dealer/api').AggregateRecord} AggregateRecord
- * 
+ * @typedef {import('@storacha/filecoin-api/aggregator/api').AggregateStore} AggregatorAggregateStore
+ * @typedef {import('@storacha/filecoin-api/dealer/api').AggregateStore} DealerAggregateStore
+ * @typedef {import('@storacha/filecoin-api/dealer/api').AggregateRecord} AggregateRecord
+ *
  * @typedef {object} MonitorContext
  * @property {AggregatorAggregateStore} context.aggregatorAggregateStore
  * @property {DealerAggregateStore} context.dealerAggregateStore
@@ -13,7 +13,7 @@ import prettyMilliseconds from 'pretty-ms'
  * @property {number} context.minPieceWarnThresholdMs
  * @property {number} context.aggregateMonitorThresholdMs
  * @property {URL} context.monitoringNotificationsUrl
- * 
+ *
  * @typedef {object} Alert
  * @property {PieceLink} aggregate
  * @property {number} duration
@@ -22,17 +22,17 @@ import prettyMilliseconds from 'pretty-ms'
 
 /**
  * On CRON tick, get aggregates without deals, and verify if thresholds are met to notify monitoring.
- * 
+ *
  * @param {MonitorContext} context
  */
 export async function dealMonitorAlertTick (context) {
   // Get offered deals pending approval/rejection
   const offeredAggregates = await context.dealerAggregateStore.query({
-    status: 'offered',
+    status: 'offered'
   })
   if (offeredAggregates.error) {
     return {
-      error: offeredAggregates.error,
+      error: offeredAggregates.error
     }
   }
 
@@ -40,32 +40,39 @@ export async function dealMonitorAlertTick (context) {
   const offeredAggregatesToMonitor = []
   const currentTime = Date.now()
   for (const offeredAggregate of offeredAggregates.ok.results) {
-    const offerTime = (new Date(offeredAggregate.insertedAt)).getTime()
+    const offerTime = new Date(offeredAggregate.insertedAt).getTime()
     // Monitor if current time is bigger than offer time + monitor threshold
-    if (currentTime > (offerTime + context.aggregateMonitorThresholdMs)) {
+    if (currentTime > offerTime + context.aggregateMonitorThresholdMs) {
       offeredAggregatesToMonitor.push(offeredAggregate)
     }
   }
 
   // Get aggregates duration
   const monitoredAggregatesResponse = await Promise.all(
-    offeredAggregatesToMonitor.map(aggregate => monitorAggregate(aggregate, context))
+    offeredAggregatesToMonitor.map((aggregate) =>
+      monitorAggregate(aggregate, context)
+    )
   )
   // Fail if any failed to get information
-  const monitoredAggregatesErrorResponse = monitoredAggregatesResponse.find(r => r?.error)
+  const monitoredAggregatesErrorResponse = monitoredAggregatesResponse.find(
+    (r) => r?.error
+  )
   if (monitoredAggregatesErrorResponse) {
     return {
       error: monitoredAggregatesErrorResponse.error
     }
   }
 
-  const alerts = /** @typedef {Alert[]} */ ([])
+  const alerts = /** @typedef {Alert[]} */ []
   // Verify if monitored aggregates should create notifications
   for (const res of monitoredAggregatesResponse) {
     // @ts-ignore if not ok, should have failed before
     const duration = /** @type {number} */ (res.ok?.duration)
     // @ts-ignore if not ok, should have failed before
-    const aggregate = /** @type {import('@web3-storage/data-segment').PieceLink} */ (res.ok?.aggregate)
+    const aggregate =
+      /** @type {import('@web3-storage/data-segment').PieceLink} */ (
+        res.ok?.aggregate
+      )
 
     if (duration > context.minPieceCriticalThresholdMs) {
       alerts.push({
@@ -92,19 +99,18 @@ export async function dealMonitorAlertTick (context) {
 
   // Send alerts
   const alertPayload = getAlertPayload(alerts)
-  const alertResponse = await fetch(
-    context.monitoringNotificationsUrl,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(alertPayload)
-    }
-  )
+  const alertResponse = await fetch(context.monitoringNotificationsUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(alertPayload)
+  })
   if (!alertResponse.ok) {
     return {
-      error: new Error(`failed to send alert to ${context.monitoringNotificationsUrl} with ${alerts.length}`)
+      error: new Error(
+        `failed to send alert to ${context.monitoringNotificationsUrl} with ${alerts.length}`
+      )
     }
   }
 
@@ -131,7 +137,7 @@ async function monitorAggregate (aggregateRecord, context) {
 
   // Get aggregate current duration
   const currentTime = Date.now()
-  const offerTime = (new Date(getAggregateInfo.ok.minPieceInsertedAt)).getTime()
+  const offerTime = new Date(getAggregateInfo.ok.minPieceInsertedAt).getTime()
 
   return {
     ok: {
@@ -151,11 +157,11 @@ async function monitorAggregate (aggregateRecord, context) {
  */
 function getAlertPayload (alerts) {
   return {
-    alerts: alerts.map(a => ({
+    alerts: alerts.map((a) => ({
       labels: {
         aggregate: a.aggregate.toString(),
         duration: prettyMilliseconds(a.duration),
-        severity: a.severity,
+        severity: a.severity
       },
       status: 'firing',
       fingerprint: a.aggregate.toString()
@@ -163,7 +169,7 @@ function getAlertPayload (alerts) {
     status: 'firing',
     version: '4',
     // eslint-disable-next-line no-useless-escape
-    groupKey: '{}:{alertname=\"FilecoinDealDelay\"}',
+    groupKey: '{}:{alertname="FilecoinDealDelay"}',
     receiver: 'combo',
     groupLabels: {
       alertname: 'FilecoinDealDelay'

@@ -1,4 +1,4 @@
-import { test as filecoinApiTest } from '@web3-storage/filecoin-api/test'
+import { test as filecoinApiTest } from '@storacha/filecoin-api/test'
 import * as Signer from '@ucanto/principal/ed25519'
 import { Consumer } from 'sqs-consumer'
 import pWaitFor from 'p-wait-for'
@@ -7,22 +7,35 @@ import { fromString } from 'uint8arrays/from-string'
 import { decode as JSONdecode } from '@ipld/dag-json'
 
 import { tesWorkflowWithMultipleQueues as test } from './helpers/context.js'
-import { getMockService, getConnection } from '@web3-storage/filecoin-api/test/context/service'
-import { createDynamodDb, createS3, createSQS, createQueue } from './helpers/resources.js'
+import {
+  getMockService,
+  getConnection
+} from '@storacha/filecoin-api/test/context/service'
+import {
+  createDynamodDb,
+  createS3,
+  createSQS,
+  createQueue
+} from './helpers/resources.js'
 import { getStores, getQueues } from './helpers/aggregator-context.js'
 
 /**
  * @typedef {import('./helpers/context.js').QueueContext} QueueContext
  */
 
-const queueNames = ['pieceQueue', 'bufferQueue', 'aggregateOfferQueue', 'pieceAcceptQueue']
+const queueNames = [
+  'pieceQueue',
+  'bufferQueue',
+  'aggregateOfferQueue',
+  'pieceAcceptQueue'
+]
 
 test.before(async (t) => {
   await delay(1000)
 
   const { client: sqsClient } = await createSQS()
   const { client: s3Client, stop: s3Stop } = await createS3({ port: 9000 })
-  const { client: dynamoClient, stop: dynamoStop} = await createDynamodDb()
+  const { client: dynamoClient, stop: dynamoStop } = await createDynamodDb()
 
   Object.assign(t.context, {
     s3: s3Client,
@@ -35,7 +48,7 @@ test.before(async (t) => {
   })
 })
 
-test.beforeEach(async t => {
+test.beforeEach(async (t) => {
   await delay(1000)
 
   /** @type {Record<string, QueueContext>} */
@@ -49,7 +62,7 @@ test.beforeEach(async t => {
     queuedMessages.set(name, [])
 
     const queueConsumer = Consumer.create({
-      queueUrl: queueUrl,
+      queueUrl,
       sqs: t.context.sqsClient,
       handleMessage: (message) => {
         // @ts-expect-error may not have body
@@ -62,9 +75,9 @@ test.beforeEach(async t => {
     })
 
     queues[name] = {
-      queueName: queueName,
-      queueUrl: queueUrl,
-      queueConsumer,
+      queueName,
+      queueUrl,
+      queueConsumer
     }
   }
 
@@ -79,24 +92,24 @@ test.beforeEach(async t => {
   })
 })
 
-test.afterEach(async t => {
+test.afterEach(async (t) => {
   for (const [, q] of Object.entries(t.context.queues)) {
     q.queueConsumer.stop()
     await delay(1000)
   }
 })
 
-test.after(async t => {
+test.after(async (t) => {
   await t.context.stop()
 })
 
 for (const [title, unit] of Object.entries(filecoinApiTest.events.aggregator)) {
   const define = title.startsWith('only ')
-    // eslint-disable-next-line no-only-tests/no-only-tests
-    ? test.only
+    ? // eslint-disable-next-line no-only-tests/no-only-tests
+    test.only
     : title.startsWith('skip ')
-    ? test.skip
-    : test
+      ? test.skip
+      : test
 
   define(title, async (t) => {
     const queues = getQueues(t.context)
@@ -118,7 +131,7 @@ for (const [title, unit] of Object.entries(filecoinApiTest.events.aggregator)) {
         equal: (actual, expect, message) =>
           t.is(actual, expect, message ? String(message) : undefined),
         deepEqual: (actual, expect, message) =>
-          t.deepEqual(actual, expect, message ? String(message) : undefined),
+          t.deepEqual(actual, expect, message ? String(message) : undefined)
       },
       {
         id: aggregatorSigner,
@@ -129,27 +142,27 @@ for (const [title, unit] of Object.entries(filecoinApiTest.events.aggregator)) {
           invocationConfig: {
             issuer: aggregatorSigner,
             with: aggregatorSigner.did(),
-            audience: dealerSigner,
-          },
+            audience: dealerSigner
+          }
         },
         aggregatorService: {
           connection: aggregatorConnection,
           invocationConfig: {
             issuer: aggregatorSigner,
             with: aggregatorSigner.did(),
-            audience: aggregatorSigner,
-          },
+            audience: aggregatorSigner
+          }
         },
         errorReporter: {
-          catch(error) {
+          catch (error) {
             t.fail(error.message)
-          },
+          }
         },
         service,
         config: {
           maxAggregateSize: 2 ** 35,
           minAggregateSize: 2 ** 34,
-          minUtilizationFactor: 4,
+          minUtilizationFactor: 4
         },
         queuedMessages: t.context.queuedMessages,
         validateAuthorization: () => ({ ok: {} })

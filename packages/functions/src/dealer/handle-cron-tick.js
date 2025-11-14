@@ -6,15 +6,18 @@ import { fromString } from 'uint8arrays/from-string'
 import * as DID from '@ipld/dag-ucan/did'
 
 import { createClient as createAggregateStoreClient } from '@w3filecoin/core/src/store/dealer-aggregate-store.js'
-import { getServiceConnection, getServiceSigner } from '@w3filecoin/core/src/service.js'
-import * as dealerEvents from '@web3-storage/filecoin-api/dealer/events'
+import {
+  getServiceConnection,
+  getServiceSigner
+} from '@w3filecoin/core/src/service.js'
+import * as dealerEvents from '@storacha/filecoin-api/dealer/events'
 
 import { mustGetEnv } from '../utils.js'
 
 Sentry.AWSLambda.init({
   environment: process.env.SST_STAGE,
   dsn: process.env.SENTRY_DSN,
-  tracesSampleRate: 0,
+  tracesSampleRate: 0
 })
 
 async function handleEvent () {
@@ -24,7 +27,7 @@ async function handleEvent () {
     delegatedProof,
     serviceUrl,
     aggregateStoreTableName,
-    aggregateStoreTableRegion,
+    aggregateStoreTableRegion
   } = getEnv()
   const { DEALER_PRIVATE_KEY: privateKey } = Config
   let issuer = getServiceSigner({
@@ -36,9 +39,11 @@ async function handleEvent () {
   })
   const proofs = []
   if (delegatedProof) {
-    const proof = await Delegation.extract(fromString(delegatedProof, 'base64pad'))
-      if (!proof.ok) throw new Error('failed to extract proof', { cause: proof.error })
-      proofs.push(proof.ok)
+    const proof = await Delegation.extract(
+      fromString(delegatedProof, 'base64pad')
+    )
+    if (!proof.ok) { throw new Error('failed to extract proof', { cause: proof.error }) }
+    proofs.push(proof.ok)
   } else {
     // if no proofs, we must be using the service private key to sign
     issuer = issuer.withDID(DID.parse(did).did())
@@ -53,11 +58,14 @@ async function handleEvent () {
         with: issuer.did()
       }
     },
-    aggregateStore: createAggregateStoreClient({
-      region: aggregateStoreTableRegion
-    }, {
-      tableName: aggregateStoreTableName.tableName
-    })
+    aggregateStore: createAggregateStoreClient(
+      {
+        region: aggregateStoreTableRegion
+      },
+      {
+        tableName: aggregateStoreTableName.tableName
+      }
+    )
   }
 
   // Types of parameters 'request' and 'request' are incompatible.
@@ -84,7 +92,7 @@ function getEnv () {
     serviceUrl: mustGetEnv('SERVICE_URL'),
     delegatedProof: process.env.PROOF,
     aggregateStoreTableName: Table['dealer-aggregate-store'],
-    aggregateStoreTableRegion: mustGetEnv('AWS_REGION'),
+    aggregateStoreTableRegion: mustGetEnv('AWS_REGION')
   }
 }
 

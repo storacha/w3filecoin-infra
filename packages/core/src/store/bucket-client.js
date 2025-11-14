@@ -4,7 +4,10 @@ import {
   HeadObjectCommand
 } from '@aws-sdk/client-s3'
 import pRetry from 'p-retry'
-import { RecordNotFound, StoreOperationFailed } from '@web3-storage/filecoin-api/errors'
+import {
+  RecordNotFound,
+  StoreOperationFailed
+} from '@storacha/filecoin-api/errors'
 
 import { connectBucket } from './index.js'
 
@@ -24,7 +27,7 @@ import { connectBucket } from './index.js'
  * @param {(key: Key) => string} context.encodeKey
  * @param {(encodedRecord: BucketStoreRecord) => Record} context.decodeRecord
  * @param {(res: GetObjectCommandOutput) => Promise<string | Uint8Array>} context.decodeBucketResponse
- * @returns {import('@web3-storage/filecoin-api/types').Store<Key, Record>}
+ * @returns {import('@storacha/filecoin-api/types').Store<Key, Record>}
  */
 export function createBucketClient (conf, context) {
   const bucketClient = connectBucket(conf)
@@ -41,7 +44,8 @@ export function createBucketClient (conf, context) {
       // retry to avoid throttling errors
       try {
         await pRetry(() => bucketClient.send(putCmd), {
-          onFailedAttempt: err => console.warn(`failed to put object: ${key}`, err)
+          onFailedAttempt: (err) =>
+            console.warn(`failed to put object: ${key}`, err)
         })
       } catch (/** @type {any} */ error) {
         return {
@@ -57,7 +61,7 @@ export function createBucketClient (conf, context) {
       const encodedKey = context.encodeKey(key)
       const getCmd = new GetObjectCommand({
         Bucket: context.name,
-        Key: encodedKey,
+        Key: encodedKey
       })
 
       let res
@@ -91,7 +95,7 @@ export function createBucketClient (conf, context) {
     has: async (key) => {
       const getCmd = new HeadObjectCommand({
         Bucket: context.name,
-        Key: context.encodeKey(key),
+        Key: context.encodeKey(key)
       })
 
       try {

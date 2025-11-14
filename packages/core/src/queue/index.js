@@ -4,7 +4,7 @@ import { SQSClient } from '@aws-sdk/client-sqs'
 const sqsClients = {}
 
 /**
- * @param {import('./types.js').QueueConnect | SQSClient} target 
+ * @param {import('./types.js').QueueConnect | SQSClient} target
  */
 export function connectQueue (target) {
   if (target instanceof SQSClient) {

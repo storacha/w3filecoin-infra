@@ -18,15 +18,18 @@ import { createClient as createBufferQueueClient } from '@w3filecoin/core/src/qu
 import { createClient as createAggregateOfferQueueClient } from '@w3filecoin/core/src/queue/aggregate-offer-queue.js'
 import { createClient as createPieceAcceptQueueClient } from '@w3filecoin/core/src/queue/piece-accept-queue.js'
 // ucanto server
-import { getServiceSigner, getPrincipal } from '@w3filecoin/core/src/service.js'
-import { createServer } from '@web3-storage/filecoin-api/aggregator/service'
+import {
+  getServiceSigner,
+  getPrincipal
+} from '@w3filecoin/core/src/service.js'
+import { createServer } from '@storacha/filecoin-api/aggregator/service'
 
 import { mustGetEnv } from '../utils.js'
 
 Sentry.AWSLambda.init({
   environment: process.env.SST_STAGE,
   dsn: process.env.SENTRY_DSN,
-  tracesSampleRate: 0,
+  tracesSampleRate: 0
 })
 
 /**
@@ -37,10 +40,10 @@ Sentry.AWSLambda.init({
  *
  * @param {import('aws-lambda').APIGatewayProxyEventV2} request
  */
-export async function ucanInvocationRouter(request) {
+export async function ucanInvocationRouter (request) {
   if (request.body === undefined) {
     return {
-      statusCode: 400,
+      statusCode: 400
     }
   }
 
@@ -68,7 +71,7 @@ export async function ucanInvocationRouter(request) {
     return toLambdaResponse({
       status: result.error.status,
       headers: result.error.headers || {},
-      body: Buffer.from(result.error.message || ''),
+      body: Buffer.from(result.error.message || '')
     })
   }
 
@@ -114,7 +117,7 @@ function getContext () {
     aggregateOfferQueueUrl,
     aggregateOfferQueueRegion,
     pieceAcceptQueueUrl,
-    pieceAcceptQueueRegion,
+    pieceAcceptQueueRegion
   } = getLambdaEnv()
 
   return {
@@ -164,7 +167,10 @@ function getContext () {
 }
 
 function getLambdaEnv () {
-  const { AGGREGATOR_PRIVATE_KEY: privateKey, UCAN_LOG_BASIC_AUTH: ucanLogAuth } = Config
+  const {
+    AGGREGATOR_PRIVATE_KEY: privateKey,
+    UCAN_LOG_BASIC_AUTH: ucanLogAuth
+  } = Config
 
   return {
     did: mustGetEnv('DID'),
@@ -174,7 +180,9 @@ function getLambdaEnv () {
     aggregateStoreTableRegion: mustGetEnv('AWS_REGION'),
     bufferStoreBucketName: mustGetEnv('BUFFER_STORE_BUCKET_NAME'),
     bufferStoreBucketRegion: mustGetEnv('AWS_REGION'),
-    inclusionProofStoreBucketName: mustGetEnv('INCLUSION_PROOF_STORE_BUCKET_NAME'),
+    inclusionProofStoreBucketName: mustGetEnv(
+      'INCLUSION_PROOF_STORE_BUCKET_NAME'
+    ),
     inclusionProofStoreBucketRegion: mustGetEnv('AWS_REGION'),
     inclusionStoreTableName: Table['aggregator-inclusion-store'].tableName,
     inclusionStoreTableRegion: mustGetEnv('AWS_REGION'),
@@ -196,12 +204,12 @@ function getLambdaEnv () {
 /**
  * @param {import('@ucanto/core').API.HTTPResponse} response
  */
-export function toLambdaResponse({ status = 200, headers, body }) {
+export function toLambdaResponse ({ status = 200, headers, body }) {
   return {
     statusCode: status,
     headers,
     body: Buffer.from(body).toString('base64'),
-    isBase64Encoded: true,
+    isBase64Encoded: true
   }
 }
 
@@ -210,7 +218,7 @@ export function toLambdaResponse({ status = 200, headers, body }) {
  */
 export const fromLambdaRequest = (request) => ({
   headers: /** @type {Record<string, string>} */ (request.headers),
-  body: Buffer.from(request.body || '', 'base64'),
+  body: Buffer.from(request.body || '', 'base64')
 })
 
 export const handler = Sentry.AWSLambda.wrapHandler(ucanInvocationRouter)

@@ -7,14 +7,14 @@ import * as Server from '@ucanto/server'
 import { connect as ucanLogConnect } from '@w3filecoin/core/src/ucan-log.js'
 import { createClient } from '@w3filecoin/core/src/store/deal-store.js'
 import { getServiceSigner } from '@w3filecoin/core/src/service.js'
-import { createServer } from '@web3-storage/filecoin-api/deal-tracker/service'
+import { createServer } from '@storacha/filecoin-api/deal-tracker/service'
 
 import { mustGetEnv } from '../utils.js'
 
 Sentry.AWSLambda.init({
   environment: process.env.SST_STAGE,
   dsn: process.env.SENTRY_DSN,
-  tracesSampleRate: 0,
+  tracesSampleRate: 0
 })
 
 /**
@@ -25,17 +25,13 @@ Sentry.AWSLambda.init({
  *
  * @param {import('aws-lambda').APIGatewayProxyEventV2} request
  */
-export async function ucanInvocationRouter(request) {
-  const {
-    did,
-    ucanLogUrl,
-    dealStoreTableName,
-    dealStoreTableRegion
-  } = getLambdaEnv()
+export async function ucanInvocationRouter (request) {
+  const { did, ucanLogUrl, dealStoreTableName, dealStoreTableRegion } =
+    getLambdaEnv()
 
   if (request.body === undefined) {
     return {
-      statusCode: 400,
+      statusCode: 400
     }
   }
 
@@ -47,11 +43,14 @@ export async function ucanInvocationRouter(request) {
 
   // Context
   const serviceSigner = getServiceSigner({ did, privateKey })
-  const dealStore = createClient({
-    region: dealStoreTableRegion
-  }, {
-    tableName: dealStoreTableName.tableName
-  })
+  const dealStore = createClient(
+    {
+      region: dealStoreTableRegion
+    },
+    {
+      tableName: dealStoreTableName.tableName
+    }
+  )
 
   const server = createServer({
     id: serviceSigner,
@@ -74,7 +73,7 @@ export async function ucanInvocationRouter(request) {
     return toLambdaResponse({
       status: result.error.status,
       headers: result.error.headers || {},
-      body: Buffer.from(result.error.message || ''),
+      body: Buffer.from(result.error.message || '')
     })
   }
 
@@ -103,19 +102,19 @@ function getLambdaEnv () {
     did: mustGetEnv('DID'),
     ucanLogUrl: mustGetEnv('UCAN_LOG_URL'),
     dealStoreTableName: Table['deal-tracker-deal-store-v1'],
-    dealStoreTableRegion: mustGetEnv('AWS_REGION'),
+    dealStoreTableRegion: mustGetEnv('AWS_REGION')
   }
 }
 
 /**
  * @param {import('@ucanto/core').API.HTTPResponse} response
  */
-export function toLambdaResponse({ status = 200, headers, body }) {
+export function toLambdaResponse ({ status = 200, headers, body }) {
   return {
     statusCode: status,
     headers,
     body: Buffer.from(body).toString('base64'),
-    isBase64Encoded: true,
+    isBase64Encoded: true
   }
 }
 
@@ -124,7 +123,7 @@ export function toLambdaResponse({ status = 200, headers, body }) {
  */
 export const fromLambdaRequest = (request) => ({
   headers: /** @type {Record<string, string>} */ (request.headers),
-  body: Buffer.from(request.body || '', 'base64'),
+  body: Buffer.from(request.body || '', 'base64')
 })
 
 export const handler = Sentry.AWSLambda.wrapHandler(ucanInvocationRouter)

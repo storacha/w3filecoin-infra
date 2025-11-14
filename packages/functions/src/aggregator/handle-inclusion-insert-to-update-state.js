@@ -4,19 +4,19 @@ import { unmarshall } from '@aws-sdk/util-dynamodb'
 
 import { decodeRecord } from '@w3filecoin/core/src/store/aggregator-inclusion-store.js'
 import { createClient as createPieceStoreClient } from '@w3filecoin/core/src/store/aggregator-piece-store.js'
-import * as aggregatorEvents from '@web3-storage/filecoin-api/aggregator/events'
+import * as aggregatorEvents from '@storacha/filecoin-api/aggregator/events'
 
 import { mustGetEnv } from '../utils.js'
 
 Sentry.AWSLambda.init({
   environment: process.env.SST_STAGE,
   dsn: process.env.SENTRY_DSN,
-  tracesSampleRate: 0,
+  tracesSampleRate: 0
 })
 
 /**
- * @typedef {import('@w3filecoin/core/src/store/types').AggregatorInclusionRecord} AggregatorInclusionRecord
- * @typedef {import('@w3filecoin/core/src/store/types').AggregatorInclusionStoreRecord} AggregatorInclusionStoreRecord
+ * @typedef {import('@w3filecoin/core/src/store/types.js').AggregatorInclusionRecord} AggregatorInclusionRecord
+ * @typedef {import('@w3filecoin/core/src/store/types.js').AggregatorInclusionStoreRecord} AggregatorInclusionStoreRecord
  */
 
 /**
@@ -43,7 +43,8 @@ async function handleInclusionInsertToUpdateState (event) {
   const storeRecord = unmarshall(eventRawRecords[0].new)
   const record = decodeRecord(storeRecord)
 
-  const { ok, error } = await aggregatorEvents.handleInclusionInsertToUpdateState(context, record)
+  const { ok, error } =
+    await aggregatorEvents.handleInclusionInsertToUpdateState(context, record)
   if (error) {
     return {
       statusCode: 500,
@@ -61,17 +62,14 @@ async function handleInclusionInsertToUpdateState (event) {
  * @param {import('aws-lambda').DynamoDBStreamEvent} event
  */
 function parseDynamoDbEvent (event) {
-  return event.Records.map(r => ({
+  return event.Records.map((r) => ({
     new: r.dynamodb?.NewImage,
     old: r.dynamodb?.OldImage
   }))
 }
 
 function getContext () {
-  const {
-    pieceStoreTableName,
-    pieceStoreTableRegion,
-  } = getEnv()
+  const { pieceStoreTableName, pieceStoreTableRegion } = getEnv()
 
   return {
     pieceStore: createPieceStoreClient(
@@ -87,8 +85,10 @@ function getContext () {
 function getEnv () {
   return {
     pieceStoreTableName: Table['aggregator-piece-store'].tableName,
-    pieceStoreTableRegion: mustGetEnv('AWS_REGION'),
+    pieceStoreTableRegion: mustGetEnv('AWS_REGION')
   }
 }
 
-export const main = Sentry.AWSLambda.wrapHandler(handleInclusionInsertToUpdateState)
+export const main = Sentry.AWSLambda.wrapHandler(
+  handleInclusionInsertToUpdateState
+)

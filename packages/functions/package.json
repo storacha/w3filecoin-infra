@@ -6,21 +6,25 @@
     "typecheck": "tsc --build"
   },
   "dependencies": {
-    "@ipld/dag-ucan": "^3.4.0",
-    "@ucanto/core": "^10.0.1",
-    "@ucanto/server": "^10.0.0",
-    "@ucanto/transport": "^9.1.1",
-    "@w3filecoin/core": "*",
-    "@web3-storage/data-segment": "^5.3.0",
-    "@web3-storage/filecoin-api": "^7.3.2",
-    "@web3-storage/filecoin-client": "^3.3.4",
-    "lru-cache": "^11.0.1",
-    "multiformats": "^13.3.0",
-    "uint8arrays": "^4.0.6"
+    "@aws-sdk/client-dynamodb": "catalog:",
+    "@aws-sdk/util-dynamodb": "catalog:",
+    "@ipld/dag-ucan": "catalog:",
+    "@storacha/filecoin-api": "catalog:",
+    "@storacha/filecoin-client": "catalog:",
+    "@types/aws-lambda": "catalog:",
+    "@ucanto/core": "catalog:",
+    "@ucanto/server": "catalog:",
+    "@ucanto/transport": "catalog:",
+    "@w3filecoin/core": "workspace:^",
+    "@web3-storage/data-segment": "catalog:",
+    "lru-cache": "catalog:",
+    "multiformats": "catalog:",
+    "uint8arrays": "catalog:"
   },
   "devDependencies": {
-    "@sentry/serverless": "7.52.1",
-    "sst": "^2.8.3",
-    "typescript": "^5.0.4"
+    "@sentry/serverless": "catalog:",
+    "aws-lambda": "catalog:",
+    "sst": "catalog:",
+    "typescript": "catalog:"
   }
 }

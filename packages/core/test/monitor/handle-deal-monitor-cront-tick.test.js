@@ -1,11 +1,14 @@
 import delay from 'delay'
 import * as Signer from '@ucanto/principal/ed25519'
-import { randomAggregate } from '@web3-storage/filecoin-api/test'
+import { randomAggregate } from '@storacha/filecoin-api/test'
 import { CBOR } from '@ucanto/server'
 
 import { createClient as createAggregatorAggregateStoreClient } from '../../src/store/aggregator-aggregate-store.js'
 import { createClient as createDealerAggregateStoreClient } from '../../src/store/dealer-aggregate-store.js'
-import { dealerAggregateStoreTableProps, aggregatorAggregateStoreTableProps } from '../../src/store/index.js'
+import {
+  dealerAggregateStoreTableProps,
+  aggregatorAggregateStoreTableProps
+} from '../../src/store/index.js'
 
 import * as dealMonitorAlertTick from '../../src/monitor/deal-monitor-alert-tick.js'
 
@@ -13,7 +16,7 @@ import { testStore as test } from '../helpers/context.js'
 import { createDynamodDb, createTable } from '../helpers/resources.js'
 
 test.before(async (t) => {
-  const { client: dynamoClient, stop: dynamoStop} = await createDynamodDb()
+  const { client: dynamoClient, stop: dynamoStop } = await createDynamodDb()
 
   Object.assign(t.context, {
     dynamoClient,
@@ -23,12 +26,12 @@ test.before(async (t) => {
   })
 })
 
-test.after(async t => {
+test.after(async (t) => {
   await t.context.stop()
   await delay(1000)
 })
 
-test('handles deal monitor tick without aggregates available', async t => {
+test('handles deal monitor tick without aggregates available', async (t) => {
   const context = await getContext(t.context)
 
   const tickRes = await dealMonitorAlertTick.dealMonitorAlertTick({
@@ -42,7 +45,7 @@ test('handles deal monitor tick without aggregates available', async t => {
   t.is(tickRes.ok?.alerts.length, 0)
 })
 
-test('handles deal monitor tick with aggregates in warn type', async t => {
+test('handles deal monitor tick with aggregates in warn type', async (t) => {
   const context = await getContext(t.context)
   const storefront = await Signer.generate()
   const group = storefront.did()
@@ -52,12 +55,10 @@ test('handles deal monitor tick with aggregates in warn type', async t => {
   const buffer = {
     pieces: pieces.map((p) => ({
       piece: p.link,
-      insertedAt: new Date(
-        pieceInsertTime
-      ).toISOString(),
-      policy: 0,
+      insertedAt: new Date(pieceInsertTime).toISOString(),
+      policy: 0
     })),
-    group,
+    group
   }
   const block = await CBOR.write(buffer)
   // Store aggregate record into store
@@ -71,7 +72,7 @@ test('handles deal monitor tick with aggregates in warn type', async t => {
     buffer: block.cid,
     group,
     insertedAt: new Date().toISOString(),
-    minPieceInsertedAt: new Date().toISOString(),
+    minPieceInsertedAt: new Date().toISOString()
   })
   t.assert(aggregatePutRes.ok)
 
@@ -81,7 +82,7 @@ test('handles deal monitor tick with aggregates in warn type', async t => {
     pieces: piecesBlock.cid,
     status: 'offered',
     insertedAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   })
   t.assert(putRes.ok)
 
@@ -100,7 +101,7 @@ test('handles deal monitor tick with aggregates in warn type', async t => {
   t.assert(tickRes.ok?.alerts[0].aggregate.equals(aggregate.link))
 })
 
-test('handles deal monitor tick with aggregates in critical type', async t => {
+test('handles deal monitor tick with aggregates in critical type', async (t) => {
   const context = await getContext(t.context)
   const storefront = await Signer.generate()
   const group = storefront.did()
@@ -110,12 +111,10 @@ test('handles deal monitor tick with aggregates in critical type', async t => {
   const buffer = {
     pieces: pieces.map((p) => ({
       piece: p.link,
-      insertedAt: new Date(
-        pieceInsertTime
-      ).toISOString(),
-      policy: 0,
+      insertedAt: new Date(pieceInsertTime).toISOString(),
+      policy: 0
     })),
-    group,
+    group
   }
   const block = await CBOR.write(buffer)
   // Store aggregate record into store
@@ -129,7 +128,7 @@ test('handles deal monitor tick with aggregates in critical type', async t => {
     buffer: block.cid,
     group,
     insertedAt: new Date().toISOString(),
-    minPieceInsertedAt: new Date().toISOString(),
+    minPieceInsertedAt: new Date().toISOString()
   })
   t.assert(aggregatePutRes.ok)
 
@@ -139,7 +138,7 @@ test('handles deal monitor tick with aggregates in critical type', async t => {
     pieces: piecesBlock.cid,
     status: 'offered',
     insertedAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   })
   t.assert(putRes.ok)
 
@@ -158,7 +157,7 @@ test('handles deal monitor tick with aggregates in critical type', async t => {
   t.assert(tickRes.ok?.alerts[0].aggregate.equals(aggregate.link))
 })
 
-test('handles deal monitor tick ignoring aggregates within a threshold', async t => {
+test('handles deal monitor tick ignoring aggregates within a threshold', async (t) => {
   const context = await getContext(t.context)
   const storefront = await Signer.generate()
   const group = storefront.did()
@@ -168,12 +167,10 @@ test('handles deal monitor tick ignoring aggregates within a threshold', async t
   const buffer = {
     pieces: pieces.map((p) => ({
       piece: p.link,
-      insertedAt: new Date(
-        pieceInsertTime
-      ).toISOString(),
-      policy: 0,
+      insertedAt: new Date(pieceInsertTime).toISOString(),
+      policy: 0
     })),
-    group,
+    group
   }
   const block = await CBOR.write(buffer)
   // Store aggregate record into store
@@ -187,7 +184,7 @@ test('handles deal monitor tick ignoring aggregates within a threshold', async t
     buffer: block.cid,
     group,
     insertedAt: new Date().toISOString(),
-    minPieceInsertedAt: new Date().toISOString(),
+    minPieceInsertedAt: new Date().toISOString()
   })
   t.assert(aggregatePutRes.ok)
 
@@ -197,7 +194,7 @@ test('handles deal monitor tick ignoring aggregates within a threshold', async t
     pieces: piecesBlock.cid,
     status: 'offered',
     insertedAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   })
   t.assert(putRes.ok)
 
@@ -218,16 +215,27 @@ test('handles deal monitor tick ignoring aggregates within a threshold', async t
  */
 async function getContext (context) {
   const { dynamoClient } = context
-  const aggregatorAggregateStoreTableName = await createTable(dynamoClient, aggregatorAggregateStoreTableProps)
-  const dealerAggregateStoreTableName = await createTable(dynamoClient, dealerAggregateStoreTableProps)
+  const aggregatorAggregateStoreTableName = await createTable(
+    dynamoClient,
+    aggregatorAggregateStoreTableProps
+  )
+  const dealerAggregateStoreTableName = await createTable(
+    dynamoClient,
+    dealerAggregateStoreTableProps
+  )
 
   return {
-    aggregatorAggregateStore: createAggregatorAggregateStoreClient(dynamoClient, {
-      tableName: aggregatorAggregateStoreTableName
-    }),
+    aggregatorAggregateStore: createAggregatorAggregateStoreClient(
+      dynamoClient,
+      {
+        tableName: aggregatorAggregateStoreTableName
+      }
+    ),
     dealerAggregateStore: createDealerAggregateStoreClient(dynamoClient, {
       tableName: dealerAggregateStoreTableName
     }),
-    monitoringNotificationsUrl: new URL(`http://127.0.0.1:${process.env.PORT || 9001}`)
+    monitoringNotificationsUrl: new URL(
+      `http://127.0.0.1:${process.env.PORT || 9001}`
+    )
   }
 }

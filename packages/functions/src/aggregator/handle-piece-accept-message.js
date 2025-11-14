@@ -3,7 +3,7 @@ import { Table } from 'sst/node/table'
 
 import { createClient as createInclusionProofStoreClient } from '@w3filecoin/core/src/store/aggregator-inclusion-proof-store.js'
 import { createClient as createInclusionStoreClient } from '@w3filecoin/core/src/store/aggregator-inclusion-store.js'
-import * as aggregatorEvents from '@web3-storage/filecoin-api/aggregator/events'
+import * as aggregatorEvents from '@storacha/filecoin-api/aggregator/events'
 import { decodeMessage } from '@w3filecoin/core/src/queue/piece-accept-queue.js'
 
 import { mustGetEnv } from '../utils.js'
@@ -11,7 +11,7 @@ import { mustGetEnv } from '../utils.js'
 Sentry.AWSLambda.init({
   environment: process.env.SST_STAGE,
   dsn: process.env.SENTRY_DSN,
-  tracesSampleRate: 0,
+  tracesSampleRate: 0
 })
 
 /**
@@ -34,7 +34,10 @@ async function handlePieceAcceptMessage (sqsEvent) {
     MessageBody: sqsEvent.Records[0].body
   })
 
-  const { ok, error } = await aggregatorEvents.handlePieceAcceptMessage(context, record)
+  const { ok, error } = await aggregatorEvents.handlePieceAcceptMessage(
+    context,
+    record
+  )
   if (error) {
     return {
       statusCode: 500,
@@ -53,7 +56,7 @@ function getContext () {
     inclusionStoreTableName,
     inclusionStoreTableRegion,
     inclusionProofStoreBucketName,
-    inclusionProofStoreBucketRegion,
+    inclusionProofStoreBucketRegion
   } = getEnv()
 
   return {
@@ -66,7 +69,7 @@ function getContext () {
           { name: inclusionProofStoreBucketName }
         )
       }
-    ),
+    )
   }
 }
 
@@ -77,8 +80,10 @@ function getEnv () {
   return {
     inclusionStoreTableName: Table['aggregator-inclusion-store'].tableName,
     inclusionStoreTableRegion: mustGetEnv('AWS_REGION'),
-    inclusionProofStoreBucketName: mustGetEnv('INCLUSION_PROOF_STORE_BUCKET_NAME'),
-    inclusionProofStoreBucketRegion: mustGetEnv('AWS_REGION'),
+    inclusionProofStoreBucketName: mustGetEnv(
+      'INCLUSION_PROOF_STORE_BUCKET_NAME'
+    ),
+    inclusionProofStoreBucketRegion: mustGetEnv('AWS_REGION')
   }
 }
 

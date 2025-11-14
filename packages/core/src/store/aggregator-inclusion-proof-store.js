@@ -4,7 +4,7 @@ import { parseLink } from '@ucanto/server'
 import { createBucketClient } from './bucket-client.js'
 
 /**
- * @typedef {import('@web3-storage/capabilities/types.js').InclusionProof} InclusionProof
+ * @typedef {import('@storacha/capabilities/types').InclusionProof} InclusionProof
  * @typedef {import('./types.js').InclusionProofRecord} InclusionProofRecord
  * @typedef {import('multiformats').ByteView<InclusionProof>} InclusionProofStoreRecordBody
  * @typedef {{key: string, body: InclusionProofStoreRecordBody}} InclusionProofStoreRecord
@@ -30,7 +30,7 @@ const encodeKey = (link) => {
 }
 
 /**
- * @param {import('@aws-sdk/client-s3').GetObjectCommandOutput} res 
+ * @param {import('@aws-sdk/client-s3').GetObjectCommandOutput} res
  * @returns {Promise<Uint8Array>}
  */
 const decodeBucketResponse = (res) => {
@@ -44,7 +44,7 @@ const decodeBucketResponse = (res) => {
  */
 const decodeRecord = (encodedRecord) => {
   /** @type {InclusionProof} */
-  const inclusion =  CBOR.decode(encodedRecord.body)
+  const inclusion = CBOR.decode(encodedRecord.body)
 
   return {
     block: parseLink(encodedRecord.key),

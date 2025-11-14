@@ -51,7 +51,7 @@ export const getAwsRegion = () => {
 }
 
 /**
- * @param {string} name 
+ * @param {string} name
  */
 const getTableName = (name) => {
   const stage = getStage()
@@ -59,7 +59,7 @@ const getTableName = (name) => {
 }
 
 /**
- * @param {string} name 
+ * @param {string} name
  */
 const getBucketName = (name) => {
   const stage = getStage()
@@ -72,14 +72,14 @@ export const getStoreClients = () => {
     region
   })
   const s3clientInfra = new S3Client({
-    region: 'us-east-2',
+    region: 'us-east-2'
   })
   const dynamoClient = new DynamoDBClient({
     region,
     endpoint: `https://dynamodb.${region}.amazonaws.com`
   })
 
-  const inclusionProofStore = createAggregatorInclusionProofClient(s3client, 
+  const inclusionProofStore = createAggregatorInclusionProofClient(s3client,
     { name: getBucketName('aggregator-inclusion-proof-store') }
   )
 
@@ -91,31 +91,31 @@ export const getStoreClients = () => {
       receiptStore: useReceiptStore(s3clientInfra, invocationBucketName, workflowBucketName)
     },
     aggregator: {
-      aggregateStore: createAggregatorAggregateClient(dynamoClient, 
-        { tableName: getTableName(`aggregator-aggregate-store`) }
+      aggregateStore: createAggregatorAggregateClient(dynamoClient,
+        { tableName: getTableName('aggregator-aggregate-store') }
       ),
-      bufferStore: createAggregatorBufferClient(s3client, 
-        { name: getBucketName(`aggregator-buffer-store`) }
+      bufferStore: createAggregatorBufferClient(s3client,
+        { name: getBucketName('aggregator-buffer-store') }
       ),
       pieceStore: createAggregatorPieceClient(dynamoClient,
-        { tableName: getTableName(`aggregator-piece-store`) }
+        { tableName: getTableName('aggregator-piece-store') }
       ),
       inclusionStore: createAggregatorInclusionClient(dynamoClient,
-        { tableName: getTableName(`aggregator-inclusion-store`), inclusionProofStore }
+        { tableName: getTableName('aggregator-inclusion-store'), inclusionProofStore }
       ),
-      inclusionProofStore,
+      inclusionProofStore
     },
     dealer: {
       aggregateStore: createDealerAggregateStore(dynamoClient,
-        { tableName: getTableName(`dealer-aggregate-store`) }
+        { tableName: getTableName('dealer-aggregate-store') }
       ),
       offerStore: createDealerOfferStore(s3client,
-        { name: getBucketName(`dealer-offer-store`) }
-      ),
+        { name: getBucketName('dealer-offer-store') }
+      )
     },
     tracker: {
       dealStore: createDealTrackerDealStoreClient(dynamoClient,
-        { tableName: getTableName(`deal-tracker-deal-store-v1`) }
+        { tableName: getTableName('deal-tracker-deal-store-v1') }
       )
     }
   }
@@ -129,7 +129,7 @@ export const getApiEndpoints = () => {
     return {
       aggregator: `https://${stage}.aggregator.web3.storage`,
       dealer: `https://${stage}.dealer.web3.storage`,
-      tracker: `https://${stage}.tracker.web3.storage`,
+      tracker: `https://${stage}.tracker.web3.storage`
     }
   }
 

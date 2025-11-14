@@ -4,14 +4,17 @@ import {
   DeleteObjectCommand
 } from '@aws-sdk/client-s3'
 import pRetry from 'p-retry'
-import { RecordNotFound, StoreOperationFailed } from '@web3-storage/filecoin-api/errors'
+import {
+  RecordNotFound,
+  StoreOperationFailed
+} from '@storacha/filecoin-api/errors'
 import { parseLink } from '@ucanto/server'
 
 import { createBucketClient } from './bucket-client.js'
 import { connectBucket } from './index.js'
 
 /**
- * @typedef {import('@web3-storage/filecoin-api/dealer/api').OfferDocument} OfferDocument
+ * @typedef {import('@storacha/filecoin-api/dealer/api').OfferDocument} OfferDocument
  * @typedef {import('./types.js').DealerOfferStoreRecordValue} DealerOfferStoreRecordValue
  * @typedef {string} OfferDocumentStoreRecordBody
  * @typedef {{key: string, body: OfferDocumentStoreRecordBody}} OfferDocumentStoreRecord
@@ -22,12 +25,14 @@ import { connectBucket } from './index.js'
  * @returns {OfferDocumentStoreRecord}
  */
 const encodeRecord = (record) => {
-  const body = JSON.stringify(/** @type {DealerOfferStoreRecordValue} */ ({
-    aggregate: record.value.aggregate.toString(),
-    pieces: record.value.pieces.map(p => p.toString()),
-    collection: record.value.issuer,
-    orderID: Date.now()
-  }))
+  const body = JSON.stringify(
+    /** @type {DealerOfferStoreRecordValue} */ ({
+      aggregate: record.value.aggregate.toString(),
+      pieces: record.value.pieces.map((p) => p.toString()),
+      collection: record.value.issuer,
+      orderID: Date.now()
+    })
+  )
 
   return {
     body,
@@ -44,7 +49,7 @@ const encodeKey = (key) => {
 }
 
 /**
- * @param {import('@aws-sdk/client-s3').GetObjectCommandOutput} res 
+ * @param {import('@aws-sdk/client-s3').GetObjectCommandOutput} res
  * @returns {Promise<string>}
  */
 const decodeBucketResponse = (res) => {
@@ -58,14 +63,14 @@ const decodeBucketResponse = (res) => {
  */
 const decodeRecord = (encodedRecord) => {
   /** @type {DealerOfferStoreRecordValue} */
-  const record =  JSON.parse(encodedRecord.body)
+  const record = JSON.parse(encodedRecord.body)
 
   return {
     key: encodedRecord.key,
     value: {
       aggregate: parseLink(record.aggregate),
-      pieces: record.pieces.map(p => parseLink(p)),
-      issuer: /** @type {`did:${string}:${string}`} */ (record.collection),
+      pieces: record.pieces.map((p) => parseLink(p)),
+      issuer: /** @type {`did:${string}:${string}`} */ (record.collection)
     }
   }
 }
@@ -74,7 +79,7 @@ const decodeRecord = (encodedRecord) => {
  * @param {import('./types.js').BucketConnect | import('@aws-sdk/client-s3').S3Client} conf
  * @param {object} context
  * @param {string} context.name
- * @returns {import('@web3-storage/filecoin-api/dealer/api').OfferStore<OfferDocument>}
+ * @returns {import('@storacha/filecoin-api/dealer/api').OfferStore<OfferDocument>}
  */
 export function createClient (conf, context) {
   const bucketClient = connectBucket(conf)
@@ -90,7 +95,9 @@ export function createClient (conf, context) {
     update: async (key, record) => {
       if (!record.key) {
         return {
-          error: new StoreOperationFailed('new key was not provided for update')
+          error: new StoreOperationFailed(
+            'new key was not provided for update'
+          )
         }
       }
 

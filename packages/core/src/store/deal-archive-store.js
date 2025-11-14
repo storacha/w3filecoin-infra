@@ -1,13 +1,19 @@
-import { PutObjectCommand, GetObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3'
+import {
+  PutObjectCommand,
+  GetObjectCommand,
+  HeadObjectCommand
+} from '@aws-sdk/client-s3'
 import pRetry from 'p-retry'
-import { StoreOperationFailed, RecordNotFound } from '@web3-storage/filecoin-api/errors'
+import {
+  StoreOperationFailed,
+  RecordNotFound
+} from '@storacha/filecoin-api/errors'
 
 import { connectBucket } from './index.js'
 
-
 /**
  * Spade oracle store keeps the latest known contracts that spade put together.
- * 
+ *
  * @param {import('./types.js').BucketConnect | import('@aws-sdk/client-s3').S3Client} conf
  * @param {object} context
  * @param {string} context.name
@@ -93,6 +99,6 @@ export function createClient (conf, context) {
       return {
         ok: true
       }
-    },
+    }
   }
 }

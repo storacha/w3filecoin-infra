@@ -17,30 +17,39 @@
     "test-integration": "ava --verbose --serial --timeout=600s test/*.test.js"
   },
   "devDependencies": {
-    "@ipld/dag-ucan": "3.4.0",
-    "@sentry/serverless": "^7.52.1",
-    "@tsconfig/node16": "^1.0.3",
-    "@types/git-rev-sync": "^2.0.0",
+    "@aws-sdk/client-dynamodb": "catalog:",
+    "@aws-sdk/client-s3": "catalog:",
+    "@ipld/dag-ucan": "catalog:",
+    "@sentry/serverless": "catalog:",
+    "@storacha/filecoin-api": "catalog:",
+    "@storacha/filecoin-client": "catalog:",
+    "@storacha/upload-api": "catalog:",
+    "@tsconfig/node16": "catalog:",
+    "@types/git-rev-sync": "catalog:",
     "@types/node": "^18.11.18",
-    "@ucanto/client": "^9.0.1",
-    "@ucanto/core": "^10.0.1",
-    "@ucanto/principal": "^9.0.1",
-    "@ucanto/transport": "^9.1.1",
-    "@web3-storage/filecoin-client": "^3.3.3",
-    "@web3-storage/upload-api": "17.0.0",
-    "ava": "^5.3.0",
-    "aws-cdk-lib": "2.142.1",
+    "@ucanto/client": "catalog:",
+    "@ucanto/core": "catalog:",
+    "@ucanto/interface": "catalog:",
+    "@ucanto/principal": "catalog:",
+    "@ucanto/transport": "catalog:",
+    "@w3filecoin/core": "workspace:^",
+    "@web3-storage/data-segment": "catalog:",
+    "ava": "catalog:",
+    "aws-cdk-lib": "catalog:",
     "constructs": "10.3.0",
-    "dotenv": "^16.3.1",
-    "git-rev-sync": "^3.0.2",
-    "hd-scripts": "^3.0.2",
-    "lint-staged": "^13.0.3",
-    "p-wait-for": "^5.0.0",
-    "sst": "^2.43.7",
-    "typescript": "^4.9.4"
+    "delay": "catalog:",
+    "dotenv": "catalog:",
+    "eslint": "catalog:",
+    "git-rev-sync": "catalog:",
+    "hd-scripts": "catalog:",
+    "lint-staged": "catalog:",
+    "p-retry": "catalog:",
+    "p-wait-for": "catalog:",
+    "sst": "catalog:",
+    "typescript": "catalog:"
   },
   "dependencies": {
-    "@storacha/one-webcrypto": "^1.0.1"
+    "@storacha/one-webcrypto": "catalog:"
   },
   "simple-git-hooks": {
     "pre-commit": "npx lint-staged"
@@ -75,5 +84,6 @@
   },
   "workspaces": [
     "packages/*"
-  ]
+  ],
+  "packageManager": "pnpm@10.22.0+sha512.bf049efe995b28f527fd2b41ae0474ce29186f7edcb3bf545087bd61fbbebb2bf75362d1307fda09c2d288e1e499787ac12d4fcb617a974718a6051f2eee741c"
 }

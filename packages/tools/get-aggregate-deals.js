@@ -1,7 +1,7 @@
 import { Piece } from '@web3-storage/data-segment'
 import * as DID from '@ipld/dag-ucan/did'
 import * as Signer from '@ucanto/principal/ed25519'
-import { DealTracker } from '@web3-storage/filecoin-client'
+import { DealTracker } from '@storacha/filecoin-client'
 
 const pieceString = process.argv[2]
 if (!pieceString) {
@@ -13,7 +13,7 @@ const res = await DealTracker.dealInfo(
   {
     issuer: storefront,
     with: storefront.did(),
-    audience: DID.parse('did:web:web3.storage'),
+    audience: DID.parse('did:web:web3.storage')
   },
   Piece.fromString(pieceString).link
 )

@@ -1,42 +1,49 @@
-import { PutItemCommand, GetItemCommand, QueryCommand } from '@aws-sdk/client-dynamodb'
+import {
+  PutItemCommand,
+  GetItemCommand,
+  QueryCommand
+} from '@aws-sdk/client-dynamodb'
 import { marshall, unmarshall } from '@aws-sdk/util-dynamodb'
-import { RecordNotFound, StoreOperationFailed } from '@web3-storage/filecoin-api/errors'
+import {
+  RecordNotFound,
+  StoreOperationFailed
+} from '@storacha/filecoin-api/errors'
 import { parseLink } from '@ucanto/server'
 
 import { connectTable } from './index.js'
 
 /**
- * @typedef {import('@web3-storage/filecoin-api/aggregator/api').AggregateRecord} AggregateRecord
- * @typedef {import('@web3-storage/filecoin-api/aggregator/api').AggregateRecordKey} AggregateRecordKey
- * @typedef {import('./types').InferStoreRecord<AggregateRecord>} InferStoreRecord
+ * @typedef {import('@storacha/filecoin-api/aggregator/api').AggregateRecord} AggregateRecord
+ * @typedef {import('@storacha/filecoin-api/aggregator/api').AggregateRecordKey} AggregateRecordKey
+ * @typedef {import('./types.js').InferStoreRecord<AggregateRecord>} InferStoreRecord
  * @typedef {Pick<InferStoreRecord, 'aggregate'>} AggregateStoreRecordKey
  */
 
 /**
- * @param {AggregateRecord} record 
- * @returns {InferStoreRecord} 
+ * @param {AggregateRecord} record
+ * @returns {InferStoreRecord}
  */
 const encodeRecord = (record) => {
   return {
     ...record,
     aggregate: record.aggregate.toString(),
     pieces: record.pieces.toString(),
-    buffer: record.buffer.toString(),
+    buffer: record.buffer.toString()
   }
 }
 
 /**
- * @param {AggregateRecordKey} recordKey 
- * @returns {AggregateStoreRecordKey} 
+ * @param {AggregateRecordKey} recordKey
+ * @returns {AggregateStoreRecordKey}
  */
 const encodeKey = (recordKey) => {
   return {
-    aggregate: recordKey.aggregate.toString(),
+    aggregate: recordKey.aggregate.toString()
   }
 }
 
 /**
- * @param {InferStoreRecord} encodedRecord 
+ * @param {InferStoreRecord} encodedRecord
  * @returns {AggregateRecord}
  */
 export const decodeRecord = (encodedRecord) => {
@@ -52,7 +59,7 @@ export const decodeRecord = (encodedRecord) => {
  * @param {import('./types.js').TableConnect | import('@aws-sdk/client-dynamodb').DynamoDBClient} conf
  * @param {object} context
  * @param {string} context.tableName
- * @returns {import('./types').CustomAggregateStore}
+ * @returns {import('./types.js').CustomAggregateStore}
  */
 export function createClient (conf, context) {
   const tableclient = connectTable(conf)
@@ -63,7 +70,7 @@ export function createClient (conf, context) {
         TableName: context.tableName,
         Item: marshall(encodeRecord(record), {
           removeUndefinedValues: true
-        }),
+        })
       })
 
       try {
@@ -81,7 +88,7 @@ export function createClient (conf, context) {
     get: async (key) => {
       const getCmd = new GetItemCommand({
         TableName: context.tableName,
-        Key: marshall(encodeKey(key)),
+        Key: marshall(encodeKey(key))
       })
       let res
       try {
@@ -108,7 +115,7 @@ export function createClient (conf, context) {
     has: async (key) => {
       const getCmd = new GetItemCommand({
         TableName: context.tableName,
-        Key: marshall(encodeKey(key)),
+        Key: marshall(encodeKey(key))
       })
       let res
       try {
@@ -131,8 +138,8 @@ export function createClient (conf, context) {
       }
     },
     /**
-     * 
-     * @param {{ group: string }} search 
+     *
+     * @param {{ group: string }} search
      */
     query: async (search) => {
       const queryCmd = new QueryCommand({
@@ -158,9 +165,11 @@ export function createClient (conf, context) {
       // TODO: handle pulling the entire list. currently we only support 2 providers so
       // this list should not be longer than the default page size so this is not terribly urgent.
       return {
-        ok: res.Items ? res.Items.map(item => decodeRecord(
-          /** @type {InferStoreRecord} */ (unmarshall(item))
-        )) : []
+        ok: res.Items
+          ? res.Items.map((item) =>
+            decodeRecord(/** @type {InferStoreRecord} */ (unmarshall(item)))
+          )
+          : []
       }
     }
   }

@@ -17,11 +17,11 @@ jobs:
     name: Convert PieceCID v1 to v2 with log2 size
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/setup-node@v3
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
         with:
           registry-url: 'https://registry.npmjs.org'
           node-version: 20
-          cache: 'npm'
-      - run: npm install @web3-storage/pieces
+          cache: 'pnpm'
       - name: Run job
-        run: npx @web3-storage/pieces v2 ${{ github.event.inputs.piece }} --log-size ${{ github.event.inputs.log2 }}
+        run: pnpm dlx @web3-storage/pieces v2 ${{ github.event.inputs.piece }} --log-size ${{ github.event.inputs.log2 }}

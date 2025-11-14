@@ -5,22 +5,22 @@ import anyTest from 'ava'
  * @property {string} queueName
  * @property {string} queueUrl
  * @property {import('sqs-consumer').Consumer} queueConsumer
- * 
+ *
  * @typedef {object} DbContext
  * @property {import('@aws-sdk/client-dynamodb').DynamoDBClient} dynamoClient
  * @property {string} dynamoEndpoint
- * 
+ *
  * @typedef {object} BucketContext
  * @property {import('@aws-sdk/client-s3').S3Client} s3
- * 
+ *
  * @typedef {object} MultipleQueueContext
  * @property {import('@aws-sdk/client-sqs').SQSClient} sqsClient
  * @property {Record<string, QueueContext>} queues
  * @property {Map<string, unknown[]>} queuedMessages
- * 
+ *
  * @typedef {object} Stoppable
  * @property {() => Promise<any>} stop
- * 
+ *
  * @typedef {import('ava').TestFn<any>} Test
  * @typedef {import('ava').TestFn<QueueContext & DbContext & Stoppable>} TestService
  * @typedef {import('ava').TestFn<BucketContext & DbContext & Stoppable>} TestStore

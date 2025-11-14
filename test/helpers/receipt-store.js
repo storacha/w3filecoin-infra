@@ -1,7 +1,5 @@
-import {
-  S3Client,
-} from '@aws-sdk/client-s3'
-import { StoreOperationFailed } from '@web3-storage/filecoin-api/errors'
+import { S3Client } from '@aws-sdk/client-s3'
+import { StoreOperationFailed } from '@storacha/filecoin-api/errors'
 import * as Store from './agent/store.js'
 
 /**
@@ -13,10 +11,15 @@ import * as Store from './agent/store.js'
  * @param {string} workflowBucketName
  * @param {import('@aws-sdk/client-s3').ServiceInputTypes} [options]
  */
-export function createReceiptStore(region, invocationBucketName, workflowBucketName, options = {}) {
+export function createReceiptStore (
+  region,
+  invocationBucketName,
+  workflowBucketName,
+  options = {}
+) {
   const s3client = new S3Client({
     region,
-    ...options,
+    ...options
   })
   return useReceiptStore(s3client, invocationBucketName, workflowBucketName)
 }
@@ -25,34 +28,45 @@ export function createReceiptStore(region, invocationBucketName, workflowBucketN
  * @param {S3Client} s3client
  * @param {string} invocationBucketName
  * @param {string} workflowBucketName
- * @returns {import('@web3-storage/filecoin-api/storefront/api').ReceiptStore}
+ * @returns {import('@storacha/filecoin-api/storefront/api').ReceiptStore}
  */
-export const useReceiptStore = (s3client, invocationBucketName, workflowBucketName) => {
+export const useReceiptStore = (
+  s3client,
+  invocationBucketName,
+  workflowBucketName
+) => {
   const store = Store.open({
     // @ts-ignore
     connection: { channel: s3client },
-    region: typeof s3client.config.region === 'string' ? s3client.config.region : 'us-west-2',
+    region:
+      typeof s3client.config.region === 'string'
+        ? s3client.config.region
+        : 'us-west-2',
     buckets: {
       index: { name: invocationBucketName },
-      message: { name: workflowBucketName },
+      message: { name: workflowBucketName }
     }
   })
-  
+
   return {
     put: async (record) => {
       return {
-        error: new StoreOperationFailed('no new receipt should be put by storefront')
+        error: new StoreOperationFailed(
+          'no new receipt should be put by storefront'
+        )
       }
     },
     /**
      * @param {import('@ucanto/interface').UnknownLink} taskCid
      */
-    get: (taskCid) =>  
+    get: (taskCid) =>
       // @ts-expect-error - need to align RecordNotFoundError
       Store.getReceipt(store, taskCid),
     has: async (record) => {
       return {
-        error: new StoreOperationFailed('no receipt should checked by storefront')
+        error: new StoreOperationFailed(
+          'no receipt should checked by storefront'
+        )
       }
     }
   }

@@ -1,5 +1,10 @@
 import { testDealTracker as test } from '../helpers/context.js'
-import { createS3, createBucket, createDynamodDb, createTable } from '../helpers/resources.js'
+import {
+  createS3,
+  createBucket,
+  createDynamodDb,
+  createTable
+} from '../helpers/resources.js'
 
 import { parse as parseLink } from 'multiformats/link'
 import { encode, decode } from '@ipld/dag-json'
@@ -8,34 +13,33 @@ import { dealStoreTableProps } from '../../src/store/index.js'
 import { createClient as createDealStoreClient } from '../../src/store/deal-store.js'
 import { createClient as createDealArchiveStoreClient } from '../../src/store/deal-archive-store.js'
 import * as spadeOracleSyncTick from '../../src/deal-tracker/spade-oracle-sync-tick.js'
-import { RecordNotFoundErrorName } from '@web3-storage/filecoin-api/errors'
+import { RecordNotFoundErrorName } from '@storacha/filecoin-api/errors'
 
 test.beforeEach(async (t) => {
   const dynamo = await createDynamodDb()
   Object.assign(t.context, {
     s3: (await createS3()).client,
-    dynamoClient: dynamo.client,
+    dynamoClient: dynamo.client
   })
 })
 
-test('downloads spade oracle replicas file from http server', async t => {
-  const {
-    dealStore,
-    dealArchiveStore,
-    spadeOracleUrl
-  } = await getContext(t.context)
+test('downloads spade oracle replicas file from http server', async (t) => {
+  const { dealStore, dealArchiveStore, spadeOracleUrl } = await getContext(
+    t.context
+  )
 
-  const spadeOracleSyncTickHandle = await spadeOracleSyncTick.spadeOracleSyncTick({
-    dealStore,
-    dealArchiveStore,
-    spadeOracleUrl
-  })
+  const spadeOracleSyncTickHandle =
+    await spadeOracleSyncTick.spadeOracleSyncTick({
+      dealStore,
+      dealArchiveStore,
+      spadeOracleUrl
+    })
   t.truthy(spadeOracleSyncTickHandle.ok)
   t.falsy(spadeOracleSyncTickHandle.error)
 
   // Verify spade oracle was stored for future check
   const getSpadeOracle = await dealArchiveStore.get(spadeOracleUrl.toString())
-  if (getSpadeOracle.error) { 
+  if (getSpadeOracle.error) {
     throw new Error('could get get spade oracle stored')
   }
   t.truthy(getSpadeOracle.ok)
@@ -69,20 +73,18 @@ test('downloads spade oracle replicas file from http server', async t => {
   }
 })
 
-test('gets current spade oracle state if available', async t => {
-  const {
-    dealArchiveStore,
-    spadeOracleUrl
-  } = await getContext(t.context)
+test('gets current spade oracle state if available', async (t) => {
+  const { dealArchiveStore, spadeOracleUrl } = await getContext(t.context)
   const spadeOracleId = spadeOracleUrl.toString()
   const source = encodeURIComponent(spadeOracleUrl.toString())
   const oracleContracts = getOracleContracts(source)
 
   // Try to get init state
-  const getSpadeOracleStateInit = await spadeOracleSyncTick.getCurrentDealArchive({
-    dealArchiveStore,
-    spadeOracleId,
-  })
+  const getSpadeOracleStateInit =
+    await spadeOracleSyncTick.getCurrentDealArchive({
+      dealArchiveStore,
+      spadeOracleId
+    })
   t.falsy(getSpadeOracleStateInit.ok)
   t.truthy(getSpadeOracleStateInit.error)
   t.is(getSpadeOracleStateInit.error?.name, RecordNotFoundErrorName)
@@ -97,9 +99,9 @@ test('gets current spade oracle state if available', async t => {
   // Get state and validate
   const getSpadeOracleState = await spadeOracleSyncTick.getCurrentDealArchive({
     dealArchiveStore,
-    spadeOracleId,
+    spadeOracleId
   })
-  if (getSpadeOracleState.error) { 
+  if (getSpadeOracleState.error) {
     throw new Error('could get get spade oracle stored')
   }
   t.truthy(getSpadeOracleState.ok)
@@ -111,11 +113,8 @@ test('gets current spade oracle state if available', async t => {
   }
 })
 
-test('computes diff', async t => {
-  const {
-    dealStore,
-    spadeOracleUrl
-  } = await getContext(t.context)
+test('computes diff', async (t) => {
+  const { dealStore, spadeOracleUrl } = await getContext(t.context)
 
   // Get current oracle contracts
   const source = encodeURIComponent(spadeOracleUrl.toString())
@@ -129,8 +128,10 @@ test('computes diff', async t => {
   t.truthy(putDiffInit.ok)
 
   // Verify pieces before updates
-  const alreadyExistingPieceCid = 'baga6ea4seaqhmw7z7q3jypdr54xaluhzdn6syn7ovovvjpaqul2qqenhmg43wii'
-  const newPieceCid = 'baga6ea4seaqlskmw3rlwyebtplguyvr7rmuofydmnud2o6a5soyydgcede56kkq'
+  const alreadyExistingPieceCid =
+    'baga6ea4seaqhmw7z7q3jypdr54xaluhzdn6syn7ovovvjpaqul2qqenhmg43wii'
+  const newPieceCid =
+    'baga6ea4seaqlskmw3rlwyebtplguyvr7rmuofydmnud2o6a5soyydgcede56kkq'
   const queryInitAlreadyExisting = await dealStore.query({
     piece: parseLink(alreadyExistingPieceCid)
   })
@@ -146,7 +147,8 @@ test('computes diff', async t => {
   // Create updated oracle
   const updatedPieceContracts = getOracleContracts(source)
   // Add one more contract to one existing item
-  const itemToAddContract = updatedPieceContracts.get(alreadyExistingPieceCid) || []
+  const itemToAddContract =
+    updatedPieceContracts.get(alreadyExistingPieceCid) || []
   itemToAddContract?.push({
     provider: 2095199,
     dealId: 40745773,
@@ -156,17 +158,14 @@ test('computes diff', async t => {
   updatedPieceContracts.set(alreadyExistingPieceCid, itemToAddContract)
 
   // Add new piece contracts
-  updatedPieceContracts.set(
-    newPieceCid,
-    [
-      {
-        provider: 20378,
-        dealId: 41028500,
-        expirationEpoch: 4482396,
-        source
-      }
-    ]
-  )
+  updatedPieceContracts.set(newPieceCid, [
+    {
+      provider: 20378,
+      dealId: 41028500,
+      expirationEpoch: 4482396,
+      source
+    }
+  ])
 
   const diffPieceContracts = spadeOracleSyncTick.computeDiff({
     currentPieceContracts,
@@ -197,21 +196,26 @@ test('computes diff', async t => {
   t.is(queryAfterDiffNew.ok?.results.length, 1)
 })
 
-test('converts PieceCidV1 to PieceCidV2', t => {
+test('converts PieceCidV1 to PieceCidV2', (t) => {
   /** @type {import('@web3-storage/data-segment').LegacyPieceLink} */
-  const pieceCidV1 = parseLink('baga6ea4seaqhmw7z7q3jypdr54xaluhzdn6syn7ovovvjpaqul2qqenhmg43wii')
+  const pieceCidV1 = parseLink(
+    'baga6ea4seaqhmw7z7q3jypdr54xaluhzdn6syn7ovovvjpaqul2qqenhmg43wii'
+  )
   const height = 35
 
-  const pieceCidV2 = spadeOracleSyncTick.convertPieceCidV1toPieceCidV2(pieceCidV1, height)
+  const pieceCidV2 = spadeOracleSyncTick.convertPieceCidV1toPieceCidV2(
+    pieceCidV1,
+    height
+  )
   t.falsy(pieceCidV1.equals(pieceCidV2))
 })
 
-test('converts log2pieceSize to height', t => {
+test('converts log2pieceSize to height', (t) => {
   const height = spadeOracleSyncTick.log2PieceSizeToHeight(35)
   t.is(height, 30)
 })
 /**
- * @param {string} source 
+ * @param {string} source
  */
 function getOracleContracts (source) {
   /** @type {import('../../src/deal-tracker/types.js').PieceContracts} */
