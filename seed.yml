@@ -1,4 +1,7 @@
 
 before_compile:
-  - n 18.16.0
-  - npm ci
+  - n 20.19.0
+  - npm i -g pnpm
+
+compile:
+  - pnpm install --frozen-lockfile

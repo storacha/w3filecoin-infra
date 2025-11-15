@@ -1,16 +1,16 @@
 import * as fzstd from 'fzstd'
 import { encode, decode } from '@ipld/dag-json'
-import { RecordNotFoundErrorName } from '@web3-storage/filecoin-api/errors'
+import { RecordNotFoundErrorName } from '@storacha/filecoin-api/errors'
 import { parse as parseLink } from 'multiformats/link'
 import { Piece } from '@web3-storage/data-segment'
 import { toString } from 'uint8arrays/to-string'
 import pAll from 'p-all'
 
 /**
- * @typedef {import('@web3-storage/filecoin-api/deal-tracker/api').DealStore} DealStore
- * @typedef {import('./types').PieceContracts} PieceContracts
- * @typedef {import('./types').DealArchive} DealArchive
- * @typedef {import('../store/types').DealArchiveStore} DealArchiveStore
+ * @typedef {import('@storacha/filecoin-api/deal-tracker/api').DealStore} DealStore
+ * @typedef {import('./types.js').PieceContracts} PieceContracts
+ * @typedef {import('./types.js').DealArchive} DealArchive
+ * @typedef {import('../store/types.js').DealArchiveStore} DealArchiveStore
  */
 
 /**
@@ -20,7 +20,7 @@ import pAll from 'p-all'
  * - Once both states are in memory, they are compared and a diff is generated.
  * - Diff is stored in deal store
  * - Handled new state of oracle is stored for comparison in next tick.
- * 
+ *
  * @param {object} context
  * @param {DealStore} context.dealStore
  * @param {DealArchiveStore} context.dealArchiveStore
@@ -34,7 +34,9 @@ export async function spadeOracleSyncTick ({
   // Get latest deal archive
   // TODO: consider doing a HEAD request and see if an ETAG is the same before proceeding
   // https://github.com/web3-storage/w3filecoin/issues/62
-  const fetchLatestDealArchiveRes = await fetchLatestDealArchive(spadeOracleUrl)
+  const fetchLatestDealArchiveRes = await fetchLatestDealArchive(
+    spadeOracleUrl
+  )
   if (fetchLatestDealArchiveRes.error) {
     return fetchLatestDealArchiveRes
   }
@@ -42,9 +44,12 @@ export async function spadeOracleSyncTick ({
   // Get current recorded spade oracle contracts
   const getCurrentDealArchiveRes = await getCurrentDealArchive({
     dealArchiveStore,
-    spadeOracleId: spadeOracleUrl.toString(),
+    spadeOracleId: spadeOracleUrl.toString()
   })
-  if (getCurrentDealArchiveRes.error && getCurrentDealArchiveRes.error.name !== RecordNotFoundErrorName) {
+  if (
+    getCurrentDealArchiveRes.error &&
+    getCurrentDealArchiveRes.error.name !== RecordNotFoundErrorName
+  ) {
     return getCurrentDealArchiveRes
   }
 
@@ -86,7 +91,7 @@ export async function spadeOracleSyncTick ({
   if (putUpdatedSpadeOracle.error) {
     return putUpdatedSpadeOracle
   }
-  
+
   return {
     ok: {},
     error: undefined
@@ -97,27 +102,32 @@ export async function spadeOracleSyncTick ({
  * @param {object} context
  * @param {DealStore} context.dealStore
  * @param {PieceContracts} context.diffPieceContracts
- * @returns {Promise<import('../types').Result<{}, import('@web3-storage/filecoin-api/types').StorePutError>>}
+ * @returns {Promise<import('../types.js').Result<{}, import('@storacha/filecoin-api/types').StorePutError>>}
  */
 export async function putDiffToDealStore ({ dealStore, diffPieceContracts }) {
   const tasks = Array.from(diffPieceContracts, ([pieceCidStr, contracts]) => {
-    return () => Promise.all(contracts.map(contract => {
-      /** @type {import('@web3-storage/data-segment').LegacyPieceLink} */
-      const legacyPieceCid = parseLink(pieceCidStr)
-      const insertedAt = new Date().toISOString()
-      return dealStore.put({
-        ...contract,
-        // @ts-expect-error not PieceCIDv2
-        piece: legacyPieceCid,
-        provider: `${contract.provider}`,
-        insertedAt,
-        updatedAt: insertedAt
-      })
-    }))
+    return () =>
+      Promise.all(
+        contracts.map((contract) => {
+          /** @type {import('@web3-storage/data-segment').LegacyPieceLink} */
+          const legacyPieceCid = parseLink(pieceCidStr)
+          const insertedAt = new Date().toISOString()
+          return dealStore.put({
+            ...contract,
+            // @ts-expect-error not PieceCIDv2
+            piece: legacyPieceCid,
+            provider: `${contract.provider}`,
+            insertedAt,
+            updatedAt: insertedAt
+          })
+        })
+      )
   })
 
   const res = await pAll(tasks, { concurrency: 3 })
-  const firsPutError = res.find(pieceContracts => pieceContracts.find(c => c.error))?.find(comb => comb.error)
+  const firsPutError = res
+    .find((pieceContracts) => pieceContracts.find((c) => c.error))
+    ?.find((comb) => comb.error)
   if (firsPutError?.error) {
     return {
       error: firsPutError.error
@@ -130,19 +140,19 @@ export async function putDiffToDealStore ({ dealStore, diffPieceContracts }) {
 
 /**
  * @param {object} context
- * @param {PieceContracts} context.currentPieceContracts 
- * @param {PieceContracts} context.updatedPieceContracts 
+ * @param {PieceContracts} context.currentPieceContracts
+ * @param {PieceContracts} context.updatedPieceContracts
  */
 export function computeDiff ({ currentPieceContracts, updatedPieceContracts }) {
   /** @type {PieceContracts} */
   const diff = new Map()
 
-  for (const [pieceCid, contracts] of updatedPieceContracts.entries() ) {
+  for (const [pieceCid, contracts] of updatedPieceContracts.entries()) {
     const currentContracts = currentPieceContracts.get(pieceCid) || []
     const diffContracts = []
     // Get contracts for PieceCID still not recorded
     for (const c of contracts) {
-      if (!currentContracts.find(pc => pc.dealId === c.dealId)) {
+      if (!currentContracts.find((pc) => pc.dealId === c.dealId)) {
         diffContracts.push(c)
       }
     }
@@ -158,16 +168,19 @@ export function computeDiff ({ currentPieceContracts, updatedPieceContracts }) {
  * @param {object} context
  * @param {DealArchiveStore} context.dealArchiveStore
  * @param {string} context.spadeOracleId
- * @returns {Promise<import('../types').Result<PieceContracts, Error>>}
+ * @returns {Promise<import('../types.js').Result<PieceContracts, Error>>}
  */
-export async function getCurrentDealArchive ({ dealArchiveStore, spadeOracleId }) {
+export async function getCurrentDealArchive ({
+  dealArchiveStore,
+  spadeOracleId
+}) {
   const getRes = await dealArchiveStore.get(spadeOracleId)
   if (getRes.error) {
     return getRes
   }
 
   return {
-    ok: new Map(Object.entries(decode(getRes.ok.value))),
+    ok: new Map(Object.entries(decode(getRes.ok.value)))
   }
 }
 
@@ -175,9 +188,13 @@ export async function getCurrentDealArchive ({ dealArchiveStore, spadeOracleId }
  * @param {object} context
  * @param {DealArchiveStore} context.dealArchiveStore
  * @param {string} context.spadeOracleId
- * @param {PieceContracts} context.oracleContracts 
+ * @param {PieceContracts} context.oracleContracts
  */
-async function putLatestDealArchive ({ dealArchiveStore, spadeOracleId, oracleContracts }) {
+async function putLatestDealArchive ({
+  dealArchiveStore,
+  spadeOracleId,
+  oracleContracts
+}) {
   const putRes = await dealArchiveStore.put({
     key: spadeOracleId,
     value: encode(Object.fromEntries(oracleContracts))
@@ -188,7 +205,7 @@ async function putLatestDealArchive ({ dealArchiveStore, spadeOracleId, oracleCo
 
 /**
  * @param {URL} spadeOracleUrl
- * @returns {Promise<import('../types').Result<PieceContracts, Error>>}
+ * @returns {Promise<import('../types.js').Result<PieceContracts, Error>>}
  */
 async function fetchLatestDealArchive (spadeOracleUrl) {
   /** @type {PieceContracts} */
@@ -196,7 +213,9 @@ async function fetchLatestDealArchive (spadeOracleUrl) {
   const res = await fetch(spadeOracleUrl)
   if (!res.ok) {
     return {
-      error: new Error(`unexpected response status fetching deal archive: ${res.status}`)
+      error: new Error(
+        `unexpected response status fetching deal archive: ${res.status}`
+      )
     }
   }
 
@@ -212,14 +231,17 @@ async function fetchLatestDealArchive (spadeOracleUrl) {
       parseLink(replica.piece_cid),
       log2PieceSizeToHeight(replica.piece_log2_size)
     )
-    dealMap.set(pieceCid.toString(), replica.contracts.map(c => ({
-      provider: c.provider_id,
-      dealId: c.legacy_market_id,
-      expirationEpoch: c.legacy_market_end_epoch,
-      source: spadeOracleUrl.toString()
-    })))
+    dealMap.set(
+      pieceCid.toString(),
+      replica.contracts.map((c) => ({
+        provider: c.provider_id,
+        dealId: c.legacy_market_id,
+        expirationEpoch: c.legacy_market_end_epoch,
+        source: spadeOracleUrl.toString()
+      }))
+    )
   }
-  
+
   return {
     ok: dealMap
   }
@@ -241,8 +263,8 @@ export function convertPieceCidV1toPieceCidV2 (link, height) {
 }
 
 /**
- * 
- * @param {number} log2Size 
+ *
+ * @param {number} log2Size
  */
 export function log2PieceSizeToHeight (log2Size) {
   return Piece.Size.Expanded.toHeight(2n ** BigInt(log2Size))

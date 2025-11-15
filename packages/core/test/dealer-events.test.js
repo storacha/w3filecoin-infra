@@ -1,4 +1,4 @@
-import { test as filecoinApiTest } from '@web3-storage/filecoin-api/test'
+import { test as filecoinApiTest } from '@storacha/filecoin-api/test'
 import * as Signer from '@ucanto/principal/ed25519'
 import delay from 'delay'
 
@@ -7,12 +7,20 @@ import { createClient as createOfferStoreClient } from '@w3filecoin/core/src/sto
 import { dealerAggregateStoreTableProps } from '@w3filecoin/core/src/store/index.js'
 
 import { testStore as test } from '@w3filecoin/core/test/helpers/context.js'
-import { getMockService, getConnection } from '@web3-storage/filecoin-api/test/context/service'
-import { createDynamodDb, createTable, createS3, createBucket } from '@w3filecoin/core/test/helpers/resources.js'
+import {
+  getMockService,
+  getConnection
+} from '@storacha/filecoin-api/test/context/service'
+import {
+  createDynamodDb,
+  createTable,
+  createS3,
+  createBucket
+} from '@w3filecoin/core/test/helpers/resources.js'
 
 test.before(async (t) => {
   const { client: s3Client, stop: s3Stop } = await createS3({ port: 9000 })
-  const { client: dynamoClient, stop: dynamoStop} = await createDynamodDb()
+  const { client: dynamoClient, stop: dynamoStop } = await createDynamodDb()
 
   Object.assign(t.context, {
     s3: s3Client,
@@ -24,23 +32,26 @@ test.before(async (t) => {
   })
 })
 
-test.after(async t => {
+test.after(async (t) => {
   await t.context.stop()
   await delay(1000)
 })
 
 for (const [title, unit] of Object.entries(filecoinApiTest.events.dealer)) {
   const define = title.startsWith('only ')
-    // eslint-disable-next-line no-only-tests/no-only-tests
-    ? test.only
+    ? // eslint-disable-next-line no-only-tests/no-only-tests
+    test.only
     : title.startsWith('skip ')
-    ? test.skip
-    : test
+      ? test.skip
+      : test
 
   define(title, async (t) => {
     const { dynamoClient, s3 } = t.context
     const bucketName = await createBucket(s3)
-    const tableName = await createTable(dynamoClient, dealerAggregateStoreTableProps)
+    const tableName = await createTable(
+      dynamoClient,
+      dealerAggregateStoreTableProps
+    )
 
     // context
     const dealerSigner = await Signer.generate()
@@ -64,15 +75,15 @@ for (const [title, unit] of Object.entries(filecoinApiTest.events.dealer)) {
         equal: (actual, expect, message) =>
           t.is(actual, expect, message ? String(message) : undefined),
         deepEqual: (actual, expect, message) =>
-          t.deepEqual(actual, expect, message ? String(message) : undefined),
+          t.deepEqual(actual, expect, message ? String(message) : undefined)
       },
       {
         id: dealerSigner,
         aggregateStore,
         errorReporter: {
-          catch(error) {
+          catch (error) {
             t.fail(error.message)
-          },
+          }
         },
         queuedMessages: new Map(),
         offerStore,
@@ -81,16 +92,16 @@ for (const [title, unit] of Object.entries(filecoinApiTest.events.dealer)) {
           invocationConfig: {
             issuer: dealerSigner,
             with: dealerSigner.did(),
-            audience: dealerSigner,
-          },
+            audience: dealerSigner
+          }
         },
         dealTrackerService: {
           connection: dealTrackerConnection,
           invocationConfig: {
             issuer: dealerSigner,
             with: dealerSigner.did(),
-            audience: dealTrackerSigner,
-          },
+            audience: dealTrackerSigner
+          }
         },
         service,
         validateAuthorization: () => ({ ok: {} })

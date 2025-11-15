@@ -10,7 +10,7 @@ import {
 /**
  * @param {import('sst/constructs').StackContext} properties
  */
-export function DealTrackerStack({ stack, app }) {
+export function DealTrackerStack ({ stack, app }) {
   const {
     SPADE_ORACLE_URL
   } = getDealTrackerEnv()
@@ -40,7 +40,7 @@ export function DealTrackerStack({ stack, app }) {
           environment: {
             SPADE_ORACLE_URL,
             DEAL_ARCHIVE_STORE_BUCKET_NAME: dealTrackerDealArchiveStoreBucket.bucketName,
-            DEAL_ARCHIVE_STORE_REGION: stack.region,
+            DEAL_ARCHIVE_STORE_REGION: stack.region
           },
           bind: [
             dealTrackerDealStoreTable

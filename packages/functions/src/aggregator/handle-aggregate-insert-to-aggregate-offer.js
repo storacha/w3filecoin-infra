@@ -5,22 +5,25 @@ import * as Delegation from '@ucanto/core/delegation'
 import { fromString } from 'uint8arrays/from-string'
 import * as DID from '@ipld/dag-ucan/did'
 
-import { getServiceConnection, getServiceSigner } from '@w3filecoin/core/src/service.js'
+import {
+  getServiceConnection,
+  getServiceSigner
+} from '@w3filecoin/core/src/service.js'
 import { decodeRecord } from '@w3filecoin/core/src/store/aggregator-aggregate-store.js'
 import { createClient as createBufferStoreClient } from '@w3filecoin/core/src/store/aggregator-buffer-store.js'
-import * as aggregatorEvents from '@web3-storage/filecoin-api/aggregator/events'
+import * as aggregatorEvents from '@storacha/filecoin-api/aggregator/events'
 
 import { mustGetEnv } from '../utils.js'
 
 Sentry.AWSLambda.init({
   environment: process.env.SST_STAGE,
   dsn: process.env.SENTRY_DSN,
-  tracesSampleRate: 0,
+  tracesSampleRate: 0
 })
 
 /**
- * @typedef {import('@web3-storage/filecoin-api/aggregator/api').AggregateRecord} AggregateRecord
- * @typedef {import('@w3filecoin/core/src/store/types').InferStoreRecord<AggregateRecord>} InferStoreRecord
+ * @typedef {import('@storacha/filecoin-api/aggregator/api').AggregateRecord} AggregateRecord
+ * @typedef {import('@w3filecoin/core/src/store/types.js').InferStoreRecord<AggregateRecord>} InferStoreRecord
  */
 
 /**
@@ -46,7 +49,11 @@ async function handleAggregateInsertToAggregateOffer (event) {
 
   // Get context
   const context = await getContext()
-  const { ok, error } = await aggregatorEvents.handleAggregateInsertToAggregateOffer(context, record)
+  const { ok, error } =
+    await aggregatorEvents.handleAggregateInsertToAggregateOffer(
+      context,
+      record
+    )
   if (error) {
     return {
       statusCode: 500,
@@ -64,7 +71,7 @@ async function handleAggregateInsertToAggregateOffer (event) {
  * @param {import('aws-lambda').DynamoDBStreamEvent} event
  */
 function parseDynamoDbEvent (event) {
-  return event.Records.map(r => ({
+  return event.Records.map((r) => ({
     new: r.dynamodb?.NewImage,
     old: r.dynamodb?.OldImage
   }))
@@ -77,7 +84,7 @@ async function getContext () {
     delegatedProof,
     serviceUrl,
     bufferStoreBucketName,
-    bufferStoreBucketRegion,
+    bufferStoreBucketRegion
   } = getEnv()
 
   const { AGGREGATOR_PRIVATE_KEY: privateKey } = Config
@@ -90,9 +97,11 @@ async function getContext () {
   })
   const proofs = []
   if (delegatedProof) {
-    const proof = await Delegation.extract(fromString(delegatedProof, 'base64pad'))
-      if (!proof.ok) throw new Error('failed to extract proof', { cause: proof.error })
-      proofs.push(proof.ok)
+    const proof = await Delegation.extract(
+      fromString(delegatedProof, 'base64pad')
+    )
+    if (!proof.ok) { throw new Error('failed to extract proof', { cause: proof.error }) }
+    proofs.push(proof.ok)
   } else {
     // if no proofs, we must be using the service private key to sign
     issuer = issuer.withDID(DID.parse(did).did())
@@ -110,7 +119,7 @@ async function getContext () {
         audience: connection.id,
         with: issuer.did()
       }
-    },
+    }
   }
 }
 
@@ -124,8 +133,10 @@ function getEnv () {
     serviceUrl: mustGetEnv('SERVICE_URL'),
     delegatedProof: process.env.PROOF,
     bufferStoreBucketName: mustGetEnv('BUFFER_STORE_BUCKET_NAME'),
-    bufferStoreBucketRegion: mustGetEnv('AWS_REGION'),
+    bufferStoreBucketRegion: mustGetEnv('AWS_REGION')
   }
 }
 
-export const main = Sentry.AWSLambda.wrapHandler(handleAggregateInsertToAggregateOffer)
+export const main = Sentry.AWSLambda.wrapHandler(
+  handleAggregateInsertToAggregateOffer
+)

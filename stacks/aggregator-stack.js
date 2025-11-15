@@ -14,7 +14,7 @@ import {
 /**
  * @param {import('sst/constructs').StackContext} properties
  */
-export function AggregatorStack({ stack, app }) {
+export function AggregatorStack ({ stack, app }) {
   const {
     AGGREGATOR_HOSTED_ZONE,
     AGGREGATOR_DID,
@@ -24,14 +24,15 @@ export function AggregatorStack({ stack, app }) {
     MIN_UTILIZATION_FACTOR,
     AGGREGATOR_PROOF
   } = getAggregatorEnv(stack)
-  const {
-    DEAL_API_HOSTED_ZONE,
-    DEALER_DID,
-    DEALER_PROOF
-  } = getDealerEnv()
-  const aggregatorApiCustomDomain = getCustomDomain(stack.stage, AGGREGATOR_HOSTED_ZONE)
-  const dealerApiCustomDomain = getCustomDomain(stack.stage, DEAL_API_HOSTED_ZONE)
-
+  const { DEAL_API_HOSTED_ZONE, DEALER_DID, DEALER_PROOF } = getDealerEnv()
+  const aggregatorApiCustomDomain = getCustomDomain(
+    stack.stage,
+    AGGREGATOR_HOSTED_ZONE
+  )
+  const dealerApiCustomDomain = getCustomDomain(
+    stack.stage,
+    DEAL_API_HOSTED_ZONE
+  )
 
   // Setup app monitoring with Sentry
   setupSentry(app, stack)
@@ -44,15 +45,15 @@ export function AggregatorStack({ stack, app }) {
     aggregatorInclusionProofStoreBucket,
     aggregatorPrivateKey
   } = use(DataStack)
- 
-   /**
-    * 1st processor queue - piece/offer invocation
-    */
-   const pieceQueueName = getResourceName('piece-queue', stack.stage)
-   const pieceQueueDLQ = new Queue(stack, `${pieceQueueName}-dlq`, {
+
+  /**
+   * 1st processor queue - piece/offer invocation
+   */
+  const pieceQueueName = getResourceName('piece-queue', stack.stage)
+  const pieceQueueDLQ = new Queue(stack, `${pieceQueueName}-dlq`, {
     cdk: { queue: { retentionPeriod: Duration.days(14) } }
-   })
-   const pieceQueue = new Queue(stack, pieceQueueName)
+  })
+  const pieceQueue = new Queue(stack, pieceQueueName)
 
   /**
    * 2nd processor queue - buffer reducing event
@@ -60,7 +61,7 @@ export function AggregatorStack({ stack, app }) {
   const bufferQueueName = getResourceName('buffer-queue', stack.stage)
   const bufferQueueDLQ = new Queue(stack, `${bufferQueueName}-dlq`, {
     cdk: { queue: { retentionPeriod: Duration.days(14) } }
-   })
+  })
   const bufferQueue = new Queue(stack, bufferQueueName, {
     cdk: {
       queue: {
@@ -73,16 +74,23 @@ export function AggregatorStack({ stack, app }) {
         queueName: `${bufferQueueName}.fifo`,
         visibilityTimeout: Duration.minutes(15)
       }
-    },
+    }
   })
 
   /**
    * 3rd processor queue - aggregator/offer invocation
    */
-  const aggregateOfferQueueName = getResourceName('aggregate-offer-queue', stack.stage)
-  const aggregateOfferQueueDLQ = new Queue(stack, `${aggregateOfferQueueName}-dlq`, {
-    cdk: { queue: { retentionPeriod: Duration.days(14) } }
-   })
+  const aggregateOfferQueueName = getResourceName(
+    'aggregate-offer-queue',
+    stack.stage
+  )
+  const aggregateOfferQueueDLQ = new Queue(
+    stack,
+    `${aggregateOfferQueueName}-dlq`,
+    {
+      cdk: { queue: { retentionPeriod: Duration.days(14) } }
+    }
+  )
   const aggregateOfferQueue = new Queue(stack, aggregateOfferQueueName, {
     cdk: {
       queue: {
@@ -100,10 +108,13 @@ export function AggregatorStack({ stack, app }) {
   /**
    * 4th processor queue - piece/accept invocation
    */
-  const pieceAcceptQueueName = getResourceName('piece-accept-queue', stack.stage)
+  const pieceAcceptQueueName = getResourceName(
+    'piece-accept-queue',
+    stack.stage
+  )
   const pieceAcceptQueueDLQ = new Queue(stack, `${pieceAcceptQueueName}-dlq`, {
     cdk: { queue: { retentionPeriod: Duration.days(14) } }
-   })
+  })
   const pieceAcceptQueue = new Queue(stack, pieceAcceptQueueName)
 
   /**
@@ -112,21 +123,23 @@ export function AggregatorStack({ stack, app }) {
   pieceQueue.addConsumer(stack, {
     function: {
       handler: 'packages/functions/src/aggregator/handle-piece-message.main',
-      bind: [
-        aggregatorPieceStoreTable
-      ]
+      bind: [aggregatorPieceStoreTable]
     },
     deadLetterQueue: pieceQueueDLQ.cdk.queue,
     cdk: {
       eventSource: {
         batchSize: 1
-      },
-    },
+      }
+    }
   })
 
-  const aggregatorPieceStoreHandleInsertDLQ = new Queue(stack, `aggregator-piece-store-handle-insert-dlq`, {
-    cdk: { queue: { retentionPeriod: Duration.days(14) } }
-  })
+  const aggregatorPieceStoreHandleInsertDLQ = new Queue(
+    stack,
+    'aggregator-piece-store-handle-insert-dlq',
+    {
+      cdk: { queue: { retentionPeriod: Duration.days(14) } }
+    }
+  )
   /**
    * On Piece store insert batch, buffer pieces together to resume buffer processing.
    */
@@ -136,33 +149,32 @@ export function AggregatorStack({ stack, app }) {
         handler: 'packages/functions/src/aggregator/handle-pieces-insert.main',
         environment: {
           BUFFER_STORE_BUCKET_NAME: aggregatorBufferStoreBucket.bucketName,
-          BUFFER_QUEUE_URL: bufferQueue.queueUrl,
+          BUFFER_QUEUE_URL: bufferQueue.queueUrl
         },
-        permissions: [
-          aggregatorBufferStoreBucket,
-          bufferQueue
-        ],
+        permissions: [aggregatorBufferStoreBucket, bufferQueue],
         timeout: '20 seconds'
       },
       deadLetterQueue: aggregatorPieceStoreHandleInsertDLQ.cdk.queue,
       cdk: {
         // https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_lambda_event_sources.DynamoEventSourceProps.html#filters
         eventSource: {
-          batchSize: stack.stage === 'production' ?
-            10_000 // Production max out batch size
-            : 10, // Integration tests
-          maxBatchingWindow: stack.stage === 'production' ?
-            Duration.minutes(5) // Production max out batch write to dynamo
-            : Duration.seconds(5), // Integration tests
+          batchSize:
+            stack.stage === 'production'
+              ? 10_000 // Production max out batch size
+              : 10, // Integration tests
+          maxBatchingWindow:
+            stack.stage === 'production'
+              ? Duration.minutes(5) // Production max out batch write to dynamo
+              : Duration.seconds(5), // Integration tests
           // allow reporting partial failures
           reportBatchItemFailures: true,
           // Start reading at the last untrimmed record in the shard in the system.
-          startingPosition: StartingPosition.TRIM_HORIZON,
+          startingPosition: StartingPosition.TRIM_HORIZON
         }
       },
       filters: [
         {
-          eventName: ['INSERT'],
+          eventName: ['INSERT']
         }
       ]
     }
@@ -179,7 +191,8 @@ export function AggregatorStack({ stack, app }) {
   bufferQueue.addConsumer(stack, {
     function: {
       runtime: 'nodejs20.x',
-      handler: 'packages/functions/src/aggregator/handle-buffer-queue-message.main',
+      handler:
+        'packages/functions/src/aggregator/handle-buffer-queue-message.main',
       environment: {
         BUFFER_QUEUE_URL: bufferQueue.queueUrl,
         BUFFER_STORE_BUCKET_NAME: aggregatorBufferStoreBucket.bucketName,
@@ -187,7 +200,7 @@ export function AggregatorStack({ stack, app }) {
         MAX_AGGREGATE_SIZE,
         MAX_AGGREGATE_PIECES,
         MIN_AGGREGATE_SIZE,
-        MIN_UTILIZATION_FACTOR,
+        MIN_UTILIZATION_FACTOR
       },
       permissions: [
         bufferQueue,
@@ -204,9 +217,9 @@ export function AggregatorStack({ stack, app }) {
         // also makes fewer lambda calls and decreases overall execution time.
         batchSize: 10,
         // allow reporting partial failures
-        reportBatchItemFailures: true,
-      },
-    },
+        reportBatchItemFailures: true
+      }
+    }
   })
 
   /**
@@ -214,88 +227,94 @@ export function AggregatorStack({ stack, app }) {
    */
   aggregateOfferQueue.addConsumer(stack, {
     function: {
-      handler: 'packages/functions/src/aggregator/handle-aggregate-offer-message.main',
-      bind: [
-        aggregatorAggregateStoreTable
-      ],
+      handler:
+        'packages/functions/src/aggregator/handle-aggregate-offer-message.main',
+      bind: [aggregatorAggregateStoreTable]
     },
     deadLetterQueue: aggregateOfferQueueDLQ.cdk.queue,
     cdk: {
       eventSource: {
-        batchSize: 1,
-      },
+        batchSize: 1
+      }
     }
   })
 
-  const aggregatorAggregateStoreHandleInsertToPieceAcceptDLQ = new Queue(stack, `aggregate-store-handle-piece-accept-dlq`, {
-    cdk: { queue: { retentionPeriod: Duration.days(14) } }
-  })
-  const aggregatorAggregateStoreHandleInsertToAggregateOfferDLQ = new Queue(stack, `aggregate-store-handle-aggregate-offer-dlq`, {
-    cdk: { queue: { retentionPeriod: Duration.days(14) } }
-  })
+  const aggregatorAggregateStoreHandleInsertToPieceAcceptDLQ = new Queue(
+    stack,
+    'aggregate-store-handle-piece-accept-dlq',
+    {
+      cdk: { queue: { retentionPeriod: Duration.days(14) } }
+    }
+  )
+  const aggregatorAggregateStoreHandleInsertToAggregateOfferDLQ = new Queue(
+    stack,
+    'aggregate-store-handle-aggregate-offer-dlq',
+    {
+      cdk: { queue: { retentionPeriod: Duration.days(14) } }
+    }
+  )
   aggregatorAggregateStoreTable.addConsumers(stack, {
     /**
      * On Aggregate store insert, offer inserted aggregate for deal.
      */
     handleAggregateInsertToPieceAcceptQueue: {
       function: {
-        handler: 'packages/functions/src/aggregator/handle-aggregate-insert-to-piece-accept-queue.main',
+        handler:
+          'packages/functions/src/aggregator/handle-aggregate-insert-to-piece-accept-queue.main',
         environment: {
           BUFFER_STORE_BUCKET_NAME: aggregatorBufferStoreBucket.bucketName,
           PIECE_ACCEPT_QUEUE_URL: pieceAcceptQueue.queueUrl,
           MAX_AGGREGATE_SIZE,
           MAX_AGGREGATE_PIECES,
           MIN_AGGREGATE_SIZE,
-          MIN_UTILIZATION_FACTOR,
+          MIN_UTILIZATION_FACTOR
         },
-        permissions: [
-          aggregatorBufferStoreBucket,
-          pieceAcceptQueue
-        ],
+        permissions: [aggregatorBufferStoreBucket, pieceAcceptQueue],
         timeout: '15 minutes'
       },
-      deadLetterQueue: aggregatorAggregateStoreHandleInsertToPieceAcceptDLQ.cdk.queue,
+      deadLetterQueue:
+        aggregatorAggregateStoreHandleInsertToPieceAcceptDLQ.cdk.queue,
       cdk: {
         eventSource: {
           batchSize: 1,
           // Start reading at the last untrimmed record in the shard in the system.
-          startingPosition: StartingPosition.TRIM_HORIZON,
-        },
+          startingPosition: StartingPosition.TRIM_HORIZON
+        }
       },
       filters: [
         {
-          eventName: ['INSERT'],
+          eventName: ['INSERT']
         }
       ]
     },
     handleAggregateInsertToAggregateOffer: {
       function: {
-        handler: 'packages/functions/src/aggregator/handle-aggregate-insert-to-aggregate-offer.main',
+        handler:
+          'packages/functions/src/aggregator/handle-aggregate-insert-to-aggregate-offer.main',
         environment: {
           BUFFER_STORE_BUCKET_NAME: aggregatorBufferStoreBucket.bucketName,
           DID: AGGREGATOR_DID,
           SERVICE_DID: DEALER_DID,
-          SERVICE_URL: dealerApiCustomDomain?.domainName ? `https://${dealerApiCustomDomain?.domainName}` : '',
+          SERVICE_URL: dealerApiCustomDomain?.domainName
+            ? `https://${dealerApiCustomDomain?.domainName}`
+            : '',
           PROOF: DEALER_PROOF
         },
-        permissions: [
-          aggregatorBufferStoreBucket,
-        ],
-        bind: [
-          aggregatorPrivateKey
-        ]
+        permissions: [aggregatorBufferStoreBucket],
+        bind: [aggregatorPrivateKey]
       },
-      deadLetterQueue: aggregatorAggregateStoreHandleInsertToAggregateOfferDLQ.cdk.queue,
+      deadLetterQueue:
+        aggregatorAggregateStoreHandleInsertToAggregateOfferDLQ.cdk.queue,
       cdk: {
         eventSource: {
           batchSize: 1,
           // Start reading at the last untrimmed record in the shard in the system.
-          startingPosition: StartingPosition.TRIM_HORIZON,
-        },
+          startingPosition: StartingPosition.TRIM_HORIZON
+        }
       },
       filters: [
         {
-          eventName: ['INSERT'],
+          eventName: ['INSERT']
         }
       ]
     }
@@ -306,55 +325,61 @@ export function AggregatorStack({ stack, app }) {
    */
   pieceAcceptQueue.addConsumer(stack, {
     function: {
-      handler: 'packages/functions/src/aggregator/handle-piece-accept-message.main',
+      handler:
+        'packages/functions/src/aggregator/handle-piece-accept-message.main',
       environment: {
-        INCLUSION_PROOF_STORE_BUCKET_NAME: aggregatorInclusionProofStoreBucket.bucketName,
+        INCLUSION_PROOF_STORE_BUCKET_NAME:
+          aggregatorInclusionProofStoreBucket.bucketName
       },
-      permissions: [
-        aggregatorInclusionProofStoreBucket,
-      ],
-      bind: [
-        aggregatorInclusionStoreTable,
-      ],
+      permissions: [aggregatorInclusionProofStoreBucket],
+      bind: [aggregatorInclusionStoreTable],
       timeout: '30 seconds'
     },
     deadLetterQueue: pieceAcceptQueueDLQ.cdk.queue,
     cdk: {
       eventSource: {
-        batchSize: 1,
-      },
+        batchSize: 1
+      }
     }
   })
 
-  const aggregatorInclusionStoreHandleInsertToUpdateStateDLQ = new Queue(stack, `inclusion-store-handle-update-state-dlq`, {
-    cdk: { queue: { retentionPeriod: Duration.days(14) } }
-  })
-  const aggregatorInclusionStoreHandleInsertToPieceAcceptDLQ = new Queue(stack, `inclusion-store-handle-piece-accept-dlq`, {
-    cdk: { queue: { retentionPeriod: Duration.days(14) } }
-  })
+  const aggregatorInclusionStoreHandleInsertToUpdateStateDLQ = new Queue(
+    stack,
+    'inclusion-store-handle-update-state-dlq',
+    {
+      cdk: { queue: { retentionPeriod: Duration.days(14) } }
+    }
+  )
+  const aggregatorInclusionStoreHandleInsertToPieceAcceptDLQ = new Queue(
+    stack,
+    'inclusion-store-handle-piece-accept-dlq',
+    {
+      cdk: { queue: { retentionPeriod: Duration.days(14) } }
+    }
+  )
   aggregatorInclusionStoreTable.addConsumers(stack, {
     /**
      * On Inclusion store insert, piece table can be updated to reflect piece state.
      */
     handleInclusionInsertToUpdateState: {
       function: {
-        handler: 'packages/functions/src/aggregator/handle-inclusion-insert-to-update-state.main',
+        handler:
+          'packages/functions/src/aggregator/handle-inclusion-insert-to-update-state.main',
         environment: {},
-        bind: [
-          aggregatorPieceStoreTable,
-        ]
+        bind: [aggregatorPieceStoreTable]
       },
-      deadLetterQueue: aggregatorInclusionStoreHandleInsertToUpdateStateDLQ.cdk.queue,
+      deadLetterQueue:
+        aggregatorInclusionStoreHandleInsertToUpdateStateDLQ.cdk.queue,
       cdk: {
         eventSource: {
           batchSize: 1,
           // Start reading at the last untrimmed record in the shard in the system.
-          startingPosition: StartingPosition.TRIM_HORIZON,
-        },
+          startingPosition: StartingPosition.TRIM_HORIZON
+        }
       },
       filters: [
         {
-          eventName: ['INSERT'],
+          eventName: ['INSERT']
         }
       ]
     },
@@ -363,29 +388,31 @@ export function AggregatorStack({ stack, app }) {
      */
     handleInclusionInsertToIssuePieceAccept: {
       function: {
-        handler: 'packages/functions/src/aggregator/handle-inclusion-insert-to-issue-piece-accept.main',
+        handler:
+          'packages/functions/src/aggregator/handle-inclusion-insert-to-issue-piece-accept.main',
         environment: {
           DID: AGGREGATOR_DID,
           SERVICE_DID: AGGREGATOR_DID,
-          SERVICE_URL: aggregatorApiCustomDomain?.domainName ? `https://${aggregatorApiCustomDomain?.domainName}` : '',
-          PROOF: AGGREGATOR_PROOF,
+          SERVICE_URL: aggregatorApiCustomDomain?.domainName
+            ? `https://${aggregatorApiCustomDomain?.domainName}`
+            : '',
+          PROOF: AGGREGATOR_PROOF
         },
-        bind: [
-          aggregatorPrivateKey
-        ],
+        bind: [aggregatorPrivateKey],
         timeout: '30 seconds'
       },
-      deadLetterQueue: aggregatorInclusionStoreHandleInsertToPieceAcceptDLQ.cdk.queue,
+      deadLetterQueue:
+        aggregatorInclusionStoreHandleInsertToPieceAcceptDLQ.cdk.queue,
       cdk: {
         eventSource: {
           batchSize: 1,
           // Start reading at the last untrimmed record in the shard in the system.
-          startingPosition: StartingPosition.TRIM_HORIZON,
-        },
+          startingPosition: StartingPosition.TRIM_HORIZON
+        }
       },
       filters: [
         {
-          eventName: ['INSERT'],
+          eventName: ['INSERT']
         }
       ]
     }

@@ -14,7 +14,7 @@ import {
 /**
  * @param {import('sst/constructs').StackContext} properties
  */
-export function DealerStack({ stack, app }) {
+export function DealerStack ({ stack, app }) {
   const {
     DEAL_TRACKER_DID,
     DEAL_TRACKER_PROOF
@@ -30,12 +30,12 @@ export function DealerStack({ stack, app }) {
   // Get dependent stacks references
   const {
     dealerApiEndpoint,
-    dealTrackerApiEndpoint,
+    dealTrackerApiEndpoint
   } = use(ApiStack)
   const {
     dealerAggregateStoreTable,
     dealerOfferStoreBucket,
-    dealerPrivateKey,
+    dealerPrivateKey
   } = use(DataStack)
 
   /**
@@ -48,7 +48,7 @@ export function DealerStack({ stack, app }) {
         handler: 'packages/functions/src/dealer/handle-aggregate-insert.main',
         environment: {
           OFFER_STORE_BUCKET_NAME: dealerOfferStoreBucket.bucketName,
-          OFFER_STORE_BUCKET_REGION: stack.region,
+          OFFER_STORE_BUCKET_REGION: stack.region
         },
         permissions: [
           dealerOfferStoreBucket
@@ -59,8 +59,8 @@ export function DealerStack({ stack, app }) {
         eventSource: {
           batchSize: 1,
           // Start reading at the last untrimmed record in the shard in the system.
-          startingPosition: StartingPosition.TRIM_HORIZON,
-        },
+          startingPosition: StartingPosition.TRIM_HORIZON
+        }
       },
       filters: [
         {
@@ -88,7 +88,7 @@ export function DealerStack({ stack, app }) {
           DID: DEALER_DID,
           SERVICE_DID: DEALER_DID,
           SERVICE_URL: dealerApiEndpoint,
-          PROOF: DEALER_PROOF,
+          PROOF: DEALER_PROOF
         },
         bind: [
           dealerPrivateKey
@@ -99,8 +99,8 @@ export function DealerStack({ stack, app }) {
         eventSource: {
           batchSize: 1,
           // Start reading at the last untrimmed record in the shard in the system.
-          startingPosition: StartingPosition.TRIM_HORIZON,
-        },
+          startingPosition: StartingPosition.TRIM_HORIZON
+        }
       },
       filters: [
         // Trigger when status value changed from OFFERED
@@ -133,12 +133,12 @@ export function DealerStack({ stack, app }) {
           DID: DEALER_DID,
           SERVICE_DID: DEAL_TRACKER_DID,
           SERVICE_URL: dealTrackerApiEndpoint,
-          PROOF: DEAL_TRACKER_PROOF,
+          PROOF: DEAL_TRACKER_PROOF
         },
         bind: [
           dealerAggregateStoreTable,
           dealerPrivateKey
-        ],
+        ]
       }
     }
   })

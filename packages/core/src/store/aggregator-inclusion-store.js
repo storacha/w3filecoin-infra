@@ -1,42 +1,49 @@
-import { PutItemCommand, GetItemCommand, QueryCommand } from '@aws-sdk/client-dynamodb'
+import {
+  PutItemCommand,
+  GetItemCommand,
+  QueryCommand
+} from '@aws-sdk/client-dynamodb'
 import { marshall, unmarshall } from '@aws-sdk/util-dynamodb'
-import { RecordNotFound, StoreOperationFailed } from '@web3-storage/filecoin-api/errors'
+import {
+  RecordNotFound,
+  StoreOperationFailed
+} from '@storacha/filecoin-api/errors'
 import { CBOR } from '@ucanto/core'
 import { parseLink } from '@ucanto/server'
 
 import { connectTable } from './index.js'
 
 /**
- * @typedef {import('@web3-storage/filecoin-api/types').StoreGetError} StoreGetError
+ * @typedef {import('@storacha/filecoin-api/types').StoreGetError} StoreGetError
  * @typedef {import('./types.js').AggregatorInclusionRecord} InclusionRecord
- * @typedef {import('@web3-storage/filecoin-api/aggregator/api').InclusionRecord} AggregatorInclusionRecord
- * @typedef {import('@web3-storage/filecoin-api/aggregator/api').InclusionRecordKey} InclusionRecordKey
- * @typedef {import('@web3-storage/filecoin-api/aggregator/api').InclusionRecordQueryByGroup} InclusionRecordQueryByGroup
- * @typedef {import('./types').AggregatorInclusionStoreRecord} InclusionStoreRecord
+ * @typedef {import('@storacha/filecoin-api/aggregator/api').InclusionRecord} AggregatorInclusionRecord
+ * @typedef {import('@storacha/filecoin-api/aggregator/api').InclusionRecordKey} InclusionRecordKey
+ * @typedef {import('@storacha/filecoin-api/aggregator/api').InclusionRecordQueryByGroup} InclusionRecordQueryByGroup
+ * @typedef {import('./types.js').AggregatorInclusionStoreRecord} InclusionStoreRecord
  * @typedef {Pick<InclusionStoreRecord, 'aggregate' | 'piece'>} InclusionStoreRecordKey
  */
 
 /**
- * @param {InclusionRecord} record 
- * @returns {InclusionStoreRecord} 
+ * @param {InclusionRecord} record
+ * @returns {InclusionStoreRecord}
  */
 const encodeRecord = (record) => {
   return {
     ...record,
     aggregate: record.aggregate.toString(),
     piece: record.piece.toString(),
-    inclusion: record.inclusion.toString(),
+    inclusion: record.inclusion.toString()
   }
 }
 
 /**
- * @param {InclusionRecordKey} recordKey 
- * @returns {InclusionStoreRecordKey} 
+ * @param {InclusionRecordKey} recordKey
+ * @returns {InclusionStoreRecordKey}
  */
 const encodeKey = (recordKey) => {
   return {
     aggregate: recordKey.aggregate.toString(),
-    piece: recordKey.piece.toString(),
+    piece: recordKey.piece.toString()
   }
 }
 
@@ -60,7 +67,7 @@ const encodeQueryProps = (recordSearch) => {
 }
 
 /**
- * @param {InclusionStoreRecord} encodedRecord 
+ * @param {InclusionStoreRecord} encodedRecord
  * @returns {InclusionRecord}
  */
 export const decodeRecord = (encodedRecord) => {
@@ -77,7 +84,7 @@ export const decodeRecord = (encodedRecord) => {
  * @param {object} context
  * @param {string} context.tableName
  * @param {import('./types.js').InclusionProofStore} context.inclusionProofStore
- * @returns {import('@web3-storage/filecoin-api/aggregator/api').InclusionStore}
+ * @returns {import('@storacha/filecoin-api/aggregator/api').InclusionStore}
  */
 export function createClient (conf, context) {
   const tableclient = connectTable(conf)
@@ -96,12 +103,15 @@ export function createClient (conf, context) {
 
       const putCmd = new PutItemCommand({
         TableName: context.tableName,
-        Item: marshall(encodeRecord({
-          ...record,
-          inclusion: inclusionBlock.cid
-        }), {
-          removeUndefinedValues: true
-        }),
+        Item: marshall(
+          encodeRecord({
+            ...record,
+            inclusion: inclusionBlock.cid
+          }),
+          {
+            removeUndefinedValues: true
+          }
+        )
       })
 
       try {
@@ -119,7 +129,7 @@ export function createClient (conf, context) {
     get: async (key) => {
       const getCmd = new GetItemCommand({
         TableName: context.tableName,
-        Key: marshall(encodeKey(key)),
+        Key: marshall(encodeKey(key))
       })
       let res
       try {
@@ -145,7 +155,7 @@ export function createClient (conf, context) {
     has: async (key) => {
       const getCmd = new GetItemCommand({
         TableName: context.tableName,
-        Key: marshall(encodeKey(key)),
+        Key: marshall(encodeKey(key))
       })
       let res
       try {
@@ -171,7 +181,9 @@ export function createClient (conf, context) {
       const queryProps = encodeQueryProps(search)
       if (!queryProps) {
         return {
-          error: new StoreOperationFailed('no valid search parameters provided')
+          error: new StoreOperationFailed(
+            'no valid search parameters provided'
+          )
         }
       }
 
@@ -179,7 +191,9 @@ export function createClient (conf, context) {
       const queryCmd = new QueryCommand({
         TableName: context.tableName,
         ...queryProps,
-        ExclusiveStartKey: options?.cursor ? JSON.parse(options.cursor) : undefined,
+        ExclusiveStartKey: options?.cursor
+          ? JSON.parse(options.cursor)
+          : undefined,
         Limit: options?.size
       })
 
@@ -194,10 +208,12 @@ export function createClient (conf, context) {
       }
 
       const inclusionRecordsGet = await Promise.all(
-        (res.Items ?? []).map((item) => getInclusionRecordFromInclusionStoreRecord(
-          /** @type {InclusionStoreRecord} */ (unmarshall(item)),
-          context.inclusionProofStore
-        ))
+        (res.Items ?? []).map((item) =>
+          getInclusionRecordFromInclusionStoreRecord(
+            /** @type {InclusionStoreRecord} */ (unmarshall(item)),
+            context.inclusionProofStore
+          )
+        )
       )
 
       const records = []
@@ -211,24 +227,30 @@ export function createClient (conf, context) {
       return {
         ok: {
           results: records,
-          ...(res.LastEvaluatedKey ? { cursor: JSON.stringify(res.LastEvaluatedKey) } : {})
+          ...(res.LastEvaluatedKey
+            ? { cursor: JSON.stringify(res.LastEvaluatedKey) }
+            : {})
         }
       }
-    },
+    }
   }
 }
-
 
 /**
  * @param {import('./types.js').AggregatorInclusionStoreRecord} inclusionStoreRecord
  * @param {import('./types.js').InclusionProofStore} inclusionProofStore
  * @returns {Promise<import('../types.js').Result<AggregatorInclusionRecord, StoreGetError>>}
  */
-async function getInclusionRecordFromInclusionStoreRecord (inclusionStoreRecord, inclusionProofStore) {
+async function getInclusionRecordFromInclusionStoreRecord (
+  inclusionStoreRecord,
+  inclusionProofStore
+) {
   // Decode record and read inclusion proof
   const inclusionRecordWithInclusionLink = decodeRecord(inclusionStoreRecord)
   // Get inclusion proof
-  const inclusionProofGet = await inclusionProofStore.get(inclusionRecordWithInclusionLink.inclusion)
+  const inclusionProofGet = await inclusionProofStore.get(
+    inclusionRecordWithInclusionLink.inclusion
+  )
   if (inclusionProofGet.error) {
     return inclusionProofGet
   }

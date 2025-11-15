@@ -1,8 +1,8 @@
 import pRetry from 'p-retry'
 
 /**
- * 
- * @typedef {object} UCANLogProps 
+ *
+ * @typedef {object} UCANLogProps
  * @property {URL} url
  * @property {string} [auth]
  */
@@ -16,16 +16,16 @@ class UCANLog {
   /**
    * @param {UCANLogProps} props
    */
-  constructor({ url, auth }) {
+  constructor ({ url, auth }) {
     this.url = url
     this.auth = auth
   }
 
   /**
-   * 
-   * @param {import('@ucanto/interface').HTTPRequest} request 
+   *
+   * @param {import('@ucanto/interface').HTTPRequest} request
    */
-  async log(request) {
+  async log (request) {
     try {
       await pRetry(
         async () => {
@@ -33,9 +33,9 @@ class UCANLog {
             method: 'POST',
             headers: {
               ...request.headers,
-              Authorization: `Basic ${this.auth}`,
+              Authorization: `Basic ${this.auth}`
             },
-            body: request.body,
+            body: request.body
           })
 
           if (!res.ok) {
@@ -44,7 +44,7 @@ class UCANLog {
           }
         },
         {
-          retries: 3,
+          retries: 3
         }
       )
     } catch (error) {

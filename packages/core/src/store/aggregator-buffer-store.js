@@ -4,8 +4,8 @@ import { parseLink } from '@ucanto/server'
 import { createBucketClient } from './bucket-client.js'
 
 /**
- * @typedef {import('@web3-storage/filecoin-api/aggregator/api').BufferRecord} BufferRecord
- * @typedef {import('@web3-storage/filecoin-api/aggregator/api').Buffer} Buffer
+ * @typedef {import('@storacha/filecoin-api/aggregator/api').BufferRecord} BufferRecord
+ * @typedef {import('@storacha/filecoin-api/aggregator/api').Buffer} Buffer
  * @typedef {import('multiformats').ByteView<Buffer>} BufferStoreRecordBody
  * @typedef {{key: string, body: BufferStoreRecordBody}} BufferStoreRecord
  */
@@ -30,7 +30,7 @@ const encodeKey = (link) => {
 }
 
 /**
- * @param {import('@aws-sdk/client-s3').GetObjectCommandOutput} res 
+ * @param {import('@aws-sdk/client-s3').GetObjectCommandOutput} res
  * @returns {Promise<Uint8Array>}
  */
 const decodeBucketResponse = (res) => {
@@ -44,7 +44,7 @@ const decodeBucketResponse = (res) => {
  */
 const decodeRecord = (encodedRecord) => {
   /** @type {Buffer} */
-  const buffer =  CBOR.decode(encodedRecord.body)
+  const buffer = CBOR.decode(encodedRecord.body)
 
   return {
     block: parseLink(encodedRecord.key.split('/')[0]),
@@ -56,7 +56,7 @@ const decodeRecord = (encodedRecord) => {
  * @param {import('./types.js').BucketConnect | import('@aws-sdk/client-s3').S3Client} conf
  * @param {object} context
  * @param {string} context.name
- * @returns {import('@web3-storage/filecoin-api/aggregator/api').BufferStore}
+ * @returns {import('@storacha/filecoin-api/aggregator/api').BufferStore}
  */
 export function createClient (conf, context) {
   return createBucketClient(conf, {

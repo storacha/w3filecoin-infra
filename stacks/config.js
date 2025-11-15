@@ -3,11 +3,15 @@ import git from 'git-rev-sync'
 import * as pack from '../package.json'
 
 // 72 Hours
-export const DEFAULT_MIN_PIECE_CRITICAL_THRESHOLD_MS = String(72 * 60 * 60 * 1000)
+export const DEFAULT_MIN_PIECE_CRITICAL_THRESHOLD_MS = String(
+  72 * 60 * 60 * 1000
+)
 // 60 Hours
 export const DEFAULT_MIN_PIECE_WARN_THRESHOLD_MS = String(60 * 60 * 60 * 1000)
 // 48 Hours
-export const DEFAULT_AGGREGATE_MONITOR_THRESHOLD_MS = String(48 * 60 * 60 * 1000)
+export const DEFAULT_AGGREGATE_MONITOR_THRESHOLD_MS = String(
+  48 * 60 * 60 * 1000
+)
 
 /**
  * Get nicer resources name
@@ -34,7 +38,7 @@ export function getQueueName (name, version = 0) {
 
 /**
  * Return the custom domain config for http api
- * 
+ *
  * @param {string} stage
  * @param {string | undefined} hostedZone
  * @returns {{domainName: string, hostedZone: string} | undefined}
@@ -42,7 +46,7 @@ export function getQueueName (name, version = 0) {
 export function getCustomDomain (stage, hostedZone) {
   // return no custom domain config if hostedZone not set
   if (!hostedZone) {
-    return 
+    return
   }
   /** @type Record<string,string> */
   const domainMap = { prod: hostedZone }
@@ -76,7 +80,7 @@ export function isPrBuild (stage) {
  * @param {string} stage
  * @param {number} version
  */
-export function getBucketConfig(name, stage, version = 0){
+export function getBucketConfig (name, stage, version = 0) {
   return {
     bucketName: getResourceName(name, stage, version),
     ...(isPrBuild(stage) && {
@@ -99,44 +103,57 @@ export function setupSentry (app, stack) {
   const { SENTRY_DSN } = getEnv()
 
   stack.addDefaultFunctionEnv({
-    SENTRY_DSN,
+    SENTRY_DSN
   })
 }
 
 /**
  * Get Env validating it is set.
  */
-export function getEnv() {
+export function getEnv () {
   return {
     SENTRY_DSN: mustGetEnv('SENTRY_DSN'),
     UCAN_LOG_URL: mustGetEnv('UCAN_LOG_URL'),
-    MIN_PIECE_CRITICAL_THRESHOLD_MS: process.env.MIN_PIECE_CRITICAL_THRESHOLD_MS || DEFAULT_MIN_PIECE_CRITICAL_THRESHOLD_MS,
-    MIN_PIECE_WARN_THRESHOLD_MS: process.env.MIN_PIECE_WARN_THRESHOLD_MS || DEFAULT_MIN_PIECE_WARN_THRESHOLD_MS,
-    AGGREGATE_MONITOR_THRESHOLD_MS: process.env.AGGREGATE_MONITOR_THRESHOLD_MS || DEFAULT_AGGREGATE_MONITOR_THRESHOLD_MS,
-    MONITORING_NOTIFICATIONS_ENDPOINT: mustGetEnv('MONITORING_NOTIFICATIONS_ENDPOINT')
+    MIN_PIECE_CRITICAL_THRESHOLD_MS:
+      process.env.MIN_PIECE_CRITICAL_THRESHOLD_MS ||
+      DEFAULT_MIN_PIECE_CRITICAL_THRESHOLD_MS,
+    MIN_PIECE_WARN_THRESHOLD_MS:
+      process.env.MIN_PIECE_WARN_THRESHOLD_MS ||
+      DEFAULT_MIN_PIECE_WARN_THRESHOLD_MS,
+    AGGREGATE_MONITOR_THRESHOLD_MS:
+      process.env.AGGREGATE_MONITOR_THRESHOLD_MS ||
+      DEFAULT_AGGREGATE_MONITOR_THRESHOLD_MS,
+    MONITORING_NOTIFICATIONS_ENDPOINT: mustGetEnv(
+      'MONITORING_NOTIFICATIONS_ENDPOINT'
+    )
   }
 }
 
 /**
  * Get Env validating it is set.
- * 
- * @param {import('sst/constructs').Stack} stack 
+ *
+ * @param {import('sst/constructs').Stack} stack
  */
-export function getAggregatorEnv(stack) {
-  const defaultMaxAggregateSize = String(2**35)
+export function getAggregatorEnv (stack) {
+  const defaultMaxAggregateSize = String(2 ** 35)
   // testing value aligned with integration test fixtures
-  const defaultMinAggregateSize = stack.stage === 'production' ? String(2**34) : String(2 ** 12)
-  const defaultMinUtilizationFactor = stack.stage === 'production' ? String(4) : String(10e9)
+  const defaultMinAggregateSize =
+    stack.stage === 'production' ? String(2 ** 34) : String(2 ** 12)
+  const defaultMinUtilizationFactor =
+    stack.stage === 'production' ? String(4) : String(10e9)
 
   return {
     ...getEnv(),
     AGGREGATOR_HOSTED_ZONE: process.env.AGGREGATOR_HOSTED_ZONE,
     AGGREGATOR_DID: mustGetEnv('AGGREGATOR_DID'),
-    MAX_AGGREGATE_SIZE: process.env.MAX_AGGREGATE_SIZE || defaultMaxAggregateSize,
+    MAX_AGGREGATE_SIZE:
+      process.env.MAX_AGGREGATE_SIZE || defaultMaxAggregateSize,
     MAX_AGGREGATE_PIECES: process.env.MAX_AGGREGATE_PIECES ?? '',
-    MIN_AGGREGATE_SIZE: process.env.MIN_AGGREGATE_SIZE || defaultMinAggregateSize,
-    MIN_UTILIZATION_FACTOR: process.env.MIN_UTILIZATION_FACTOR || defaultMinUtilizationFactor,
-    AGGREGATOR_PROOF: process.env.AGGREGATOR_PROOF ?? '',
+    MIN_AGGREGATE_SIZE:
+      process.env.MIN_AGGREGATE_SIZE || defaultMinAggregateSize,
+    MIN_UTILIZATION_FACTOR:
+      process.env.MIN_UTILIZATION_FACTOR || defaultMinUtilizationFactor,
+    AGGREGATOR_PROOF: process.env.AGGREGATOR_PROOF ?? ''
   }
 }
 
@@ -145,7 +162,7 @@ export function getDealerEnv () {
     ...getEnv(),
     DEAL_API_HOSTED_ZONE: process.env.DEALER_API_HOSTED_ZONE,
     DEALER_DID: mustGetEnv('DEALER_DID'),
-    DEALER_PROOF: process.env.DEALER_PROOF ?? '',
+    DEALER_PROOF: process.env.DEALER_PROOF ?? ''
   }
 }
 
@@ -155,13 +172,13 @@ export function getDealTrackerEnv () {
     DEAL_TRACKER_API_HOSTED_ZONE: process.env.DEAL_TRACKER_API_HOSTED_ZONE,
     DEAL_TRACKER_DID: mustGetEnv('DEAL_TRACKER_DID'),
     DEAL_TRACKER_PROOF: process.env.DEAL_TRACKER_PROOF ?? '',
-    SPADE_ORACLE_URL: mustGetEnv('SPADE_ORACLE_URL'),
+    SPADE_ORACLE_URL: mustGetEnv('SPADE_ORACLE_URL')
   }
 }
 
 /**
- * 
- * @param {string} name 
+ *
+ * @param {string} name
  * @returns {string}
  */
 function mustGetEnv (name) {

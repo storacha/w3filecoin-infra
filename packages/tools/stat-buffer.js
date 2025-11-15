@@ -4,7 +4,7 @@ import { createClient as createBufferStoreClient } from '@w3filecoin/core/src/st
 
 const AWS_REGION = 'us-west-2'
 const config = {
-  maxAggregateSize: 2**35,
+  maxAggregateSize: 2 ** 35
 }
 
 const bufferCidString = process.argv[2]
@@ -12,15 +12,17 @@ if (!bufferCidString) {
   throw new Error('no buffer CID string was provided')
 }
 
-const bufferStore = createBufferStoreClient({
-  region: AWS_REGION
-}, {
-  name: 'prod-w3filecoin-aggregator-buffer-store-0'
-})
+const bufferStore = createBufferStoreClient(
+  {
+    region: AWS_REGION
+  },
+  {
+    name: 'prod-w3filecoin-aggregator-buffer-store-0'
+  }
+)
 
 const bufferCid = parseLink(bufferCidString)
 
-// @ts-expect-error CID multiple versions can exist
 const buffer = await bufferStore.get(bufferCid)
 if (buffer.error) {
   throw new Error(`Error getting buffer: ${buffer.error.message}`)
@@ -38,7 +40,7 @@ console.log('Total size of pieces:', bufferUtilizationSize)
 
 // Create builder with maximum size and try to fill it up
 const builder = Aggregate.createBuilder({
-  size: Aggregate.Size.from(config.maxAggregateSize),
+  size: Aggregate.Size.from(config.maxAggregateSize)
 })
 
 // add pieces to an aggregate until there is no more space, or no more pieces

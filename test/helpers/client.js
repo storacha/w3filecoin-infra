@@ -6,7 +6,7 @@ import { connect } from '@ucanto/client'
 /**
  * Client connection config for w3filecoin pipeline entrypoint, i.e. API Storefront relies on
  *
- * @param {URL} url 
+ * @param {URL} url
  */
 export async function getClientConfig (url) {
   // UCAN actors
@@ -20,15 +20,15 @@ export async function getClientConfig (url) {
     invocationConfig: {
       issuer: storefront,
       with: storefront.did(),
-      audience: aggregatorService,
+      audience: aggregatorService
     },
     connection: connect({
       id: aggregatorService,
       codec: CAR.outbound,
       channel: HTTP.open({
         url,
-        method: 'POST',
-      }),
+        method: 'POST'
+      })
     })
   }
 }
@@ -41,7 +41,7 @@ export async function getClientConfig (url) {
  * @param {string} [config.did] - public DID for the service (did:key:... derived from PRIVATE_KEY if not set)
  * @returns {import('@ucanto/principal/ed25519').Signer.Signer}
  */
-export function getServiceSigner(config) {
+export function getServiceSigner (config) {
   const signer = Signer.parse(config.privateKey)
   if (config.did) {
     const did = DID.parse(config.did).did()

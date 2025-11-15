@@ -1,5 +1,5 @@
 /**
- * @param {string} name 
+ * @param {string} name
  * @returns {string}
  */
 export function mustGetEnv (name) {

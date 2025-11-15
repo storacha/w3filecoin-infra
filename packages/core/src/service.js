@@ -11,7 +11,7 @@ import { connect } from '@ucanto/client'
  * @param {string} [config.did] - public DID for the service (did:key:... derived from PRIVATE_KEY if not set)
  * @returns {import('@ucanto/principal/ed25519').Signer.Signer}
  */
- export function getServiceSigner(config) {
+export function getServiceSigner (config) {
   const signer = ed25519.parse(config.privateKey)
   if (config.did) {
     const did = DID.parse(config.did).did()
@@ -21,16 +21,16 @@ import { connect } from '@ucanto/client'
 }
 
 /**
- * @param {string} did 
+ * @param {string} did
  */
 export function getPrincipal (did) {
   return DID.parse(did) // 'did:web:spade.web3.storage'
 }
 
 /**
- * 
- * @param {{ did: string, url: string }} config 
- * @returns 
+ *
+ * @param {{ did: string, url: string }} config
+ * @returns
  */
 export function getServiceConnection (config) {
   const servicePrincipal = DID.parse(config.did) // 'did:web:spade.web3.storage'
@@ -41,8 +41,8 @@ export function getServiceConnection (config) {
     codec: CAR.outbound,
     channel: HTTP.open({
       url: serviceURL,
-      method: 'POST',
-    }),
+      method: 'POST'
+    })
   })
 
   return serviceConnection

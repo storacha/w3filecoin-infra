@@ -1,6 +1,14 @@
-import { PutItemCommand, GetItemCommand, UpdateItemCommand, QueryCommand } from '@aws-sdk/client-dynamodb'
+import {
+  PutItemCommand,
+  GetItemCommand,
+  UpdateItemCommand,
+  QueryCommand
+} from '@aws-sdk/client-dynamodb'
 import { marshall, unmarshall } from '@aws-sdk/util-dynamodb'
-import { RecordNotFound, StoreOperationFailed } from '@web3-storage/filecoin-api/errors'
+import {
+  RecordNotFound,
+  StoreOperationFailed
+} from '@storacha/filecoin-api/errors'
 import { parseLink } from '@ucanto/server'
 
 import { connectTable } from './index.js'
@@ -8,19 +16,19 @@ import { connectTable } from './index.js'
 /**
  * @typedef {import('@web3-storage/data-segment').PieceLink} PieceLink
  * @typedef {'offered' | 'accepted' | 'invalid'} AggregateStatus
- * @typedef {import('@web3-storage/filecoin-api/dealer/api').AggregateRecord} AggregateRecord
- * @typedef {import('@web3-storage/filecoin-api/dealer/api').AggregateRecordKey} AggregateRecordKey
+ * @typedef {import('@storacha/filecoin-api/dealer/api').AggregateRecord} AggregateRecord
+ * @typedef {import('@storacha/filecoin-api/dealer/api').AggregateRecordKey} AggregateRecordKey
  * @typedef {{ status: AggregateStatus }} AggregateRecordQuery
- * @typedef {import('./types').DealerAggregateStoreRecord} DealerAggregateStoreRecord
- * @typedef {import('./types').DealerAggregateStoreRecordKey} DealerAggregateStoreRecordKey
- * @typedef {import('./types').DealerAggregateStoreRecordQueryByAggregate} DealerAggregateStoreRecordQueryByAggregate
- * @typedef {import('./types').DealerAggregateStoreRecordQueryByStatus} DealerAggregateStoreRecordQueryByStatus
- * @typedef {import('./types').DealerAggregateStoreRecordStatus} DealerAggregateStoreRecordStatus
+ * @typedef {import('./types.js').DealerAggregateStoreRecord} DealerAggregateStoreRecord
+ * @typedef {import('./types.js').DealerAggregateStoreRecordKey} DealerAggregateStoreRecordKey
+ * @typedef {import('./types.js').DealerAggregateStoreRecordQueryByAggregate} DealerAggregateStoreRecordQueryByAggregate
+ * @typedef {import('./types.js').DealerAggregateStoreRecordQueryByStatus} DealerAggregateStoreRecordQueryByStatus
+ * @typedef {import('./types.js').DealerAggregateStoreRecordStatus} DealerAggregateStoreRecordStatus
  */
 
 /**
- * @param {AggregateRecord} record 
- * @returns {DealerAggregateStoreRecord} 
+ * @param {AggregateRecord} record
+ * @returns {DealerAggregateStoreRecord}
  */
 const encodeRecord = (record) => {
   return {
@@ -32,19 +40,19 @@ const encodeRecord = (record) => {
 }
 
 /**
- * @param {Partial<AggregateRecord>} record 
- * @returns {Partial<DealerAggregateStoreRecord>} 
+ * @param {Partial<AggregateRecord>} record
+ * @returns {Partial<DealerAggregateStoreRecord>}
  */
 const encodePartialRecord = (record) => {
   return {
     ...(record.aggregate && { aggregate: record.aggregate.toString() }),
     ...(record.pieces && { pieces: record.pieces.toString() }),
-    ...(record.status && { stat: encodeStatus(record.status) }),
+    ...(record.status && { stat: encodeStatus(record.status) })
   }
 }
 
 /**
- * @param {AggregateStatus} status 
+ * @param {AggregateStatus} status
  */
 const encodeStatus = (status) => {
   switch (status) {
@@ -64,17 +72,17 @@ const encodeStatus = (status) => {
 }
 
 /**
- * @param {AggregateRecordKey} recordKey 
- * @returns {DealerAggregateStoreRecordKey} 
+ * @param {AggregateRecordKey} recordKey
+ * @returns {DealerAggregateStoreRecordKey}
  */
 const encodeKey = (recordKey) => {
   return {
-    aggregate: recordKey.aggregate.toString(),
+    aggregate: recordKey.aggregate.toString()
   }
 }
 
 /**
- * @param {AggregateRecordQuery} recordKey 
+ * @param {AggregateRecordQuery} recordKey
  */
 const encodeQueryProps = (recordKey) => {
   return {
@@ -89,7 +97,7 @@ const encodeQueryProps = (recordKey) => {
 }
 
 /**
- * @param {DealerAggregateStoreRecord} encodedRecord 
+ * @param {DealerAggregateStoreRecord} encodedRecord
  * @returns {AggregateRecord}
  */
 export const decodeRecord = (encodedRecord) => {
@@ -103,7 +111,7 @@ export const decodeRecord = (encodedRecord) => {
 }
 
 /**
- * @param {DealerAggregateStoreRecordStatus} status 
+ * @param {DealerAggregateStoreRecordStatus} status
  * @returns {"offered" | "accepted" | "invalid"}
  */
 const decodeStatus = (status) => {
@@ -127,7 +135,7 @@ const decodeStatus = (status) => {
  * @param {import('./types.js').TableConnect | import('@aws-sdk/client-dynamodb').DynamoDBClient} conf
  * @param {object} context
  * @param {string} context.tableName
- * @returns {import('@web3-storage/filecoin-api/dealer/api').AggregateStore}
+ * @returns {import('@storacha/filecoin-api/dealer/api').AggregateStore}
  */
 export function createClient (conf, context) {
   const tableclient = connectTable(conf)
@@ -138,7 +146,7 @@ export function createClient (conf, context) {
         TableName: context.tableName,
         Item: marshall(encodeRecord(record), {
           removeUndefinedValues: true
-        }),
+        })
       })
 
       try {
@@ -156,7 +164,7 @@ export function createClient (conf, context) {
     get: async (key) => {
       const getCmd = new GetItemCommand({
         TableName: context.tableName,
-        Key: marshall(encodeKey(key)),
+        Key: marshall(encodeKey(key))
       })
       let res
       try {
@@ -183,7 +191,7 @@ export function createClient (conf, context) {
     has: async (key) => {
       const getCmd = new GetItemCommand({
         TableName: context.tableName,
-        Key: marshall(encodeKey(key)),
+        Key: marshall(encodeKey(key))
       })
       let res
       try {
@@ -208,8 +216,8 @@ export function createClient (conf, context) {
     update: async (key, record) => {
       const encodedRecord = encodePartialRecord(record)
       const ExpressionAttributeValues = {
-        ':ua': { S: encodedRecord.updatedAt || (new Date()).toISOString() },
-        ...(encodedRecord.stat && {':st': { N: `${encodedRecord.stat}` }})
+        ':ua': { S: encodedRecord.updatedAt || new Date().toISOString() },
+        ...(encodedRecord.stat && { ':st': { N: `${encodedRecord.stat}` } })
       }
       const stateUpdateExpression = encodedRecord.stat ? ', stat = :st' : ''
       const UpdateExpression = `SET updatedAt = :ua ${stateUpdateExpression}`
@@ -219,7 +227,7 @@ export function createClient (conf, context) {
         Key: marshall(encodeKey(key)),
         UpdateExpression,
         ExpressionAttributeValues,
-        ReturnValues: 'ALL_NEW',
+        ReturnValues: 'ALL_NEW'
       })
 
       let res
@@ -233,7 +241,9 @@ export function createClient (conf, context) {
 
       if (!res.Attributes) {
         return {
-          error: new StoreOperationFailed('Missing `Attributes` property on DyanmoDB response')
+          error: new StoreOperationFailed(
+            'Missing `Attributes` property on DyanmoDB response'
+          )
         }
       }
 
@@ -247,7 +257,9 @@ export function createClient (conf, context) {
       const queryProps = encodeQueryProps(search)
       if (!queryProps) {
         return {
-          error: new StoreOperationFailed('no valid search parameters provided')
+          error: new StoreOperationFailed(
+            'no valid search parameters provided'
+          )
         }
       }
 
@@ -255,7 +267,9 @@ export function createClient (conf, context) {
       const queryCmd = new QueryCommand({
         TableName: context.tableName,
         ...queryProps,
-        ExclusiveStartKey: options?.cursor ? JSON.parse(options.cursor) : undefined,
+        ExclusiveStartKey: options?.cursor
+          ? JSON.parse(options.cursor)
+          : undefined,
         Limit: options?.size
       })
 
@@ -271,13 +285,17 @@ export function createClient (conf, context) {
 
       return {
         ok: {
-          results: (res.Items ?? []).map(item => decodeRecord(
-            /** @type {DealerAggregateStoreRecord} */ (unmarshall(item))
-          )),
-          ...(res.LastEvaluatedKey ? { cursor: JSON.stringify(res.LastEvaluatedKey) } : {})
+          results: (res.Items ?? []).map((item) =>
+            decodeRecord(
+              /** @type {DealerAggregateStoreRecord} */ (unmarshall(item))
+            )
+          ),
+          ...(res.LastEvaluatedKey
+            ? { cursor: JSON.stringify(res.LastEvaluatedKey) }
+            : {})
         }
       }
-    },
+    }
   }
 }
 

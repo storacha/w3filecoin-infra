@@ -10,7 +10,7 @@ import { Aggregate, Piece } from '@web3-storage/data-segment'
  * @param {number} length
  * @param {number} size
  */
-export async function randomCargo(length, size) {
+export async function randomCargo (length, size) {
   const cars = await Promise.all(
     Array.from({ length }).map(() => randomCAR(size))
   )
@@ -32,25 +32,25 @@ export async function randomCargo(length, size) {
  * @param {number} length
  * @param {number} size
  */
-export async function randomAggregate(length, size) {
+export async function randomAggregate (length, size) {
   const pieces = await randomCargo(length, size)
 
   const aggregateBuild = Aggregate.build({
-    pieces,
+    pieces
   })
 
   return {
     pieces: pieces.map((p) => ({
       link: p.link,
       height: p.height,
-      content: p.content,
+      content: p.content
     })),
-    aggregate: aggregateBuild,
+    aggregate: aggregateBuild
   }
 }
 
 /** @param {number} size */
-async function randomBytes(size) {
+async function randomBytes (size) {
   const bytes = new Uint8Array(size)
   while (size) {
     const chunk = new Uint8Array(Math.min(size, 65_536))
@@ -63,7 +63,7 @@ async function randomBytes(size) {
 }
 
 /** @param {number} size */
-async function randomCAR(size) {
+async function randomCAR (size) {
   const bytes = await randomBytes(size)
   const hash = await sha256.digest(bytes)
   const root = CID.create(1, raw.code, hash)
@@ -83,9 +83,9 @@ async function randomCAR(size) {
 }
 
 /**
- * @param {string} bucketRegion 
- * @param {string} bucketName 
- * @param {string} key 
+ * @param {string} bucketRegion
+ * @param {string} bucketName
+ * @param {string} key
  */
 export function getS3ContentSource (bucketRegion, bucketName, key) {
   return new URL(`https://${bucketName}.s3.${bucketRegion}.amazonaws.com/${key}`)
@@ -93,7 +93,7 @@ export function getS3ContentSource (bucketRegion, bucketName, key) {
 
 /**
  * @param {string} bucketName
- * @param {string} key 
+ * @param {string} key
  */
 export function getR2ContentSource (bucketName, key) {
   return new URL(`https://fffa4b4363a7e5250af8357087263b3a.r2.cloudflarestorage.com/${bucketName}/${key}`)

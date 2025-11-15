@@ -10,7 +10,7 @@ import { DynamoDBClient, CreateTableCommand } from '@aws-sdk/client-dynamodb'
  * @param {number} [opts.port]
  * @param {string} [opts.region]
  */
-export async function createDynamodDb(opts = {}) {
+export async function createDynamodDb (opts = {}) {
   const port = opts.port || 8000
   const region = opts.region || 'us-west-2'
   const dbContainer = await pRetry(() =>
@@ -26,7 +26,7 @@ export async function createDynamodDb(opts = {}) {
       endpoint
     }),
     endpoint,
-    stop: () => dbContainer.stop(),
+    stop: () => dbContainer.stop()
   }
 }
 
@@ -34,7 +34,7 @@ export async function createDynamodDb(opts = {}) {
  * @param {import("@aws-sdk/client-dynamodb").DynamoDBClient} dynamo
  * @param {import('sst/constructs').TableProps} props
  */
-export async function createTable(dynamo, props) {
+export async function createTable (dynamo, props) {
   const id = customAlphabet('1234567890abcdefghijklmnopqrstuvwxyz', 10)
   const tableName = id()
 
@@ -44,8 +44,8 @@ export async function createTable(dynamo, props) {
       ...dynamoDBTableConfig(props),
       ProvisionedThroughput: {
         ReadCapacityUnits: 1,
-        WriteCapacityUnits: 1,
-      },
+        WriteCapacityUnits: 1
+      }
     })
   ))
 
@@ -54,7 +54,7 @@ export async function createTable(dynamo, props) {
 
 /**
  * Convert SST TableProps to DynamoDB `CreateTableCommandInput` config
- * 
+ *
  * @typedef {import('@aws-sdk/client-dynamodb').CreateTableCommandInput} CreateTableCommandInput
  * @typedef {import('sst/constructs').TableProps} TableProps
  *
@@ -100,7 +100,7 @@ export function dynamoDBTableConfig ({ fields, primaryIndex, globalIndexes = {} 
  * @param {string} index.partitionKey
  * @param {string} [index.sortKey]
  */
-function toKeySchema ({partitionKey, sortKey}) {
+function toKeySchema ({ partitionKey, sortKey }) {
   /** @type {import('@aws-sdk/client-dynamodb').KeySchemaElement[]} */
   const KeySchema = [
     { AttributeName: partitionKey, KeyType: 'HASH' }
@@ -118,7 +118,7 @@ function toKeySchema ({partitionKey, sortKey}) {
  * @param {number} [opts.port]
  * @param {string} [opts.region]
  */
-export async function createS3(opts = {}) {
+export async function createS3 (opts = {}) {
   const region = opts.region || 'us-west-2'
   const port = opts.port || 9000
 
@@ -135,21 +135,21 @@ export async function createS3(opts = {}) {
     region,
     credentials: {
       accessKeyId: 'minioadmin',
-      secretAccessKey: 'minioadmin',
-    },
+      secretAccessKey: 'minioadmin'
+    }
   }
 
   return {
     client: new S3Client(clientOpts),
     clientOpts,
-    stop: () => minio.stop(),
+    stop: () => minio.stop()
   }
 }
 
 /**
  * @param {S3Client} s3
  */
-export async function createBucket(s3) {
+export async function createBucket (s3) {
   const id = customAlphabet('1234567890abcdefghijklmnopqrstuvwxyz', 10)
   const Bucket = id()
   await pRetry(() => s3.send(new CreateBucketCommand({ Bucket })))
@@ -191,7 +191,7 @@ export async function createQueue (sqs) {
 
   const res = await pRetry(() =>
     sqs.send(new CreateQueueCommand({
-      QueueName,
+      QueueName
     }))
   )
 

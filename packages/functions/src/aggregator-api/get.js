@@ -7,7 +7,7 @@ import { mustGetEnv } from '../utils.js'
 Sentry.AWSLambda.init({
   environment: process.env.SST_STAGE,
   dsn: process.env.SENTRY_DSN,
-  tracesSampleRate: 0,
+  tracesSampleRate: 0
 })
 
 const repo = 'https://github.com/web3-storage/w3filecoin-infra'
@@ -25,7 +25,7 @@ export async function versionGet () {
   return {
     statusCode: 200,
     headers: {
-      'Content-Type': `application/json`
+      'Content-Type': 'application/json'
     },
     body: JSON.stringify({ name, version, did: serviceDid, publicKey, repo, commit, env: stage })
   }
@@ -53,7 +53,7 @@ export const home = Sentry.AWSLambda.wrapHandler(homeGet)
 /**
  * AWS HTTP Gateway handler for GET /error
  */
- export async function errorGet () {
+export async function errorGet () {
   throw new Error('API Error')
 }
 
@@ -65,6 +65,6 @@ function getLambdaEnv () {
     name: mustGetEnv('NAME'),
     version: mustGetEnv('VERSION'),
     commit: mustGetEnv('COMMIT'),
-    stage: mustGetEnv('STAGE'),
+    stage: mustGetEnv('STAGE')
   }
 }

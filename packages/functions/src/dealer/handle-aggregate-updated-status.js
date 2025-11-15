@@ -5,32 +5,30 @@ import * as Delegation from '@ucanto/core/delegation'
 import { fromString } from 'uint8arrays/from-string'
 import * as DID from '@ipld/dag-ucan/did'
 
-import { getServiceConnection, getServiceSigner } from '@w3filecoin/core/src/service.js'
+import {
+  getServiceConnection,
+  getServiceSigner
+} from '@w3filecoin/core/src/service.js'
 import { decodeRecord } from '@w3filecoin/core/src/store/dealer-aggregate-store.js'
-import * as dealerEvents from '@web3-storage/filecoin-api/dealer/events'
+import * as dealerEvents from '@storacha/filecoin-api/dealer/events'
 
 import { mustGetEnv } from '../utils.js'
 
 Sentry.AWSLambda.init({
   environment: process.env.SST_STAGE,
   dsn: process.env.SENTRY_DSN,
-  tracesSampleRate: 0,
+  tracesSampleRate: 0
 })
 
 /**
- * @typedef {import('@w3filecoin/core/src/store//types').DealerAggregateStoreRecord} DealerAggregateStoreRecord
+ * @typedef {import('@w3filecoin/core/src/store/types.js').DealerAggregateStoreRecord} DealerAggregateStoreRecord
  */
 
 /**
  * @param {import('aws-lambda').DynamoDBStreamEvent} event
  */
 async function handleEvent (event) {
-  const {
-    did,
-    serviceDid,
-    delegatedProof,
-    serviceUrl
-  } = getEnv()
+  const { did, serviceDid, delegatedProof, serviceUrl } = getEnv()
   const { DEALER_PRIVATE_KEY: privateKey } = Config
   let issuer = getServiceSigner({
     privateKey
@@ -41,9 +39,11 @@ async function handleEvent (event) {
   })
   const proofs = []
   if (delegatedProof) {
-    const proof = await Delegation.extract(fromString(delegatedProof, 'base64pad'))
-      if (!proof.ok) throw new Error('failed to extract proof', { cause: proof.error })
-      proofs.push(proof.ok)
+    const proof = await Delegation.extract(
+      fromString(delegatedProof, 'base64pad')
+    )
+    if (!proof.ok) { throw new Error('failed to extract proof', { cause: proof.error }) }
+    proofs.push(proof.ok)
   } else {
     // if no proofs, we must be using the service private key to sign
     issuer = issuer.withDID(DID.parse(did).did())
@@ -70,12 +70,17 @@ async function handleEvent (event) {
       body: 'Should only receive one aggregate to handle'
     }
   }
-  // @ts-expect-error can't figure out type of new
-  const aggregateStoreRecord = /** @type {DealerAggregateStoreRecord} */ (unmarshall(records[0].new))
+  const aggregateStoreRecord = /** @type {DealerAggregateStoreRecord} */ (
+    // @ts-expect-error can't figure out type of new
+    unmarshall(records[0].new)
+  )
   const record = decodeRecord(aggregateStoreRecord)
 
   // Types of parameters 'request' and 'request' are incompatible.
-  const { ok, error } = await dealerEvents.handleAggregateUpdatedStatus(context, record)
+  const { ok, error } = await dealerEvents.handleAggregateUpdatedStatus(
+    context,
+    record
+  )
   if (error) {
     return {
       statusCode: 500,
@@ -93,7 +98,7 @@ async function handleEvent (event) {
  * @param {import('aws-lambda').DynamoDBStreamEvent} event
  */
 function parseDynamoDbEvent (event) {
-  return event.Records.map(r => ({
+  return event.Records.map((r) => ({
     new: r.dynamodb?.NewImage,
     old: r.dynamodb?.OldImage
   }))
@@ -107,7 +112,7 @@ function getEnv () {
     did: mustGetEnv('DID'),
     serviceDid: mustGetEnv('SERVICE_DID'),
     serviceUrl: mustGetEnv('SERVICE_URL'),
-    delegatedProof: process.env.PROOF,
+    delegatedProof: process.env.PROOF
   }
 }
 

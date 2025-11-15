@@ -8,12 +8,12 @@
     "stat-buffer": "node stat-buffer.js",
     "stat-oracle": "node stat-oracle.js"
   },
-  "dependencies": {},
   "devDependencies": {
-    "@ipld/dag-ucan": "^3.4.0",
-    "@ucanto/principal": "^9.0.0",
-    "@web3-storage/data-segment": "^5.2.0",
-    "@web3-storage/filecoin-client": "^3.3.4"
+    "@ipld/dag-ucan": "catalog:",
+    "@storacha/filecoin-api": "catalog:",
+    "@storacha/filecoin-client": "catalog:",
+    "@ucanto/principal": "catalog:",
+    "@ucanto/server": "catalog:"
   },
   "engines": {
     "node": ">=18.16"

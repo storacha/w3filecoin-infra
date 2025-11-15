@@ -1,12 +1,12 @@
 import {
   S3Client,
   GetObjectCommand,
-  ListObjectsV2Command,
+  ListObjectsV2Command
 } from '@aws-sdk/client-s3'
 import {
   RecordNotFound,
-  StorageOperationFailed,
-} from '@web3-storage/upload-api/errors'
+  StorageOperationFailed
+} from '@storacha/upload-api/errors'
 import * as CAR from '@ucanto/transport/car'
 import { parseLink, Receipt } from '@ucanto/core'
 
@@ -39,9 +39,10 @@ import { parseLink, Receipt } from '@ucanto/core'
  * @returns {Store}
  */
 export const open = ({ connection, region, buckets }) => ({
-  channel: connection.channel ?? new S3Client({ ...connection.address, region }),
+  channel:
+    connection.channel ?? new S3Client({ ...connection.address, region }),
   region,
-  buckets,
+  buckets
 })
 
 /**
@@ -59,9 +60,12 @@ export const getReceipt = async (store, task) => {
   }
 
   //
-  const invocation = /** @type {import('@ucanto/interface').UCANLink<[import('@ucanto/interface').Capability]>} */ (task)
+  const invocation =
+    /** @type {import('@ucanto/interface').UCANLink<[import('@ucanto/interface').Capability]>} */ (
+      task
+    )
   const { ok: entry, error } = await resolve(store, {
-    receipt: invocation,
+    receipt: invocation
   })
   if (error) {
     return { error }
@@ -74,12 +78,10 @@ export const getReceipt = async (store, task) => {
 
   if (entry.root) {
     const archive = await CAR.codec.decode(body)
-    const receipt = Receipt.view(
-      {
-        root: entry.root,
-        blocks: archive.blocks,
-      }
-    )
+    const receipt = Receipt.view({
+      root: entry.root,
+      blocks: archive.blocks
+    })
     if (receipt) {
       // @ts-ignore
       return { ok: receipt }
@@ -87,7 +89,7 @@ export const getReceipt = async (store, task) => {
   } else {
     const message = await CAR.request.decode({
       body,
-      headers: {},
+      headers: {}
     })
 
     // Attempt to find a receipt corresponding to this task
@@ -101,7 +103,7 @@ export const getReceipt = async (store, task) => {
   return {
     error: new RecordNotFound(
       `agent message ${entry.message} does not contain receipt for ${task} task`
-    ),
+    )
   }
 }
 
@@ -192,8 +194,8 @@ const load = async (store, query) => {
   return {
     ok: {
       archive: await CAR.codec.decode(bytes),
-      root: root ?? undefined,
-    },
+      root: root ?? undefined
+    }
   }
 }
 /**
@@ -209,10 +211,10 @@ const toIndexEntry = (path) => {
   return offset > 0
     ? {
         root: parseLink(path.slice(start + 1, offset)),
-        message: parseLink(path.slice(offset + 1, path.indexOf('.'))),
+        message: parseLink(path.slice(offset + 1, path.indexOf('.')))
       }
     : {
-        message: parseLink(path.slice(start + 1, path.indexOf('.'))),
+        message: parseLink(path.slice(start + 1, path.indexOf('.')))
       }
 }
 
@@ -228,7 +230,7 @@ const list = async (connection, { prefix, suffix }) => {
   try {
     const command = new ListObjectsV2Command({
       Bucket: connection.buckets.index.name,
-      Prefix: prefix,
+      Prefix: prefix
     })
 
     const { Contents } = await connection.channel.send(command)
@@ -241,18 +243,18 @@ const list = async (connection, { prefix, suffix }) => {
       : {
           error: new RecordNotFound(
             `no pseudo symlink matching query ${prefix}*${suffix} was found`
-          ),
+          )
         }
   } catch (/** @type {any} */ error) {
     if (error?.$metadata?.httpStatusCode === 404) {
       return {
         error: new RecordNotFound(
           `no pseudo symlink matching query ${prefix}*${suffix} was found`
-        ),
+        )
       }
     }
     return {
-      error: new StorageOperationFailed(error.message),
+      error: new StorageOperationFailed(error.message)
     }
   }
 }
@@ -265,7 +267,7 @@ const list = async (connection, { prefix, suffix }) => {
 const read = async ({ buckets, channel }, message) => {
   const getCmd = new GetObjectCommand({
     Bucket: buckets.message.name,
-    Key: toMessagePath({ message }),
+    Key: toMessagePath({ message })
   })
 
   let res
@@ -276,25 +278,25 @@ const read = async ({ buckets, channel }, message) => {
       return {
         error: new RecordNotFound(
           `agent message archive ${message} not found in store`
-        ),
+        )
       }
     }
     return {
-      error: new StorageOperationFailed(error.message),
+      error: new StorageOperationFailed(error.message)
     }
   }
   if (!res || !res.Body) {
     return {
       error: new RecordNotFound(
         `agent message archive ${message} not found in store`
-      ),
+      )
     }
   }
 
   const bytes = await res.Body.transformToByteArray()
 
   return {
-    ok: bytes,
+    ok: bytes
   }
 }
 
@@ -303,16 +305,18 @@ const read = async ({ buckets, channel }, message) => {
  * @param {import('@ucanto/interface').Link} message
  */
 export const toMessageURL = (store, message) =>
-  new URL(`https://${store.buckets.message.name}.s3.${store.region}.amazonaws.com/${toMessagePath({message})}`)
-
+  new URL(
+    `https://${store.buckets.message.name}.s3.${
+      store.region
+    }.amazonaws.com/${toMessagePath({ message })}`
+  )
 
 /**
  * @param {object} source
- * @param {import('@ucanto/interface').Link} source.message 
+ * @param {import('@ucanto/interface').Link} source.message
  */
 
-export const toMessagePath = ({message}) =>
-  `${message}/${message}`
+export const toMessagePath = ({ message }) => `${message}/${message}`
 
 /**
  * @param {object} source
@@ -320,7 +324,7 @@ export const toMessagePath = ({message}) =>
  * @param {import('@ucanto/interface').Link} source.task
  * @param {import('@ucanto/interface').Link} source.invocation
  */
-export const toInvocationPath = ({message, task, invocation}) =>
+export const toInvocationPath = ({ message, task, invocation }) =>
   `${task}/${invocation}@${message}.in`
 
 /**
@@ -329,5 +333,5 @@ export const toInvocationPath = ({message, task, invocation}) =>
  * @param {import('@ucanto/interface').Link} source.task
  * @param {import('@ucanto/interface').Link} source.receipt
  */
-export const toReceiptPath = ({message, task, receipt}) =>
+export const toReceiptPath = ({ message, task, receipt }) =>
   `${task}/${receipt}@${message}.out`

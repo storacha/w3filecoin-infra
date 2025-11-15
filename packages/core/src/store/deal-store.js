@@ -1,22 +1,29 @@
-import { PutItemCommand, GetItemCommand, QueryCommand } from '@aws-sdk/client-dynamodb'
+import {
+  PutItemCommand,
+  GetItemCommand,
+  QueryCommand
+} from '@aws-sdk/client-dynamodb'
 import { marshall, unmarshall } from '@aws-sdk/util-dynamodb'
-import { RecordNotFound, StoreOperationFailed } from '@web3-storage/filecoin-api/errors'
+import {
+  RecordNotFound,
+  StoreOperationFailed
+} from '@storacha/filecoin-api/errors'
 import { parseLink } from '@ucanto/server'
 
 import { connectTable } from './index.js'
 
 /**
- * @typedef {import('@web3-storage/filecoin-api/deal-tracker/api').DealRecord} DealRecord
- * @typedef {import('@web3-storage/filecoin-api/deal-tracker/api').DealRecordKey} DealRecordKey
- * @typedef {import('@web3-storage/filecoin-api/deal-tracker/api').DealRecordQueryByPiece} DealRecordQueryByPiece
- * @typedef {import('./types').InferStoreRecord<DealRecord>} InferStoreRecord
+ * @typedef {import('@storacha/filecoin-api/deal-tracker/api').DealRecord} DealRecord
+ * @typedef {import('@storacha/filecoin-api/deal-tracker/api').DealRecordKey} DealRecordKey
+ * @typedef {import('@storacha/filecoin-api/deal-tracker/api').DealRecordQueryByPiece} DealRecordQueryByPiece
+ * @typedef {import('./types.js').InferStoreRecord<DealRecord>} InferStoreRecord
  * @typedef {Pick<InferStoreRecord, 'piece' | 'dealId'>} DealStoreRecordKey
  * @typedef {Pick<InferStoreRecord, 'piece'>} DealStoreRecordQueryByPiece
  */
 
 /**
- * @param {DealRecord} record 
- * @returns {InferStoreRecord} 
+ * @param {DealRecord} record
+ * @returns {InferStoreRecord}
  */
 const encodeRecord = (record) => {
   return {
@@ -26,8 +33,8 @@ const encodeRecord = (record) => {
 }
 
 /**
- * @param {DealRecordKey} recordKey 
- * @returns {DealStoreRecordKey} 
+ * @param {DealRecordKey} recordKey
+ * @returns {DealStoreRecordKey}
  */
 const encodeKey = (recordKey) => {
   return {
@@ -37,8 +44,8 @@ const encodeKey = (recordKey) => {
 }
 
 /**
- * @param {DealRecordQueryByPiece} recordKey 
- * @returns {DealStoreRecordQueryByPiece} 
+ * @param {DealRecordQueryByPiece} recordKey
+ * @returns {DealStoreRecordQueryByPiece}
  */
 const encodeQueryByPiece = (recordKey) => {
   return {
@@ -48,7 +55,7 @@ const encodeQueryByPiece = (recordKey) => {
 }
 
 /**
- * @param {InferStoreRecord} encodedRecord 
+ * @param {InferStoreRecord} encodedRecord
  * @returns {DealRecord}
  */
 const decodeRecord = (encodedRecord) => {
@@ -62,7 +69,7 @@ const decodeRecord = (encodedRecord) => {
  * @param {import('./types.js').TableConnect | import('@aws-sdk/client-dynamodb').DynamoDBClient} conf
  * @param {object} context
  * @param {string} context.tableName
- * @returns {import('@web3-storage/filecoin-api/deal-tracker/api').DealStore}
+ * @returns {import('@storacha/filecoin-api/deal-tracker/api').DealStore}
  */
 export function createClient (conf, context) {
   const tableclient = connectTable(conf)
@@ -73,7 +80,7 @@ export function createClient (conf, context) {
         TableName: context.tableName,
         Item: marshall(encodeRecord(record), {
           removeUndefinedValues: true
-        }),
+        })
       })
 
       try {
@@ -151,7 +158,9 @@ export function createClient (conf, context) {
             AttributeValueList: [{ S: dealStoreRecordQueryByPiece.piece }]
           }
         },
-        ExclusiveStartKey: options?.cursor ? JSON.parse(options.cursor) : undefined,
+        ExclusiveStartKey: options?.cursor
+          ? JSON.parse(options.cursor)
+          : undefined,
         Limit: options?.size
       })
 
@@ -167,10 +176,12 @@ export function createClient (conf, context) {
 
       return {
         ok: {
-          results: (res.Items ?? []).map(item => decodeRecord(
-            /** @type {InferStoreRecord} */ (unmarshall(item))
-          )),
-          ...(res.LastEvaluatedKey ? { cursor: JSON.stringify(res.LastEvaluatedKey) } : {})
+          results: (res.Items ?? []).map((item) =>
+            decodeRecord(/** @type {InferStoreRecord} */ (unmarshall(item)))
+          ),
+          ...(res.LastEvaluatedKey
+            ? { cursor: JSON.stringify(res.LastEvaluatedKey) }
+            : {})
         }
       }
     }

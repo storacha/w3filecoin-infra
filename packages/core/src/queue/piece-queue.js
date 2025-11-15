@@ -5,12 +5,12 @@ import { fromString } from 'uint8arrays/from-string'
 import { createQueueClient } from './client.js'
 
 /**
- * @typedef {import('@web3-storage/filecoin-api/aggregator/api').PieceMessage} PieceMessage
+ * @typedef {import('@storacha/filecoin-api/aggregator/api').PieceMessage} PieceMessage
  * @typedef {import('./client.js').ClientEncodedMessage} ClientEncodedMessage
  */
 
 /**
- * @param {PieceMessage} pieceMessage 
+ * @param {PieceMessage} pieceMessage
  * @returns {ClientEncodedMessage}
  */
 const encodeMessage = (pieceMessage) => {
@@ -21,7 +21,7 @@ const encodeMessage = (pieceMessage) => {
 }
 
 /**
- * @param {{ 'MessageBody': string }} message 
+ * @param {{ 'MessageBody': string }} message
  * @returns {PieceMessage}
  */
 export const decodeMessage = (message) => {
@@ -30,16 +30,15 @@ export const decodeMessage = (message) => {
 }
 
 /**
- * 
+ *
  * @param {import('./types.js').QueueConnect | import('@aws-sdk/client-sqs').SQSClient} conf
  * @param {object} context
  * @param {string} context.queueUrl
- * @returns {import('@web3-storage/filecoin-api/aggregator/api').PieceQueue}
+ * @returns {import('@storacha/filecoin-api/aggregator/api').PieceQueue}
  */
 export function createClient (conf, context) {
-  return createQueueClient(conf,
-    {
-      queueUrl: context.queueUrl,
-      encodeMessage
-    })
+  return createQueueClient(conf, {
+    queueUrl: context.queueUrl,
+    encodeMessage
+  })
 }

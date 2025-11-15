@@ -10,10 +10,10 @@ import { mustGetEnv } from '../utils.js'
 Sentry.AWSLambda.init({
   environment: process.env.SST_STAGE,
   dsn: process.env.SENTRY_DSN,
-  tracesSampleRate: 0,
+  tracesSampleRate: 0
 })
 
-export async function main() {
+export async function main () {
   // Construct context
   const {
     dealArchiveStoreBucketName,
@@ -48,7 +48,7 @@ export async function main() {
   }
 
   return {
-    statusCode: 200,
+    statusCode: 200
   }
 }
 
@@ -61,6 +61,6 @@ function getLambdaEnv () {
     dealArchiveStoreBucketRegion: mustGetEnv('DEAL_ARCHIVE_STORE_REGION'),
     dealStoreTableName: Table['deal-tracker-deal-store-v1'],
     dealStoreTableRegion: mustGetEnv('AWS_REGION'),
-    spadeOracleUrl: mustGetEnv('SPADE_ORACLE_URL'),
+    spadeOracleUrl: mustGetEnv('SPADE_ORACLE_URL')
   }
 }
