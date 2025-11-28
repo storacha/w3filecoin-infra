@@ -11,6 +11,7 @@
     "@ipld/dag-ucan": "catalog:",
     "@storacha/filecoin-api": "catalog:",
     "@storacha/filecoin-client": "catalog:",
+    "@storacha/principal-resolver": "catalog:",
     "@types/aws-lambda": "catalog:",
     "@ucanto/core": "catalog:",
     "@ucanto/server": "catalog:",

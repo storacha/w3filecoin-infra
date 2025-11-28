@@ -4,7 +4,7 @@ import { Table } from 'sst/node/table'
 // eslint-disable-next-line no-unused-vars
 import * as CAR from '@ucanto/transport/car'
 import * as Server from '@ucanto/server'
-
+import { HTTPResolver } from '@storacha/principal-resolver'
 import { connect as ucanLogConnect } from '@w3filecoin/core/src/ucan-log.js'
 // store clients
 import { createClient as createAggregateStoreClient } from '@w3filecoin/core/src/store/aggregator-aggregate-store.js'
@@ -120,6 +120,8 @@ function getContext () {
     pieceAcceptQueueRegion
   } = getLambdaEnv()
 
+  const principalResolver = HTTPResolver.create([/^did:web:.*\.storacha\.network$/])
+
   return {
     id: getServiceSigner({ did, privateKey }),
     dealerId: getPrincipal(dealerDid),
@@ -161,6 +163,7 @@ function getContext () {
       { region: pieceAcceptQueueRegion },
       { queueUrl: pieceAcceptQueueUrl }
     ),
+    ...principalResolver,
     // TODO: integrate with revocations
     validateAuthorization: () => ({ ok: {} })
   }

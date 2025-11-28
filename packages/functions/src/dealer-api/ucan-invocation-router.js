@@ -6,7 +6,7 @@ import { fromString } from 'uint8arrays/from-string'
 import * as DID from '@ipld/dag-ucan/did'
 import * as CAR from '@ucanto/transport/car'
 import * as Server from '@ucanto/server'
-
+import { HTTPResolver } from '@storacha/principal-resolver'
 import { connect as ucanLogConnect } from '@w3filecoin/core/src/ucan-log.js'
 import { createClient as createAggregateStoreClient } from '@w3filecoin/core/src/store/dealer-aggregate-store.js'
 import { createClient as createOfferStoreClient } from '@w3filecoin/core/src/store/dealer-offer-store.js'
@@ -93,6 +93,8 @@ export async function ucanInvocationRouter (request) {
     issuer = issuer.withDID(DID.parse(did).did())
   }
 
+  const principalResolver = HTTPResolver.create([/^did:web:.*\.storacha\.network$/])
+
   const server = createServer({
     id: issuer,
     aggregateStore,
@@ -112,6 +114,7 @@ export async function ucanInvocationRouter (request) {
         Sentry.AWSLambda.captureException(err)
       }
     },
+    ...principalResolver,
     // TODO: integrate with revocations
     validateAuthorization: () => ({ ok: {} })
   })
