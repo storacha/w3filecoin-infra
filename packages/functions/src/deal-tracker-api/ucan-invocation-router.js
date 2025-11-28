@@ -3,7 +3,7 @@ import { Config } from 'sst/node/config'
 import { Table } from 'sst/node/table'
 import * as CAR from '@ucanto/transport/car'
 import * as Server from '@ucanto/server'
-
+import { HTTPResolver } from '@storacha/principal-resolver'
 import { connect as ucanLogConnect } from '@w3filecoin/core/src/ucan-log.js'
 import { createClient } from '@w3filecoin/core/src/store/deal-store.js'
 import { getServiceSigner } from '@w3filecoin/core/src/service.js'
@@ -52,6 +52,8 @@ export async function ucanInvocationRouter (request) {
     }
   )
 
+  const principalResolver = HTTPResolver.create([/^did:web:.*\.storacha\.network$/])
+
   const server = createServer({
     id: serviceSigner,
     dealStore,
@@ -61,6 +63,7 @@ export async function ucanInvocationRouter (request) {
         Sentry.AWSLambda.captureException(err)
       }
     },
+    ...principalResolver,
     // TODO: integrate with revocations
     validateAuthorization: () => ({ ok: {} })
   })
