@@ -151,6 +151,8 @@ export interface DealerOfferStoreRecordValue {
   // PieceCid of sorted pieces used to generate aggregate
   pieces: string[]
   // Issuer of the collection of aggregates
+  issuer: string
+  // Collection/group the aggregate belongs to
   collection: string
   // Order that broker will rely on to prioritize deals.
   orderID: number

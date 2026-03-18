@@ -104,6 +104,7 @@ export const decodeRecord = (encodedRecord) => {
   return {
     aggregate: parseLink(encodedRecord.aggregate),
     pieces: parseLink(encodedRecord.pieces),
+    ...(encodedRecord.group && { group: encodedRecord.group }),
     status: decodeStatus(encodedRecord.stat),
     insertedAt: encodedRecord.insertedAt,
     updatedAt: encodedRecord.updatedAt
