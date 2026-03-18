@@ -29,7 +29,8 @@ const encodeRecord = (record) => {
     /** @type {DealerOfferStoreRecordValue} */ ({
       aggregate: record.value.aggregate.toString(),
       pieces: record.value.pieces.map((p) => p.toString()),
-      collection: record.value.issuer,
+      issuer: record.value.issuer,
+      collection: record.value.group || record.value.issuer,
       orderID: Date.now()
     })
   )
@@ -70,7 +71,8 @@ const decodeRecord = (encodedRecord) => {
     value: {
       aggregate: parseLink(record.aggregate),
       pieces: record.pieces.map((p) => parseLink(p)),
-      issuer: /** @type {`did:${string}:${string}`} */ (record.collection)
+      issuer: /** @type {`did:${string}:${string}`} */ (record.issuer),
+      group: record.collection,
     }
   }
 }
